@@ -175,15 +175,18 @@ with open(csv_quêtes, newline="", encoding=encoding) as csvfile:
             except:
                 raise ParseException("place", row["Place"])
             try:
-                type_de_quête = re.match(r"(.*) \(http", row["Type de Quete"]).group(1)
+                types_de_quête = row["Type de Quete"].split(", ")
+                types_de_quête = list(
+                    map(lambda t: re.match(r"(.*) \(http", t).group(1), types_de_quête)
+                )
             except:
                 raise ParseException("type", row["Type de Quete"])
             try:
                 début, fin = parse_horaires(row["Horaire"])
             except ValueError as e:
                 raise ParseException(f"horaire ({e.args[0]})", row["Horaire"])
-            type_de_quête = Type_de_quête.tous[type_de_quête]
-            if type_de_quête.sécable:
+            type_de_quête = list(map(lambda t: Type_de_quête.tous[t], types_de_quête))
+            if all(t.sécable for t in type_de_quête):
                 fin_acc = début
                 while fin_acc < fin:
                     début_acc = fin_acc
@@ -293,7 +296,10 @@ for b in bénévoles:
     # model.AddMultiplicationEquality(var, [diff, diff])
     # we want la moyenne ?
 
-model.minimize(sum(diffs[b] for b in bénévoles))
+max_diff = model.NewIntVar(0, 100000, f"max_diff")
+# model.AddMaxEquality(max_diff, diffs.values())
+# écart type ?
+model.minimize(sum(diffs[b] for b in bénévoles) + max_diff)
 
 
 """ Solution printer """
@@ -352,15 +358,21 @@ if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
                     else:
                         result = f"{result}, {b}"
         print(f"Quête {q}: {result}")
+    max_diff = 0
+    max_diff_abs = 0
     for b in bénévoles:
         minutes = solver.value(temps_total_bénévole(b))
         diff = solver.value(diff_temps(b))
+        if abs(diff) > max_diff_abs:
+            max_diff = diff
+            max_diff_abs = abs(diff)
         print(
             f"{b.surnom}: {int(minutes // 60):0=2d}h{int(minutes % 60):0=2d} ({diff/60:.1f})"
         )
     print(
         f"Objective value = {solver.objective_value}",
     )
+    print(f"Deviation horaire maximale = {max_diff}")
 else:
     print("No optimal solution found !")
 
