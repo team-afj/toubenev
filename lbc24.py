@@ -24,8 +24,9 @@ class Lieu:
 class Type_de_quête:
     tous: Dict[str, Type_de_quête] = {}
 
-    def __init__(self, nom):
+    def __init__(self, nom, sécable):
         self.nom = nom
+        self.sécable: bool = sécable
         Type_de_quête.tous[self.nom] = self
 
 
@@ -67,11 +68,11 @@ class Bénévole:
 
     tous: Dict[str, Bénévole] = {}
 
-    def __init__(self, surnom, prénom, nom, heures_theoriques):
+    def __init__(self, surnom, prénom, nom, heures_théoriques):
         self.surnom: str = surnom if surnom else prénom
         self.prénom: str = prénom
         self.nom: str = nom
-        self.heures_theoriques: int = heures_theoriques
+        self.heures_théoriques: int = heures_théoriques
         self.score_types_de_quêtes: Dict[Type_de_quête, int] = {}
         self.binômes_interdits: List[Bénévole] = []
         self.lieux_interdits: List[Lieu] = []
@@ -110,12 +111,12 @@ class Bénévole:
 
 """ Importation des données """
 csv_lieux = sys.argv[1]  # That's not very flexible...
-csv_types_de_quete = sys.argv[2]
+csv_types_de_quête = sys.argv[2]
 csv_bénévoles = sys.argv[3]
 csv_quêtes = sys.argv[4]
 
 encoding = "utf-8-sig"
-dialect = csv.excel  # Dialecte par défault
+dialect = csv.excel  # Dialecte par default
 with open(csv_bénévoles, newline="", encoding=encoding) as csvfile:
     # We expect the dialect to be the same for every input csv
     dialect = csv.Sniffer().sniff(csvfile.read(1024))
@@ -125,10 +126,11 @@ with open(csv_lieux, newline="", encoding=encoding) as csvfile:
     for row in reader:
         Lieu(row["Name"])
 
-with open(csv_types_de_quete, newline="", encoding=encoding) as csvfile:
+with open(csv_types_de_quête, newline="", encoding=encoding) as csvfile:
     reader = csv.DictReader(csvfile, dialect=dialect)
     for row in reader:
-        Type_de_quête(row["Name"])
+        sécable = row["Découpable ? "] == "oui"
+        Type_de_quête(row["Name"], sécable)
 
 with open(csv_bénévoles, newline="", encoding=encoding) as csvfile:
     reader = csv.DictReader(csvfile, dialect=dialect)
@@ -191,7 +193,7 @@ quêtes = Quête.toutes
 bénévoles = Bénévole.tous.values()
 
 for b in bénévoles:
-    print(b, b.heures_theoriques)
+    print(b, b.heures_théoriques)
 
 
 def quêtes_dun_lieu(lieu):
@@ -244,7 +246,7 @@ for b in bénévoles:
                         )
 
 
-""" Calcul de la qualité d'une reponse """
+""" Calcul de la qualité d'une réponse """
 
 
 def temps_total_bénévole(b) -> int:
@@ -257,7 +259,7 @@ def temps_total_bénévole(b) -> int:
 
 # Todo: c'est pour chaque journée de travail qu'il faut vérifier:
 def diff_temps(b):
-    return temps_total_bénévole(b) - (b.heures_theoriques * 60)
+    return temps_total_bénévole(b) - (b.heures_théoriques * 60)
 
 
 diffs: Dict[Bénévole, cp_model.IntVar] = {}
@@ -335,7 +337,7 @@ if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
             f"{b.surnom}: {int(minutes // 60):0=2d}h{int(minutes % 60):0=2d} ({diff/60:.1f})"
         )
     print(
-        f"Obective value = {solver.objective_value}",
+        f"Objective value = {solver.objective_value}",
     )
 else:
     print("No optimal solution found !")
@@ -349,11 +351,12 @@ def total_temps_travail(quêtes: List[Quête]):
 
 
 def total_temps_dispo(bénévoles: List[Bénévole]):
-    return sum(b.heures_theoriques * 60 for b in bénévoles)
+    return sum(b.heures_théoriques * 60 for b in bénévoles)
 
 
 temps_total = total_temps_travail(quêtes)
 temps_dispo = total_temps_dispo(bénévoles)
+print()
 print(
     f"Temps de travail total: {int(temps_total // 60):0=2d}h{int(temps_total % 60):0=2d}"
 )
