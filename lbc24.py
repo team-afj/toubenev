@@ -104,8 +104,8 @@ class Bénévole:
     def equal(self, lautre):
         self.surnom == lautre.surnom
 
-    def appréciation_dune_quête(self, quête):
-        return self.score_types_de_quêtes.get(quête.type, 0)
+    # def appréciation_dune_quête(self, quête):
+    #     return self.score_types_de_quêtes.get(quête.type, 0)
 
     def appréciation_du_planning(self, planning):
         for (b, q, n), _ in enumerate(filter(lambda q: q == 1, planning)):
@@ -187,7 +187,8 @@ with open(csv_quêtes, newline="", encoding=encoding) as csvfile:
                 fin_acc = début
                 while fin_acc < fin:
                     début_acc = fin_acc
-                    fin_acc = min(fin_acc + timedelta(minutes=15), fin)
+                    # fin_acc = min(fin_acc + timedelta(minutes=15), fin)
+                    fin_acc = min(fin_acc + timedelta(minutes=120), fin)
                     Quête(
                         row["Name"],
                         type_de_quête,
@@ -284,12 +285,13 @@ def diff_temps(b):
 
 diffs: Dict[Bénévole, cp_model.IntVar] = {}
 for b in bénévoles:
-    var = model.NewIntVar(0, 1000, f"squared_diff_béné_{b}")
+    var = model.NewIntVar(0, 100000, f"squared_diff_béné_{b}")
     diffs[b] = var
-    diff = model.NewIntVar(-1000, 1000, f"diff_béné_{b}")
+    diff = model.NewIntVar(-100000, 100000, f"diff_béné_{b}")
     model.Add(diff == diff_temps(b))
     model.AddAbsEquality(var, diff)
     # model.AddMultiplicationEquality(var, [diff, diff])
+    # we want la moyenne ?
 
 model.minimize(sum(diffs[b] for b in bénévoles))
 
@@ -389,3 +391,16 @@ print("\nStatistics")
 print(f"- conflicts: {solver.num_conflicts}")
 print(f"- branches : {solver.num_branches}")
 print(f"- wall time: {solver.wall_time}s")
+
+
+"""
+  Autres contraintes:
+  - Respect temps horaire quotidien
+  - Des activités différentes chaque jour ?
+  - Des horaires différents chaque jour ?
+  - Les horaires de prédilection
+  - Equilibrer les déficits ou les excès
+  - Pause de 15 minutes entre deux missions qui ne sont pas dans le même lieu
+  - Sur les scènes, on veut que les tâches consécutives soit si possible faites par les mêmes personnes
+  - A la fin de la semaine, c'est cool si tout le monde a fait chaque type de quêtes
+"""
