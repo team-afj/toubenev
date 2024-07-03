@@ -42,8 +42,12 @@ class Quête:
         self.début: datetime = début
         self.fin: datetime = fin
         Quête.toutes.append(self)
-        quêtes_du_jour = Quête.par_jour.get(self.début.date, [])
-        Quête.par_jour[self.début.date] = quêtes_du_jour.append(self)
+        date_début = self.début.date()
+        quêtes_du_jour: List[Quête] = Quête.par_jour.get(date_début, [])
+        if quêtes_du_jour == []:
+            Quête.par_jour[date_début] = [self]
+        else:
+            quêtes_du_jour.append(self)
 
     def __str__(self) -> str:
         return f"{self.nom}, {self.début.strftime('%a %H:%M')} -> {self.fin.strftime('%H:%M')}"
@@ -178,14 +182,30 @@ with open(csv_quêtes, newline="", encoding=encoding) as csvfile:
                 début, fin = parse_horaires(row["Horaire"])
             except ValueError as e:
                 raise ParseException(f"horaire ({e.args[0]})", row["Horaire"])
-            Quête(
-                row["Name"],
-                Type_de_quête.tous[type_de_quête],
-                Lieu.tous[place],
-                int(row["Needed"]),
-                début,
-                fin,
-            )
+            type_de_quête = Type_de_quête.tous[type_de_quête]
+            if type_de_quête.sécable:
+                fin_acc = début
+                while fin_acc < fin:
+                    début_acc = fin_acc
+                    fin_acc = min(fin_acc + timedelta(minutes=15), fin)
+                    Quête(
+                        row["Name"],
+                        type_de_quête,
+                        Lieu.tous[place],
+                        int(row["Needed"]),
+                        début_acc,
+                        fin_acc,
+                    )
+            else:
+                Quête(
+                    row["Name"],
+                    type_de_quête,
+                    Lieu.tous[place],
+                    int(row["Needed"]),
+                    début,
+                    fin,
+                )
+
         except ParseException as e:
             print(f"Cannot parse {e.args[0]}: '{e.args[1]}'")
 
