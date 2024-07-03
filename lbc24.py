@@ -5,7 +5,7 @@ from typing import List, Dict
 
 import csv, re, sys
 
-from datetime import date, time, datetime
+from datetime import date, time, datetime, timedelta
 
 from ortools.sat.python import cp_model
 
@@ -48,7 +48,7 @@ class Quête:
         return f"{self.nom}, {self.début.strftime('%a %H:%M')} -> {self.fin.strftime('%H:%M')}"
 
     def durée_minutes(self) -> int:
-        return (self.fin - self.début).total_seconds() / 60
+        return int((self.fin - self.début).total_seconds() / 60)
 
     def en_même_temps(self) -> filter[Quête]:
         """Return la liste de toutes les quêtes chevauchant celle-ci. Cette liste
@@ -133,12 +133,13 @@ with open(csv_types_de_quete, newline="", encoding=encoding) as csvfile:
 with open(csv_bénévoles, newline="", encoding=encoding) as csvfile:
     reader = csv.DictReader(csvfile, dialect=dialect)
     for row in reader:
-        Bénévole(
-            row["Name"],
-            row["Prénom"],
-            row["Full Name"],
-            int(row["heures théoriques par jour"]),
-        )
+        if row["Prénom"]:
+            Bénévole(
+                row["Name"],
+                row["Prénom"],
+                row["Full Name"],
+                int(row["heures théoriques par jour"]),
+            )
 
 
 def parse_horaires(horaire: str):
@@ -148,20 +149,33 @@ def parse_horaires(horaire: str):
         fin = datetime.strptime(horaire_groups.group(2), "%d/%m/%Y %H:%M")
         return début, fin
     else:
-        horaire_groups = re.match(r"(.*) \(.*\) → (.*)", horaire)
+        horaire_groups = re.match(r"(.*) \(.*\) → (.*):(.*)", horaire)
         début = datetime.strptime(horaire_groups.group(1), "%d/%m/%Y %H:%M")
-        heure_fin = time.fromisoformat(f"{horaire_groups.group(2)}:00")
+        heure_fin = time(int(horaire_groups.group(2)), int(horaire_groups.group(3)))
         fin = datetime.combine(début, heure_fin)
         return début, fin
+
+
+class ParseException(Exception):
+    pass
 
 
 with open(csv_quêtes, newline="", encoding=encoding) as csvfile:
     reader = csv.DictReader(csvfile, dialect=dialect)
     for row in reader:
         try:
-            place = re.match(r"(.*) \(http", row["Place"]).group(1)
-            type_de_quête = re.match(r"(.*) \(http", row["Type de Quete"]).group(1)
-            début, fin = parse_horaires(row["Horaire"])
+            try:
+                place = re.match(r"(.*) \(http", row["Place"]).group(1)
+            except:
+                raise ParseException("place", row["Place"])
+            try:
+                type_de_quête = re.match(r"(.*) \(http", row["Type de Quete"]).group(1)
+            except:
+                raise ParseException("type", row["Type de Quete"])
+            try:
+                début, fin = parse_horaires(row["Horaire"])
+            except ValueError as e:
+                raise ParseException(f"horaire ({e.args[0]})", row["Horaire"])
             Quête(
                 row["Name"],
                 Type_de_quête.tous[type_de_quête],
@@ -170,11 +184,14 @@ with open(csv_quêtes, newline="", encoding=encoding) as csvfile:
                 début,
                 fin,
             )
-        except:
-            print("Something went wrong while parsing:\n", row)
+        except ParseException as e:
+            print(f"Cannot parse {e.args[0]}: '{e.args[1]}'")
 
 quêtes = Quête.toutes
 bénévoles = Bénévole.tous.values()
+
+for b in bénévoles:
+    print(b, b.heures_theoriques)
 
 
 def quêtes_dun_lieu(lieu):
@@ -230,7 +247,7 @@ for b in bénévoles:
 """ Calcul de la qualité d'une reponse """
 
 
-def temps_total_bénévole(b):
+def temps_total_bénévole(b) -> int:
     return sum(
         q.durée_minutes() * assignations[(b, q, n)]
         for q in quêtes
@@ -238,14 +255,24 @@ def temps_total_bénévole(b):
     )
 
 
-model.maximize(
-    sum(
-        b.appréciation_dune_quête(q) * assignations[(b, q, n)]
-        for b in bénévoles
-        for q in quêtes
-        for n in range(q.nombre_bénévoles)
-    )
-)
+# Todo: c'est pour chaque journée de travail qu'il faut vérifier:
+def diff_temps(b):
+    return temps_total_bénévole(b) - (b.heures_theoriques * 60)
+
+
+diffs: Dict[Bénévole, cp_model.IntVar] = {}
+for b in bénévoles:
+    var = model.NewIntVar(0, 1000, f"squared_diff_béné_{b}")
+    diffs[b] = var
+    diff = model.NewIntVar(-1000, 1000, f"diff_béné_{b}")
+    model.Add(diff == diff_temps(b))
+    model.AddAbsEquality(var, diff)
+    # model.AddMultiplicationEquality(var, [diff, diff])
+
+model.minimize(sum(diffs[b] for b in bénévoles))
+
+
+""" Solution printer """
 
 
 class VarArraySolutionPrinter(cp_model.CpSolverSolutionCallback):
@@ -301,12 +328,38 @@ if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
                     else:
                         result = f"{result}, {b}"
         print(f"Quête {q}: {result}")
+    for b in bénévoles:
+        minutes = solver.value(temps_total_bénévole(b))
+        diff = solver.value(diff_temps(b))
+        print(
+            f"{b.surnom}: {int(minutes // 60):0=2d}h{int(minutes % 60):0=2d} ({diff/60:.1f})"
+        )
     print(
         f"Obective value = {solver.objective_value}",
     )
 else:
     print("No optimal solution found !")
 
+
+""" Quelques données sur les quêtes """
+
+
+def total_temps_travail(quêtes: List[Quête]):
+    return sum(q.durée_minutes() * q.nombre_bénévoles for q in quêtes)
+
+
+def total_temps_dispo(bénévoles: List[Bénévole]):
+    return sum(b.heures_theoriques * 60 for b in bénévoles)
+
+
+temps_total = total_temps_travail(quêtes)
+temps_dispo = total_temps_dispo(bénévoles)
+print(
+    f"Temps de travail total: {int(temps_total // 60):0=2d}h{int(temps_total % 60):0=2d}"
+)
+print(
+    f"Temps de travail disponible: {int(temps_dispo // 60):0=2d}h{int(temps_dispo % 60):0=2d}"
+)
 
 # Statistics.
 print("\nStatistics")
