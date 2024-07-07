@@ -42,7 +42,12 @@ class Quête:
         self.début: datetime = début
         self.fin: datetime = fin
         Quête.toutes.append(self)
+
         date_début = self.début.date()
+        if self.début.time() < time(4):
+            # Day starts at 4 am
+            date_début = date_début - timedelta(1)
+
         quêtes_du_jour: List[Quête] = Quête.par_jour.get(date_début, [])
         if quêtes_du_jour == []:
             Quête.par_jour[date_début] = [self]
@@ -273,7 +278,8 @@ for b in bénévoles:
 """ Calcul de la qualité d'une réponse """
 
 
-def temps_total_bénévole(b) -> int:
+# Temps de travail d'un bénévole sur un ensemble de quêtes
+def temps_bev(b, quêtes):
     return sum(
         q.durée_minutes() * assignations[(b, q, n)]
         for q in quêtes
@@ -281,25 +287,40 @@ def temps_total_bénévole(b) -> int:
     )
 
 
-# Todo: c'est pour chaque journée de travail qu'il faut vérifier:
+# Temps de travail, par jour, d'un bénévole
+def temps_total_bénévole(b) -> Dict[date, cp_model.IntVar]:
+    return {date: temps_bev(b, quêtes) for date, quêtes in Quête.par_jour.items()}
+
+
+# Différence avec le tdt prévu par jour:
 def diff_temps(b):
-    return temps_total_bénévole(b) - (b.heures_théoriques * 60)
+    return {
+        date: tdt - (b.heures_théoriques * 60)
+        for date, tdt in temps_total_bénévole(b).items()
+    }
 
 
+def squared(id, value):
+    var = model.NewIntVar(0, 100000, f"v_squared_{id}")
+    diff = model.NewIntVar(-100000, 100000, f"v_{id}")
+    model.Add(diff == value)
+    model.AddMultiplicationEquality(var, [diff, diff])
+    # model.AddAbsEquality(var, diff)
+    return var
+
+
+# Au carré:
 diffs: Dict[Bénévole, cp_model.IntVar] = {}
 for b in bénévoles:
-    var = model.NewIntVar(0, 100000, f"squared_diff_béné_{b}")
-    diffs[b] = var
-    diff = model.NewIntVar(-100000, 100000, f"diff_béné_{b}")
-    model.Add(diff == diff_temps(b))
-    model.AddAbsEquality(var, diff)
-    # model.AddMultiplicationEquality(var, [diff, diff])
-    # we want la moyenne ?
+    diff_par_jour = diff_temps(b)
+    diffs[b] = sum(
+        squared(f"diff_{date}_béné_{b}", diff) for date, diff in diff_par_jour.items()
+    )
 
-max_diff = model.NewIntVar(0, 100000, f"max_diff")
+# max_diff = model.NewIntVar(0, 100000, f"max_diff")
 # model.AddMaxEquality(max_diff, diffs.values())
 # écart type ?
-model.minimize(sum(diffs[b] for b in bénévoles) + max_diff)
+model.minimize(sum(diffs[b] for b in bénévoles))
 
 
 """ Solution printer """
@@ -361,8 +382,8 @@ if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
     max_diff = 0
     max_diff_abs = 0
     for b in bénévoles:
-        minutes = solver.value(temps_total_bénévole(b))
-        diff = solver.value(diff_temps(b))
+        minutes = solver.value(sum(temps_total_bénévole(b).values()))
+        diff = solver.value(max(diff_temps(b).values()))
         if abs(diff) > max_diff_abs:
             max_diff = diff
             max_diff_abs = abs(diff)
@@ -407,12 +428,13 @@ print(f"- wall time: {solver.wall_time}s")
 
 """
   Autres contraintes:
-  - Respect temps horaire quotidien
-  - Des activités différentes chaque jour ?
-  - Des horaires différents chaque jour ?
-  - Les horaires de prédilection
-  - Equilibrer les déficits ou les excès
-  - Pause de 15 minutes entre deux missions qui ne sont pas dans le même lieu
-  - Sur les scènes, on veut que les tâches consécutives soit si possible faites par les mêmes personnes
-  - A la fin de la semaine, c'est cool si tout le monde a fait chaque type de quêtes
+  - [x] Respect temps horaire quotidien
+  - [ ] Une pause de 4-5 heures consécutive chaque jour
+  - [ ] Des activités différentes chaque jour ?
+  - [ ] Des horaires différents chaque jour ?
+  - [ ] Les horaires de prédilection
+  - [ ] Equilibrer les déficits ou les excès
+  - [ ] Pause de 15 minutes entre deux missions qui ne sont pas dans le même lieu
+  - [ ] Sur les scènes, on veut que les tâches consécutives soit si possible faites par les mêmes personnes
+  - [ ] A la fin de la semaine, c'est cool si tout le monde a fait chaque type de quêtes
 """
