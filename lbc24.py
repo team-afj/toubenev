@@ -421,3 +421,38 @@ print(f"- wall time: {solver.wall_time}s")
   - [ ] Sur les scènes, on veut que les tâches consécutives soit si possible faites par les mêmes personnes
   - [ ] A la fin de la semaine, c'est cool si tout le monde a fait chaque type de quêtes
 """
+
+from icalendar import Calendar, Event
+import zoneinfo
+
+cal = Calendar()
+cal.add("prodid", "-//LBC Calendar//mxm.dk//")
+cal.add("version", "2.0")
+
+for q in quêtes:
+    result = ""
+    for b in bénévoles:
+        if solver.value(assignations[(b, q)]) == 1:
+            if result == "":
+                result = f"{b}"
+            else:
+                result = f"{result}, {b}"
+    print(f"Quête {q}: {result}")
+    event = Event()
+    event.add("summary", f"{result}: {q.nom}")
+    event.add("description", f"Lieu: {q.lieu.nom}")
+    event.add("dtstart", q.début)
+    event.add("dtend", q.fin)
+    event.add("dtstamp", q.fin)
+    cal.add_component(event)
+
+cal.add_component(event)
+
+import os
+
+path = os.path.join(os.getcwd(), "example.ics")
+f = open(path, "wb")
+f.write(cal.to_ical())
+f.close()
+
+print(path)
