@@ -77,7 +77,9 @@ class Bénévole:
 
     tous: Dict[str, Bénévole] = {}
 
-    def __init__(self, surnom, prénom, nom, heures_théoriques):
+    def __init__(
+        self, surnom, prénom, nom, heures_théoriques, indisponibilités, pref_horaires
+    ):
         self.surnom: str = surnom if surnom else prénom
         self.prénom: str = prénom
         self.nom: str = nom
@@ -85,6 +87,9 @@ class Bénévole:
         self.score_types_de_quêtes: Dict[Type_de_quête, int] = {}
         self.binômes_interdits: List[Bénévole] = []
         self.lieux_interdits: List[Lieu] = []
+        self.indisponibilités: List[time] = indisponibilités
+        self.pref_horaires: Dict[time, int] = pref_horaires
+
         try:
             print(Bénévole.tous[self.surnom])
             print(
@@ -118,6 +123,22 @@ class Bénévole:
                 print(q, n)
 
 
+def update_pref_horaire(heure_début, data, prefs, indisponibilités):
+    heure_fin = heure_début + 1
+    if heure_début == 23:
+        heure_fin = 0
+    pref = data[f"{heure_début:0=2d}H{heure_fin:0=2d}H"]
+    val = 0
+    if pref == "indisponible":
+        indisponibilités.append(time(hour=heure_début))
+        return
+    if pref.startswith("Dispo sous"):
+        val = -1
+    if pref.startswith("Dispo et horaire"):
+        val = 1
+    prefs[time(hour=heure_début)] = val
+
+
 """ Importation des données """
 csv_lieux = sys.argv[1]  # That's not very flexible...
 csv_types_de_quête = sys.argv[2]
@@ -145,11 +166,18 @@ with open(csv_bénévoles, newline="", encoding=encoding) as csvfile:
     reader = csv.DictReader(csvfile, dialect=dialect)
     for row in reader:
         if row["Prénom"]:
+            indisponibilités = []
+            pref_horaires = {}
+            update_pref_horaire(0, row, pref_horaires, indisponibilités)
+            for i in range(9, 23 + 1):
+                update_pref_horaire(i, row, pref_horaires, indisponibilités)
             Bénévole(
                 row["Name"],
                 row["Prénom"],
                 row["Full Name"],
                 int(row["heures théoriques par jour"]),
+                indisponibilités,
+                pref_horaires,
             )
 
 
@@ -249,6 +277,15 @@ for b in bénévoles:
         model.add_at_most_one(
             assignations[(b, q_en_même_temps)] for q_en_même_temps in q.en_même_temps()
         )
+
+""" Certains bénévoles sont indisponibles à certains horaires """
+for b in bénévoles:
+    for q in quêtes:
+        indispo = False
+        for début_indispo in b.indisponibilités:
+            fin_indispo = time((début_indispo.hour + 1) % 24)
+            if not (fin_indispo <= q.début.time() or début_indispo >= q.fin.time()):
+                model.add(assignations[(b, q)] == 0)
 
 """ Les lieux interdits sont interdits """
 for b in bénévoles:
@@ -415,6 +452,7 @@ print(f"- wall time: {solver.wall_time}s")
   - [ ] Une pause de 4-5 heures consécutive chaque jour
   - [ ] Des activités différentes chaque jour ?
   - [ ] Des horaires différents chaque jour ?
+  - [x] Les horaires indispo
   - [ ] Les horaires de prédilection
   - [ ] Equilibrer les déficits ou les excès
   - [ ] Pause de 15 minutes entre deux missions qui ne sont pas dans le même lieu
