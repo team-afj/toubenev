@@ -237,42 +237,31 @@ model = cp_model.CpModel()
 assignations: Dict[(Bénévole, Quête, int), cp_model.BoolVarT] = {}
 for b in bénévoles:
     for q in quêtes:
-        for n in range(q.nombre_bénévoles):
-            assignations[(b, q, n)] = model.new_bool_var(f"shift_b{b}_q{q}_n{n}")
+        assignations[(b, q)] = model.new_bool_var(f"shift_b{b}_q{q}")
 
 """ Tous les slots de toutes les quêtes doivent être peuplés """
 for q in quêtes:
-    for n in range(0, q.nombre_bénévoles):
-        model.add_exactly_one(assignations[(b, q, n)] for b in bénévoles)
+    model.add(sum(assignations[(b, q)] for b in bénévoles) == q.nombre_bénévoles)
 
 """ Un même bénévole ne peut pas remplir plusieurs quêtes en même temps """
 for b in bénévoles:
     for q in quêtes:
         model.add_at_most_one(
-            assignations[(b, q_en_même_temps, n)]
-            for q_en_même_temps in q.en_même_temps()
-            for n in range(q_en_même_temps.nombre_bénévoles)
+            assignations[(b, q_en_même_temps)] for q_en_même_temps in q.en_même_temps()
         )
 
 """ Les lieux interdits sont interdits """
 for b in bénévoles:
     for lieu in b.lieux_interdits:
         for q in quêtes_dun_lieu(lieu):
-            for n in range(q.nombre_bénévoles):
-                model.add(assignations[(b, q, n)] == 0)
+            model.add(assignations[(b, q)] == 0)
 
 
 """ Ils se détestent, séparez-les ! """
 for b in bénévoles:
     for e in b.binômes_interdits:
         for q in quêtes:
-            for n1 in range(q.nombre_bénévoles):
-                for n2 in range(q.nombre_bénévoles):
-                    if n1 != n2:
-                        model.add_implication(
-                            assignations[(b, q, n1)],
-                            assignations[(e, q, n2)].Not(),
-                        )
+            model.add_max_equality(assignations[(b, q)] + assignations[(e, q)], 1)
 
 
 """ Calcul de la qualité d'une réponse """
@@ -280,11 +269,7 @@ for b in bénévoles:
 
 # Temps de travail d'un bénévole sur un ensemble de quêtes
 def temps_bev(b, quêtes):
-    return sum(
-        q.durée_minutes() * assignations[(b, q, n)]
-        for q in quêtes
-        for n in range(q.nombre_bénévoles)
-    )
+    return sum(q.durée_minutes() * assignations[(b, q)] for q in quêtes)
 
 
 # Temps de travail, par jour, d'un bénévole
@@ -339,13 +324,12 @@ class VarArraySolutionPrinter(cp_model.CpSolverSolutionCallback):
         print(f"Solution {self._solution_count}")
         for q in quêtes:
             result = ""
-            for n in range(q.nombre_bénévoles):
-                for b in bénévoles:
-                    if self.value(self._assignations[(b, q, n)]) == 1:
-                        if result == "":
-                            result = f"{b}"
-                        else:
-                            result = f"{result}, {b}"
+            for b in bénévoles:
+                if self.value(self._assignations[(b, q)]) == 1:
+                    if result == "":
+                        result = f"{b}"
+                    else:
+                        result = f"{result}, {b}"
             print(f"Quête {q}: {result}")
         print()
 
@@ -371,13 +355,12 @@ if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
         print("Non-optimal solution:")
     for q in quêtes:
         result = ""
-        for n in range(q.nombre_bénévoles):
-            for b in bénévoles:
-                if solver.value(assignations[(b, q, n)]) == 1:
-                    if result == "":
-                        result = f"{b}"
-                    else:
-                        result = f"{result}, {b}"
+        for b in bénévoles:
+            if solver.value(assignations[(b, q)]) == 1:
+                if result == "":
+                    result = f"{b}"
+                else:
+                    result = f"{result}, {b}"
         print(f"Quête {q}: {result}")
     max_diff = 0
     max_diff_abs = 0
