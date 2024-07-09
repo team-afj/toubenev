@@ -1,7 +1,7 @@
 from __future__ import annotations  # allows class type usage in class decl
 from typing import List, Dict
 from datetime import date, time, datetime, timedelta
-
+import string
 
 """ Sales types """
 
@@ -9,29 +9,47 @@ from datetime import date, time, datetime, timedelta
 class Lieu:
     tous: Dict[str, Lieu] = {}
 
-    def __init__(self, nom):
+    def __init__(self, id, nom):
+        self.id: str = id
         self.nom = nom
-        Lieu.tous[self.nom] = self
+        Lieu.tous[self.id] = self
+
+    def __cmp__(self, lautre):
+        return (self.id > lautre.id) - (self.id < lautre.id)
+
+    def __eq__(self, lautre):
+        return self.__cmp__(lautre) == 0
 
 
 class Type_de_quête:
     tous: Dict[str, Type_de_quête] = {}
 
-    def __init__(self, nom, sécable):
+    def __init__(self, id, nom, sécable):
+        self.id: str = id
         self.nom = nom
         self.sécable: bool = sécable
-        Type_de_quête.tous[self.nom] = self
+        Type_de_quête.tous[self.id] = self
+
+    def __cmp__(self, lautre):
+        return (self.id > lautre.id) - (self.id < lautre.id)
+
+    def __eq__(self, lautre):
+        return self.__cmp__(lautre) == 0
 
 
 class Quête:
     toutes: List[Quête] = []
     par_jour: Dict[date, List[Quête]] = {}
 
-    def __init__(self, nom, type, lieu, nombre_bénévoles, début, fin):
+    def __init__(
+        self, id, nom, types, lieu, nombre_bénévoles, début, fin, bénévoles=[]
+    ):
+        self.id: str = id
         self.nom: str = nom
-        self.type: str = type
+        self.types: List[Type_de_quête] = types
         self.lieu: Lieu = lieu
         self.nombre_bénévoles: int = nombre_bénévoles
+        self.bénévoles: List[Bénévole] = bénévoles
         self.début: datetime = début
         self.fin: datetime = fin
         Quête.toutes.append(self)
@@ -71,32 +89,34 @@ class Bénévole:
     tous: Dict[str, Bénévole] = {}
 
     def __init__(
-        self, surnom, prénom, nom, heures_théoriques, indisponibilités, pref_horaires
+        self,
+        id,
+        surnom,
+        prénom,
+        nom,
+        heures_théoriques,
+        indisponibilités,
+        pref_horaires,
+        sérénité,
     ):
+        self.id: str = id
         self.surnom: str = surnom if surnom else prénom
         self.prénom: str = prénom
         self.nom: str = nom
+        self.sérénité: bool = sérénité
         self.heures_théoriques: int = heures_théoriques
         self.score_types_de_quêtes: Dict[Type_de_quête, int] = {}
         self.binômes_interdits: List[Bénévole] = []
         self.lieux_interdits: List[Lieu] = []
         self.indisponibilités: List[time] = indisponibilités
         self.pref_horaires: Dict[time, int] = pref_horaires
-
-        try:
-            print(Bénévole.tous[self.surnom])
-            print(
-                "Le nom (ou le surnom) des bénévoles doit être unique. Deux bénévoles on le nom",
-                self.surnom,
-            )
-        except KeyError:
-            Bénévole.tous[self.surnom] = self
+        Bénévole.tous[self.id] = self
 
     def __hash__(self):
-        return hash(self.surnom)
+        return hash(self.id)
 
     def __cmp__(self, lautre):
-        return str.__cmp__(self.surnom, lautre.surnom)
+        return (self.id > lautre.id) - (self.id < lautre.id)
 
     def __eq__(self, lautre):
         return self.__cmp__(lautre) == 0
@@ -105,7 +125,7 @@ class Bénévole:
         return f"{self.surnom}"
 
     def equal(self, lautre):
-        self.surnom == lautre.surnom
+        self.id == lautre.id
 
     # def appréciation_dune_quête(self, quête):
     #     return self.score_types_de_quêtes.get(quête.type, 0)
