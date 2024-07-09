@@ -1,21 +1,24 @@
 from __future__ import annotations  # allows class type usage in class decl
 from typing import List, Dict
 from datetime import date, time, datetime, timedelta
+from operator import contains
 from ortools.sat.python import cp_model
 from data_model import Bénévole, Lieu, Type_de_quête, Quête
 
-import import_csv
+# import import_csv
+from import_json import from_file
+
+from_file("data/db.json")
 
 quêtes = Quête.toutes
 bénévoles = Bénévole.tous.values()
-
-for b in bénévoles:
-    print(b, b.heures_théoriques)
 
 
 def quêtes_dun_lieu(lieu):
     return filter(lambda q: q.lieu == lieu, quêtes)
 
+
+id_quête_sérénité = "784fc134-cab5-4797-8be2-7a7a91e57795"
 
 """Préparation du modèle et des contraintes"""
 
@@ -38,12 +41,27 @@ for b in bénévoles:
             assignations[(b, q_en_même_temps)] for q_en_même_temps in q.en_même_temps()
         )
 
+""" Certaines quêtes sont déjà assignées """
+for q in quêtes:
+    for b in q.bénévoles:
+        model.add(assignations[(b, q)] == 1)
+
+
 """ Certains bénévoles sont indisponibles à certains horaires """
 for b in bénévoles:
     for q in quêtes:
-        for début_indispo in b.indisponibilités:
-            fin_indispo = time((début_indispo.hour + 1) % 24)
-            if not (fin_indispo <= q.début.time() or début_indispo >= q.fin.time()):
+        # On vérifie que ce n'est pas une quête forcée:
+        if not (contains(q.bénévoles, b)):
+            for début_indispo in b.indisponibilités:
+                fin_indispo = time((début_indispo.hour + 1) % 24)
+                if not (fin_indispo <= q.début.time() or début_indispo >= q.fin.time()):
+                    model.add(assignations[(b, q)] == 0)
+
+""" Tout le monde ne peut pas assumer les quêtes sérénité """
+for b in bénévoles:
+    if not (b.sérénité):
+        for q in quêtes:
+            if contains(q.types, Type_de_quête.tous[id_quête_sérénité]):
                 model.add(assignations[(b, q)] == 0)
 
 """ Les lieux interdits sont interdits """
@@ -162,7 +180,7 @@ if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
     max_diff_abs = 0
     for b in bénévoles:
         minutes = solver.value(sum(temps_total_bénévole(b).values()))
-        diff = solver.value(max(diff_temps(b).values()))
+        diff = solver.value(sum(diff_temps(b).values()))
         if abs(diff) > max_diff_abs:
             max_diff = diff
             max_diff_abs = abs(diff)
@@ -211,6 +229,7 @@ print(f"- wall time: {solver.wall_time}s")
   - [ ] Une pause de 4-5 heures consécutive chaque jour
   - [ ] Des activités différentes chaque jour ?
   - [ ] Des horaires différents chaque jour ?
+  - [x] La sérénité
   - [x] Les horaires indispo
   - [ ] Les horaires de prédilection
   - [ ] Equilibrer les déficits ou les excès
