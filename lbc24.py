@@ -80,6 +80,8 @@ for b in bénévoles:
 
 """ Calcul de la qualité d'une réponse """
 
+""" Contrôle du temps de travail """
+
 
 # Temps de travail d'un bénévole sur un ensemble de quêtes
 def temps_bev(b, quêtes):
@@ -119,7 +121,36 @@ for b in bénévoles:
 # max_diff = model.NewIntVar(0, 100000, f"max_diff")
 # model.AddMaxEquality(max_diff, diffs.values())
 # écart type ?
-model.minimize(sum(diffs[b] for b in bénévoles))
+
+""" Pondération des préférences des bénévoles """
+
+
+def appréciation_dune_quête(bénévole: Bénévole, quête: Quête):
+    # On découpe la quête par blocs de 15 minutes
+    acc = quête.début
+    somme_prefs = 0
+    while acc < quête.fin:
+        time = acc.time()
+        pref = 0
+        for t, p in bénévole.pref_horaires.items():
+            if time.hour >= t.hour and time.hour <= (t.hour + 1):
+                pref = p * 2
+                break
+        acc = min(acc + timedelta(minutes=15), quête.fin)
+        somme_prefs += pref
+    return somme_prefs
+
+
+def appréciation_du_planning(bénévole: Bénévole, quêtes: List[Quête]):
+    return sum(
+        assignations[(bénévole, q)] * (appréciation_dune_quête(bénévole, q))
+        for q in quêtes
+    )
+
+
+""" Formule finale """
+
+model.minimize(sum(diffs[b] + appréciation_du_planning(b, quêtes) for b in bénévoles))
 
 
 """ Solution printer """
