@@ -1,8 +1,7 @@
 #!/bin/sh
 
-cd planning_bras_croises_v0/data && \
-python ../../lbc24.py \
-Lieux*.csv \
-Type*.csv \
-Bénévoles*.csv \
-Quetes*.csv
+python lbc24.py \
+planning_bras_croises_v0/data/Lieux*.csv \
+planning_bras_croises_v0/data/Type*.csv \
+planning_bras_croises_v0/data/Bénévoles*.csv \
+planning_bras_croises_v0/data/Quetes*.csv
