@@ -299,7 +299,10 @@ for q in quêtes:
                 result = f"{result}, {b} {smile}"
     event = Event()
     event.add("summary", f"{result}: {q.nom}")
-    event.add("description", f"Lieu: {q.lieu.nom}")
+    lieu = "partout"
+    if q.lieu:
+        lieu = q.lieu.nom
+    event.add("description", f"Lieu: {lieu}")
     event.add("dtstart", q.début)
     event.add("dtend", q.fin)
     event.add("dtstamp", q.fin)

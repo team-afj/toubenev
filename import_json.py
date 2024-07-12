@@ -88,7 +88,10 @@ def load_quêtes(obj):
         id = p["id"]
         name = props["Name"]["title"][0]["plain_text"]
         needed = props["Needed"]["number"]
-        place = Lieu.tous[props["Place"]["relation"][0]["id"]]
+        places = props["Place"]["relation"]
+        place = None
+        if len(places) > 0:
+            place = Lieu.tous[places[0]["id"]]
         types_de_quête = list(
             map(
                 lambda tdq: Type_de_quête.tous[tdq["id"]],

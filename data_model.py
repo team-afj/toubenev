@@ -1,5 +1,5 @@
 from __future__ import annotations  # allows class type usage in class decl
-from typing import List, Dict
+from typing import List, Dict, Optional
 from datetime import date, time, datetime, timedelta
 import string
 
@@ -47,7 +47,7 @@ class Quête:
         self.id: str = id
         self.nom: str = nom
         self.types: List[Type_de_quête] = types
-        self.lieu: Lieu = lieu
+        self.lieu: Optional[Lieu] = lieu
         self.nombre_bénévoles: int = nombre_bénévoles
         self.bénévoles: List[Bénévole] = bénévoles
         self.début: datetime = début
@@ -57,7 +57,7 @@ class Quête:
         date_début = self.début.date()
         if self.début.time() < time(4):
             # Day starts at 4 am
-            date_début = date_début - timedelta(1)
+            date_début = date_début - timedelta(days=1)
 
         quêtes_du_jour: List[Quête] = Quête.par_jour.get(date_début, [])
         if quêtes_du_jour == []:
