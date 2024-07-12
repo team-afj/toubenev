@@ -131,13 +131,11 @@ def appréciation_dune_quête(bénévole: Bénévole, quête: Quête):
     somme_prefs = 0
     while acc < quête.fin:
         time = acc.time()
-        pref = 0
-        for t, p in bénévole.pref_horaires.items():
-            if time.hour >= t.hour and time.hour <= (t.hour + 1):
-                pref = p * 2
+        for pref_t, p in bénévole.pref_horaires.items():
+            if time.hour == pref_t.hour:
+                somme_prefs += p * 2
                 break
         acc = min(acc + timedelta(minutes=15), quête.fin)
-        somme_prefs += pref
     return somme_prefs
 
 
@@ -150,10 +148,21 @@ def appréciation_du_planning(bénévole: Bénévole, quêtes: List[Quête]):
 
 """ Formule finale """
 
-model.minimize(sum(diffs[b] + appréciation_du_planning(b, quêtes) for b in bénévoles))
+model.minimize(sum(diffs[b] - appréciation_du_planning(b, quêtes) for b in bénévoles))
 
 
 """ Solution printer """
+
+
+def smile_of_appréciation(app):
+    smile = "🙂"
+    if app >= 2:
+        smile = "😃"
+    if app < 0:
+        smile = "😥"
+    if app < -5:
+        smile = "😭"
+    return smile
 
 
 class VarArraySolutionPrinter(cp_model.CpSolverSolutionCallback):
@@ -171,10 +180,12 @@ class VarArraySolutionPrinter(cp_model.CpSolverSolutionCallback):
             result = ""
             for b in bénévoles:
                 if self.value(self._assignations[(b, q)]) == 1:
+                    app = appréciation_dune_quête(b, q)
+                    smile = smile_of_appréciation(app)
                     if result == "":
-                        result = f"{b}"
+                        result = f"{b} {smile}"
                     else:
-                        result = f"{result}, {b}"
+                        result = f"{result}, {b} {smile}"
             print(f"Quête {q}: {result}")
         print()
 
@@ -202,10 +213,11 @@ if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
         result = ""
         for b in bénévoles:
             if solver.value(assignations[(b, q)]) == 1:
+                app = appréciation_dune_quête(b, q)
                 if result == "":
-                    result = f"{b}"
+                    result = f"{b} ({app})"
                 else:
-                    result = f"{result}, {b}"
+                    result = f"{result}, {b} ({app})"
         print(f"Quête {q}: {result}")
     max_diff = 0
     max_diff_abs = 0
@@ -262,7 +274,7 @@ print(f"- wall time: {solver.wall_time}s")
   - [ ] Des horaires différents chaque jour ?
   - [x] La sérénité
   - [x] Les horaires indispo
-  - [ ] Les horaires de prédilection
+  - [x] Les horaires de prédilection
   - [ ] Equilibrer les déficits ou les excès
   - [ ] Pause de 15 minutes entre deux missions qui ne sont pas dans le même lieu
   - [ ] Sur les scènes, on veut que les tâches consécutives soit si possible faites par les mêmes personnes
@@ -279,10 +291,12 @@ for q in quêtes:
     result = ""
     for b in bénévoles:
         if solver.value(assignations[(b, q)]) == 1:
+            app = appréciation_dune_quête(b, q)
+            smile = smile_of_appréciation(app)
             if result == "":
-                result = f"{b}"
+                result = f"{b} {smile}"
             else:
-                result = f"{result}, {b}"
+                result = f"{result}, {b} {smile}"
     event = Event()
     event.add("summary", f"{result}: {q.nom}")
     event.add("description", f"Lieu: {q.lieu.nom}")
