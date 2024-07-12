@@ -68,6 +68,9 @@ class Quête:
     def __str__(self) -> str:
         return f"{self.nom}, {self.début.strftime('%a %H:%M')} -> {self.fin.strftime('%H:%M')}"
 
+    def __lt__(self, other):
+        return self.début < other.début
+
     def durée_minutes(self) -> int:
         return int((self.fin - self.début).total_seconds() / 60)
 

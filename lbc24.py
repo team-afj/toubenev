@@ -10,7 +10,7 @@ from import_json import from_file
 
 from_file("data/db.json")
 
-quêtes = Quête.toutes
+quêtes = sorted(Quête.toutes)
 bénévoles = Bénévole.tous.values()
 
 
@@ -77,6 +77,36 @@ for b in bénévoles:
         for q in quêtes:
             model.add_max_equality(assignations[(b, q)] + assignations[(e, q)], 1)
 
+""" Chacun a un trou dans son emploi du temps """
+durée_pause = 5 * 60  # 5h en minutes
+
+
+def time_to_minutes(t: time):
+    return t.hour * 60 + t.minute
+
+
+def diff_minutes(t1: time, t2: time):
+    return time_to_minutes(t2) - time_to_minutes(t1)
+
+
+def max_pause(b: Bénévole):
+    for date, quêtes in Quête.par_jour.items():
+        quêtes = sorted(quêtes)
+        max_pause = 0
+        last_quête_end = 9 * 60  # 9h
+        for q in quêtes:
+            diff = time_to_minutes(q.début.time()) - last_quête_end
+            pause = diff * assignations[(b, q)]
+            last_quête_end = max(
+                last_quête_end, time_to_minutes(q.fin.time()) * assignations[(b, q)]
+            )
+            max_pause = max(max_pause, pause)
+        model.add_linear_constraint(max_pause >= durée_pause)
+
+
+model.add
+for b in bénévoles:
+    max_pause(b)
 
 """ Calcul de la qualité d'une réponse """
 
