@@ -89,24 +89,36 @@ def diff_minutes(t1: time, t2: time):
     return time_to_minutes(t2) - time_to_minutes(t1)
 
 
-def max_pause(b: Bénévole):
+def min_pause(b: Bénévole, durée_pause):
+    # Todo: we use a lot of additionnal variable and calls to max which can be very bed for performances
+    # THere might be a better way
     for date, quêtes in Quête.par_jour.items():
         quêtes = sorted(quêtes)
         max_pause = 0
         last_quête_end = 9 * 60  # 9h
         for q in quêtes:
+            
+            last_quête_end_var = model.new_int_var(0, 24*60, f"last_quete_end_{b}_{q.nom}")
+
+            # If assigned, update last_quest_end time 
+            model.add(last_quête_end_var == time_to_minutes(q.fin.time())).only_enforce_if(assignations[(b, q)])
+            model.add(last_quête_end_var == last_quête_end).only_enforce_if(assignations[(b, q)].Not())
+            last_quête_end = last_quête_end_var
+
+            max_pause_var = model.new_int_var(0, 24*60, f"max_pause_{b}_{q.nom}")
+
+            # Time elapsed since last quest end
             diff = time_to_minutes(q.début.time()) - last_quête_end
-            pause = diff * assignations[(b, q)]
-            last_quête_end = max(
-                last_quête_end, time_to_minutes(q.fin.time()) * assignations[(b, q)]
-            )
-            max_pause = max(max_pause, pause)
-        model.add_linear_constraint(max_pause >= durée_pause)
+            model.add_max_equality(max_pause_var, [max_pause, diff])
+            max_pause = max_pause_var
+
+        model.add(max_pause >= durée_pause)
 
 
-model.add
+durée_pause = 5 * 60  # 5h en minutes
 for b in bénévoles:
-    max_pause(b)
+    min_pause(b,durée_pause)
+
 
 """ Calcul de la qualité d'une réponse """
 
