@@ -75,10 +75,9 @@ for b in bénévoles:
 for b in bénévoles:
     for e in b.binômes_interdits:
         for q in quêtes:
-            model.add_max_equality(assignations[(b, q)] + assignations[(e, q)], 1)
+            model.add(assignations[(b, q)] + assignations[(e, q)] <= 1)
 
 """ Chacun a un trou dans son emploi du temps """
-durée_pause = 5 * 60  # 5h en minutes
 
 
 def time_to_minutes(t: time):
