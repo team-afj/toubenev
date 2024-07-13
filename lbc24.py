@@ -89,22 +89,29 @@ def diff_minutes(t1: time, t2: time):
 
 
 def min_pause(b: Bénévole, durée_pause):
-    # Todo: we use a lot of additionnal variable and calls to max which can be very bed for performances
-    # THere might be a better way
+    # Todo: we use a lot of additionnal variable and calls to max which can be
+    # very bed for performances There might be a better way. Maybe trying to fit
+    # an large enough interval that doesn't overlaps with any quest ?
     for date, quêtes in Quête.par_jour.items():
         quêtes = sorted(quêtes)
         max_pause = 0
         last_quête_end = 9 * 60  # 9h
         for q in quêtes:
-            
-            last_quête_end_var = model.new_int_var(0, 24*60, f"last_quete_end_{b}_{q.nom}")
 
-            # If assigned, update last_quest_end time 
-            model.add(last_quête_end_var == time_to_minutes(q.fin.time())).only_enforce_if(assignations[(b, q)])
-            model.add(last_quête_end_var == last_quête_end).only_enforce_if(assignations[(b, q)].Not())
+            last_quête_end_var = model.new_int_var(
+                0, 24 * 60, f"last_quete_end_{b}_{q.nom}"
+            )
+
+            # If assigned, update last_quest_end time
+            model.add(
+                last_quête_end_var == time_to_minutes(q.fin.time())
+            ).only_enforce_if(assignations[(b, q)])
+            model.add(last_quête_end_var == last_quête_end).only_enforce_if(
+                assignations[(b, q)].Not()
+            )
             last_quête_end = last_quête_end_var
 
-            max_pause_var = model.new_int_var(0, 24*60, f"max_pause_{b}_{q.nom}")
+            max_pause_var = model.new_int_var(0, 24 * 60, f"max_pause_{b}_{q.nom}")
 
             # Time elapsed since last quest end
             diff = time_to_minutes(q.début.time()) - last_quête_end
@@ -116,7 +123,7 @@ def min_pause(b: Bénévole, durée_pause):
 
 durée_pause = 5 * 60  # 5h en minutes
 for b in bénévoles:
-    min_pause(b,durée_pause)
+    min_pause(b, durée_pause)
 
 
 """ Calcul de la qualité d'une réponse """
