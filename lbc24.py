@@ -96,6 +96,7 @@ def min_pause(b: Bénévole, durée_pause):
         quêtes = sorted(quêtes)
         max_pause = 0
         last_quête_end = 9 * 60  # 9h
+        # Todo, we should also count the last quest of the day
         for q in quêtes:
 
             last_quête_end_var = model.new_int_var(
