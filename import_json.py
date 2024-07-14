@@ -57,9 +57,9 @@ def load_bénévoles(obj):
         # print(props["Name"]["title"][0]["plain_text"], pref_horaires)
         b = Bénévole(
             id,
-            props["Name"]["title"][0]["plain_text"],
+            props["Pseudo"]["title"][0]["plain_text"],
             props["Pr\u00e9nom"]["rich_text"][0]["plain_text"],
-            props["Full Name"]["rich_text"][0]["plain_text"],
+            props["Nom"]["rich_text"][0]["plain_text"],
             int(props["heures th\u00e9oriques par jour"]["number"]),
             indisponibilités,
             pref_horaires,
@@ -101,7 +101,7 @@ def load_quêtes(obj):
         début = datetime.fromisoformat(props["Horaire"]["date"]["start"])
         fin = datetime.fromisoformat(props["Horaire"]["date"]["end"])
         bénévoles = list(
-            map(lambda b: Bénévole.tous[b["id"]], props["Volunteers"]["relation"])
+            map(lambda b: Bénévole.tous[b["id"]], props["B\u00e9n\u00e9voles v\u00e9rouill\u00e9s"]["relation"])
         )
         if all(t.sécable for t in types_de_quête):
             fin_acc = début
