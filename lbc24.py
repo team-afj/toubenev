@@ -315,6 +315,18 @@ print(f"- branches : {solver.num_branches}")
 print(f"- wall time: {solver.wall_time}s")
 
 
+result: Dict[Quête, List[Bénévole]] = {}
+for q in quêtes:
+    participants = []
+    for b in bénévoles:
+        if solver.value(assignations[(b, q)]):
+            participants.append(b)
+    result[q] = participants
+
+from export_json import write_json
+
+write_json(result)
+
 """
   Autres contraintes:
   - [x] Respect temps horaire quotidien
