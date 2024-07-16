@@ -88,43 +88,49 @@ def diff_minutes(t1: time, t2: time):
     return time_to_minutes(t2) - time_to_minutes(t1)
 
 
-def min_pause(b: Bénévole, durée_pause):
-    # Todo: we use a lot of additionnal variable and calls to max which can be
-    # very bed for performances There might be a better way. Maybe trying to fit
-    # an large enough interval that doesn't overlaps with any quest ?
+début_période_pause = 9 * 60
+fin_période_pause = 23 * 60
+durée_pause_min = 5 * 60  # 5h en minutes
+
+
+def c_est_la_pause(b: Bénévole):
     for date, quêtes in Quête.par_jour.items():
-        quêtes = sorted(quêtes)
-        max_pause = 0
-        last_quête_end = 9 * 60  # 9h
-        # Todo, we should also count the last quest of the day
+        début_pause = model.new_int_var(
+            début_période_pause,
+            fin_période_pause - durée_pause_min,
+            f"début_pause_{b}_{date}",
+        )
+        fin_pause = model.new_int_var(
+            début_période_pause + durée_pause_min,
+            fin_période_pause,
+            f"fin_pause_{b}_{date}",
+        )
+        size = model.new_int_var(durée_pause_min, 24 * 60, f"size_pause_{b}_{date}")
+        interval_pause = model.new_interval_var(
+            début_pause,
+            size,
+            fin_pause,
+            f"interval_pause_{b}_{date}",
+        )
+        # La pause est suffisamment longue:
+        model.add(size >= durée_pause_min)
+        # Le bénévole n'a aucune quête pendant sa pause:
+        overlaps = [interval_pause]
         for q in quêtes:
-
-            last_quête_end_var = model.new_int_var(
-                0, 24 * 60, f"last_quete_end_{b}_{q.nom}"
-            )
-
-            # If assigned, update last_quest_end time
-            model.add(
-                last_quête_end_var == time_to_minutes(q.fin.time())
-            ).only_enforce_if(assignations[(b, q)])
-            model.add(last_quête_end_var == last_quête_end).only_enforce_if(
-                assignations[(b, q)].Not()
-            )
-            last_quête_end = last_quête_end_var
-
-            max_pause_var = model.new_int_var(0, 24 * 60, f"max_pause_{b}_{q.nom}")
-
-            # Time elapsed since last quest end
-            diff = time_to_minutes(q.début.time()) - last_quête_end
-            model.add_max_equality(max_pause_var, [max_pause, diff])
-            max_pause = max_pause_var
-
-        model.add(max_pause >= durée_pause)
+            # TODO: this is gnééé. Quests that end after midnight are not
+            # handled correctly
+            d: int = time_to_minutes(q.début.time())
+            f: int = min(time_to_minutes(q.fin.time()), fin_période_pause)
+            if f > d:
+                interval_quête = model.new_optional_interval_var(
+                    d, f - d, f, assignations[(b, q)], f"interval_quête_{b}_{q}"
+                )
+                overlaps.append(interval_quête)
+        model.add_no_overlap(overlaps)
 
 
-durée_pause = 5 * 60  # 5h en minutes
 for b in bénévoles:
-    min_pause(b, durée_pause)
+    c_est_la_pause(b)
 
 
 """ Calcul de la qualité d'une réponse """
@@ -246,7 +252,7 @@ class VarArraySolutionPrinter(cp_model.CpSolverSolutionCallback):
 # Enumerate all solutions.
 solver = cp_model.CpSolver()
 solution_printer = VarArraySolutionPrinter(assignations)
-solver.parameters.log_search_progress = False
+solver.parameters.log_search_progress = True
 solver.parameters.num_workers = 16
 
 status = solver.solve(model, solution_printer)
@@ -330,7 +336,7 @@ write_json(result)
 """
   Autres contraintes:
   - [x] Respect temps horaire quotidien
-  - [ ] Une pause de 4-5 heures consécutive chaque jour
+  - [x] Une pause de 4-5 heures consécutive chaque jour
   - [ ] Des activités différentes chaque jour ?
   - [ ] Des horaires différents chaque jour ?
   - [x] La sérénité
