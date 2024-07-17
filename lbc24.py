@@ -2,6 +2,7 @@ from __future__ import annotations  # allows class type usage in class decl
 from typing import List, Dict
 from datetime import date, time, datetime, timedelta
 from operator import contains
+import math
 from ortools.sat.python import cp_model
 from data_model import Bénévole, Lieu, Type_de_quête, Quête
 
@@ -212,10 +213,10 @@ model.minimize(sum(diffs[b] - appréciation_du_planning(b, quêtes) for b in bé
 def smile_of_appréciation(app):
     smile = "🙂"
     if app >= 2:
-        smile = "😃"
+        smile = "🤗"
     if app < 0:
-        smile = "😥"
-    if app < -5:
+        smile = "😰"
+    if app < -10:
         smile = "😭"
     return smile
 
@@ -230,19 +231,24 @@ class VarArraySolutionPrinter(cp_model.CpSolverSolutionCallback):
 
     def on_solution_callback(self) -> None:
         self._solution_count += 1
-        print(f"Solution {self._solution_count}")
+        smiles = {}
         for q in quêtes:
-            result = ""
             for b in bénévoles:
                 if self.value(self._assignations[(b, q)]) == 1:
                     app = appréciation_dune_quête(b, q)
                     smile = smile_of_appréciation(app)
-                    if result == "":
-                        result = f"{b} {smile}"
-                    else:
-                        result = f"{result}, {b} {smile}"
-            print(f"Quête {q}: {result}")
-        print()
+                    smile_count = smiles.get(smile, 0)
+                    smiles[smile] = smile_count + 1
+        total_smiles = sum(smiles.values())
+        smile_kinds = sorted(smiles.keys())
+        # x / total_smile = y / 10
+        smile_line = ""
+        for smile in smile_kinds:
+            n = smiles[smile]
+            n = math.ceil(n * 30 / total_smiles)
+            for _ in range(n):
+                smile_line = f"{smile_line}{smile}"
+        print(f"Solution {self._solution_count}: {smile_line}")
 
     @property
     def solution_count(self) -> int:
@@ -252,7 +258,7 @@ class VarArraySolutionPrinter(cp_model.CpSolverSolutionCallback):
 # Enumerate all solutions.
 solver = cp_model.CpSolver()
 solution_printer = VarArraySolutionPrinter(assignations)
-solver.parameters.log_search_progress = True
+solver.parameters.log_search_progress = False
 solver.parameters.num_workers = 16
 
 status = solver.solve(model, solution_printer)
