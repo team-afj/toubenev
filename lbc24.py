@@ -258,10 +258,13 @@ class VarArraySolutionPrinter(cp_model.CpSolverSolutionCallback):
 # Enumerate all solutions.
 solver = cp_model.CpSolver()
 solution_printer = VarArraySolutionPrinter(assignations)
-solver.parameters.log_search_progress = False
+solver.parameters.log_search_progress = True
 solver.parameters.num_workers = 16
+solver.parameters.log_to_stdout = False
 
-status = solver.solve(model, solution_printer)
+with open("cp_sat_log.txt", "w") as text_file:
+    solver.log_callback = lambda str: text_file.write(f"{str}\n")
+    status = solver.solve(model, solution_printer)
 
 
 # Best solution:
