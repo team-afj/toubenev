@@ -3,6 +3,10 @@ from typing import List, Dict, Optional
 from datetime import date, time, datetime, timedelta
 import string
 
+""" Paramêtres """
+
+temps_inter_quêtes = 15  # minutes
+
 """ Sales types """
 
 
@@ -74,14 +78,20 @@ class Quête:
     def durée_minutes(self) -> int:
         return int((self.fin - self.début).total_seconds() / 60)
 
+    def chevauche(self, q2: Quête):
+        """Les quêtes qui ne n'ont pas lieu dans le même lieu
+        doivent être séparées d'au moins {temps_inter_quêtes}."""
+        q2_début = q2.début
+        q2_fin = q2.fin
+        if self.lieu and q2.lieu and q2.lieu != self.lieu:
+            q2_début = q2_début - timedelta(minutes=temps_inter_quêtes)
+            q2_fin = q2_fin + timedelta(minutes=temps_inter_quêtes)
+        return not (self.fin <= q2_début or self.début >= q2_fin)
+
     def en_même_temps(self) -> filter[Quête]:
         """Return la liste de toutes les quêtes chevauchant celle-ci. Cette liste
         inclue la quête courante."""
-        return filter(
-            lambda q2: (self.début <= q2.début and self.fin > q2.début)
-            or (self.fin >= q2.fin and self.début < q2.fin),
-            Quête.toutes,
-        )
+        return filter(self.chevauche, Quête.toutes)
 
 
 class Bénévole:
