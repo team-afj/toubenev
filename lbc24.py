@@ -270,33 +270,36 @@ if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
         print("Optimal solution:")
     else:
         print("Non-optimal solution:")
-    for q in quêtes:
-        result = ""
+
+    """ Dumb result dump"""
+    with open("results.md", "w") as text_file:
+        for q in quêtes:
+            result = ""
+            for b in bénévoles:
+                if solver.value(assignations[(b, q)]) == 1:
+                    app = appréciation_dune_quête(b, q)
+                    if result == "":
+                        result = f"{b} ({app})"
+                    else:
+                        result = f"{result}, {b} ({app})"
+            text_file.write(f"Quête {q}: {result}\n")
+        max_diff = 0
+        max_diff_abs = 0
         for b in bénévoles:
-            if solver.value(assignations[(b, q)]) == 1:
-                app = appréciation_dune_quête(b, q)
-                if result == "":
-                    result = f"{b} ({app})"
-                else:
-                    result = f"{result}, {b} ({app})"
-        print(f"Quête {q}: {result}")
-    max_diff = 0
-    max_diff_abs = 0
-    for b in bénévoles:
-        minutes = solver.value(sum(temps_total_bénévole(b).values()))
-        diff = solver.value(sum(diff_temps(b).values()))
-        if abs(diff) > max_diff_abs:
-            max_diff = diff
-            max_diff_abs = abs(diff)
-        print(
-            f"{b.surnom}: {int(minutes // 60):0=2d}h{int(minutes % 60):0=2d} ({diff/60:.1f})"
-        )
+            minutes = solver.value(sum(temps_total_bénévole(b).values()))
+            diff = solver.value(sum(diff_temps(b).values()))
+            if abs(diff) > max_diff_abs:
+                max_diff = diff
+                max_diff_abs = abs(diff)
+            text_file.write(
+                f"{b.surnom}: {int(minutes // 60):0=2d}h{int(minutes % 60):0=2d} ({diff/60:.1f})\n"
+            )
     print(
         f"Objective value = {solver.objective_value}",
     )
     print(f"Deviation horaire maximale = {max_diff}")
 else:
-    print("No optimal solution found !")
+    print("No solution found !")
 
 
 """ Quelques données sur les quêtes """
@@ -326,7 +329,6 @@ print(f"- conflicts: {solver.num_conflicts}")
 print(f"- branches : {solver.num_branches}")
 print(f"- wall time: {solver.wall_time}s")
 
-
 result: Dict[Quête, List[Bénévole]] = {}
 for q in quêtes:
     participants = []
@@ -354,6 +356,7 @@ write_json(result)
   - [ ] A la fin de la semaine, c'est cool si tout le monde a fait chaque type de quêtes
 """
 
+""" ICAL export """
 from icalendar import Calendar, Event
 
 cal = Calendar()
