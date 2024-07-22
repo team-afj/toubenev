@@ -267,10 +267,33 @@ def appréciation_du_planning(bénévole: Bénévole, quêtes: List[Quête]):
     )
 
 
+""" Distance entre la première et la dernière quête """
+
+
+def amplitude_horaire(b: Bénévole, quêtes: List[Quête]):
+    début = model.new_int_var(0, 60 * 24, f"début_journée_{b}")
+    fin = model.new_int_var(0, 60 * 24, f"fin_journée_{b}")
+    model.add_min_equality(
+        début, map(lambda q: intervalles[(b, q)].start_expr(), quêtes)
+    )
+    model.add_max_equality(fin, map(lambda q: intervalles[(b, q)].end_expr(), quêtes))
+    return fin - début
+
+
+def amplitudes(b: Bénévole):
+    return sum(
+        amplitude_horaire(b, quêtes) - (b.heures_théoriques * 60)
+        for quêtes in Quête.par_jour.values()
+    )
+
+
 """ Formule finale """
 
 model.minimize(
-    sum(2 * diffs[b] - appréciation_du_planning(b, quêtes) for b in bénévoles)
+    sum(
+        2 * diffs[b] - appréciation_du_planning(b, quêtes) + 2 * amplitudes(b)
+        for b in bénévoles
+    )
 )
 
 
