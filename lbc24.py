@@ -215,11 +215,12 @@ def diff_temps(b):
 
 
 def squared(id, value):
-    var = model.NewIntVar(0, 100000, f"v_squared_{id}")
-    diff = model.NewIntVar(-100000, 100000, f"v_{id}")
+    var = model.NewIntVar(0, 12 * 60, f"v_squared_{id}")
+    diff = model.NewIntVar(-12 * 60, 12 * 60, f"v_{id}")
     model.Add(diff == value)
-    model.AddMultiplicationEquality(var, [diff, diff])
-    # model.AddAbsEquality(var, diff)
+    # Multiplication is very expensive
+    # model.AddMultiplicationEquality(var, [diff, diff])
+    model.AddAbsEquality(var, diff)
     return var
 
 
@@ -261,7 +262,9 @@ def appréciation_du_planning(bénévole: Bénévole, quêtes: List[Quête]):
 
 """ Formule finale """
 
-model.minimize(sum(diffs[b] - appréciation_du_planning(b, quêtes) for b in bénévoles))
+model.minimize(
+    sum(2 * diffs[b] - appréciation_du_planning(b, quêtes) for b in bénévoles)
+)
 
 
 """ Solution printer """
