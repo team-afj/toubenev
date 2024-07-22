@@ -417,7 +417,7 @@ write_json(result)
   - [x] La sérénité
   - [x] Les horaires indispo
   - [x] Les horaires de prédilection
-  - [ ] Equilibrer les déficits ou les excès
+  - [ ] Équilibrer les déficits ou les excès, notamment de la "satisfaction"
   - [x] Pause de 15 minutes entre deux missions qui ne sont pas dans le même lieu
   - [x] Sur les scènes, on veut que les tâches consécutives soit si possible faites par les mêmes personnes
   - [ ] A la fin de la semaine, c'est cool si tout le monde a fait chaque type de quêtes
