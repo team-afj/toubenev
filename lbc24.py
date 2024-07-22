@@ -21,15 +21,38 @@ def quêtes_dun_lieu(lieu):
 
 id_quête_sérénité = "784fc134-cab5-4797-8be2-7a7a91e57795"
 
+""" Outils """
+
+
+def time_to_minutes(t: time):
+    return t.hour * 60 + t.minute
+
+
+def diff_minutes(t1: time, t2: time):
+    return time_to_minutes(t2) - time_to_minutes(t1)
+
+
 """Préparation du modèle et des contraintes"""
 
 model = cp_model.CpModel()
 
 """ On créé une variable par bénévole pour chaque "slot" de chaque quête."""
-assignations: Dict[(Bénévole, Quête, int), cp_model.BoolVarT] = {}
+assignations: Dict[(Bénévole, Quête), cp_model.BoolVarT] = {}
+""" Ainsi qu'un intervalle correspondant aux horaires de la quête en minutes """
+intervalles: Dict[(Bénévole, Quête)] = {}
+
 for b in bénévoles:
     for q in quêtes:
         assignations[(b, q)] = model.new_bool_var(f"shift_b{b}_q{q}")
+        # TODO: this is gnééé. Quests that end after midnight are not
+        # handled correctly
+        d: int = time_to_minutes(q.début.time())
+        f: int = time_to_minutes(q.fin.time())
+        if f < d:
+            f = 23 * 60 + 59
+        intervalles[(b, q)] = model.new_optional_interval_var(
+            d, f - d, f, assignations[(b, q)], f"interval_quête_{b}_{q}"
+        )
 
 """ Tous les slots de toutes les quêtes doivent être peuplés """
 for q in quêtes:
@@ -138,14 +161,6 @@ for b in bénévoles:
 """ Chacun a un trou dans son emploi du temps """
 
 
-def time_to_minutes(t: time):
-    return t.hour * 60 + t.minute
-
-
-def diff_minutes(t1: time, t2: time):
-    return time_to_minutes(t2) - time_to_minutes(t1)
-
-
 début_période_pause = 9 * 60
 fin_période_pause = 23 * 60
 durée_pause_min = 5 * 60  # 5h en minutes
@@ -175,15 +190,7 @@ def c_est_la_pause(b: Bénévole):
         # Le bénévole n'a aucune quête pendant sa pause:
         overlaps = [interval_pause]
         for q in quêtes:
-            # TODO: this is gnééé. Quests that end after midnight are not
-            # handled correctly
-            d: int = time_to_minutes(q.début.time())
-            f: int = min(time_to_minutes(q.fin.time()), fin_période_pause)
-            if f > d:
-                interval_quête = model.new_optional_interval_var(
-                    d, f - d, f, assignations[(b, q)], f"interval_quête_{b}_{q}"
-                )
-                overlaps.append(interval_quête)
+            overlaps.append(intervalles[(b, q)])
         model.add_no_overlap(overlaps)
 
 
