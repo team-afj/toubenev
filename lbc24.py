@@ -35,11 +35,25 @@ for b in bénévoles:
 for q in quêtes:
     model.add(sum(assignations[(b, q)] for b in bénévoles) == q.nombre_bénévoles)
 
+
+def member(l, x):
+    for e in l:
+        if l == x:
+            return True
+    return False
+
+
 """ Un même bénévole ne peut pas remplir plusieurs quêtes en même temps """
 for b in bénévoles:
-    for q in quêtes:
+    quêtes_restantes = quêtes
+    while len(quêtes_restantes) > 0:
+        q = quêtes[0]
+        en_même_temps = q.en_même_temps()
+        quêtes_restantes = list(
+            filter(lambda q: member(en_même_temps, q), quêtes_restantes)
+        )
         model.add_at_most_one(
-            assignations[(b, q_en_même_temps)] for q_en_même_temps in q.en_même_temps()
+            assignations[(b, q_en_même_temps)] for q_en_même_temps in en_même_temps
         )
 
 """ Certaines quêtes sont déjà assignées """
