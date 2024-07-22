@@ -4,7 +4,7 @@ from datetime import date, time, datetime, timedelta
 from operator import contains
 import math
 from ortools.sat.python import cp_model
-from data_model import Bénévole, Lieu, Type_de_quête, Quête
+from data_model import Bénévole, Type_de_quête, Quête
 
 # import import_csv
 from import_json import from_file
@@ -388,6 +388,10 @@ print("\nStatistics")
 print(f"- conflicts: {solver.num_conflicts}")
 print(f"- branches : {solver.num_branches}")
 print(f"- wall time: {solver.wall_time}s")
+
+
+if status == cp_model.INFEASIBLE:
+    exit()
 
 result: Dict[Quête, List[Bénévole]] = {}
 for q in quêtes:
