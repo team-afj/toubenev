@@ -61,6 +61,49 @@ for q in quêtes:
     for b in q.bénévoles:
         model.add(assignations[(b, q)] == 1)
 
+""" Les tâches consécutives d'une scène sont faites par les mêmes bénévoles """
+
+quêtes_liées_des_spectacles: List[List[Quête]] = []
+for date, quêtes_du_jour in Quête.par_jour.items():
+    quêtes_des_spectacles: Dict[str, List[Quête]] = {}
+    for q in quêtes_du_jour:
+        if q.spectacle:
+            quêtes_du_spectacle = quêtes_des_spectacles.get(q.spectacle.id, [])
+            if quêtes_du_spectacle == []:
+                quêtes_des_spectacles[q.spectacle.id] = [q]
+            else:
+                quêtes_du_spectacle.append(q)
+    for l in quêtes_des_spectacles.values():
+        quêtes_liées_des_spectacles.append(l)
+
+
+def suivi_quêtes_dun_spectacles(quêtes: List[Quête]):
+    min_nb = 99
+    min_quête = None
+    for q in quêtes:
+        if q.nombre_bénévoles < min_nb:
+            min_nb = q.nombre_bénévoles
+            min_quête = q
+
+    # On s'assure que les quêtes groupées ne se chevauchent pas, cela évite des
+    # erreurs incompréhensible:
+    for q in min_quête.en_même_temps():
+        if not (q == min_quête):
+            for q2 in quêtes:
+                if q == q2:
+                    print("Arg, des quêtes groupées se chevauchent:")
+                    print(f"{q2} chevauche {q}")
+                    exit()
+
+    for b in bénévoles:
+        model.add_bool_and(assignations[(b, q)] for q in quêtes).only_enforce_if(
+            assignations[(b, min_quête)]
+        )
+
+
+for quêtes_dun_spectacle in quêtes_liées_des_spectacles:
+    suivi_quêtes_dun_spectacles(quêtes_dun_spectacle)
+
 
 """ Certains bénévoles sont indisponibles à certains horaires """
 for b in bénévoles:
