@@ -10,6 +10,15 @@ temps_inter_quêtes = 15  # minutes
 """ Sales types """
 
 
+class Spectacle:
+    tous: Dict[str, Spectacle] = {}
+
+    def __init__(self, id, nom):
+        self.id: str = id
+        self.nom = nom
+        Spectacle.tous[self.id] = self
+
+
 class Lieu:
     tous: Dict[str, Lieu] = {}
 
@@ -46,12 +55,22 @@ class Quête:
     par_jour: Dict[date, List[Quête]] = {}
 
     def __init__(
-        self, id, nom, types, lieu, nombre_bénévoles, début, fin, bénévoles=[]
+        self,
+        id,
+        nom,
+        types,
+        lieu,
+        spectacle,
+        nombre_bénévoles,
+        début,
+        fin,
+        bénévoles=[],
     ):
         self.id: str = id
         self.nom: str = nom
         self.types: List[Type_de_quête] = types
         self.lieu: Optional[Lieu] = lieu
+        self.spectacle: Optional[Spectacle] = spectacle
         self.nombre_bénévoles: int = nombre_bénévoles
         self.bénévoles: List[Bénévole] = bénévoles
         self.début: datetime = début

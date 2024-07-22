@@ -1,7 +1,15 @@
 import json
 from datetime import date, time, datetime, timedelta
 
-from data_model import Bénévole, Lieu, Type_de_quête, Quête
+from data_model import Bénévole, Spectacle, Lieu, Type_de_quête, Quête
+
+
+def load_spectacles(obj):
+    spectacles = obj["shows"]
+    for s in spectacles["pages"]:
+        id = s["id"]
+        props = s["properties"]
+        Spectacle(id, props["Nom"]["title"][0]["plain_text"])
 
 
 def load_lieux(obj):
@@ -101,31 +109,52 @@ def load_quêtes(obj):
         début = datetime.fromisoformat(props["Horaire"]["date"]["start"])
         fin = datetime.fromisoformat(props["Horaire"]["date"]["end"])
         bénévoles = list(
-            map(lambda b: Bénévole.tous[b["id"]], props["B\u00e9n\u00e9voles v\u00e9rouill\u00e9s"]["relation"])
+            map(
+                lambda b: Bénévole.tous[b["id"]],
+                props["B\u00e9n\u00e9voles v\u00e9rouill\u00e9s"]["relation"],
+            )
         )
+        spectacle = None
+        if len(props["Spectacle"]["relation"]) > 0:
+            spectacle = Spectacle.tous[props["Spectacle"]["relation"][0]["id"]]
+
         if all(t.sécable for t in types_de_quête):
             fin_acc = début
+            i = 0
             while fin_acc < fin:
                 début_acc = fin_acc
                 # fin_acc = min(fin_acc + timedelta(minutes=15), fin)
                 fin_acc = min(fin_acc + timedelta(minutes=120), fin)
+                i = i + 1
                 Quête(
                     id,
-                    name,
+                    f"{name} #{i}",
                     types_de_quête,
                     place,
+                    spectacle,
                     needed,
                     début_acc,
                     fin_acc,
                     bénévoles,
                 )
         else:
-            Quête(id, name, types_de_quête, place, needed, début, fin, bénévoles)
+            Quête(
+                id,
+                name,
+                types_de_quête,
+                place,
+                spectacle,
+                needed,
+                début,
+                fin,
+                bénévoles,
+            )
 
 
 def from_file(src):
     with open(src, "r") as file:
         obj = json.load(file)
+        load_spectacles(obj)
         load_lieux(obj)
         load_types_de_quête(obj)
         load_bénévoles(obj)
