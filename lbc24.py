@@ -39,7 +39,7 @@ model = cp_model.CpModel()
 """ On créé une variable par bénévole pour chaque "slot" de chaque quête."""
 assignations: Dict[(Bénévole, Quête), cp_model.BoolVarT] = {}
 """ Ainsi qu'un intervalle correspondant aux horaires de la quête en minutes """
-intervalles: Dict[(Bénévole, Quête)] = {}
+intervalles: Dict[(Bénévole, Quête), cp_model.IntervalVar] = {}
 
 for b in bénévoles:
     for q in quêtes:
