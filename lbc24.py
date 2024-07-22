@@ -419,7 +419,7 @@ write_json(result)
   - [x] Les horaires de prédilection
   - [ ] Equilibrer les déficits ou les excès
   - [x] Pause de 15 minutes entre deux missions qui ne sont pas dans le même lieu
-  - [ ] Sur les scènes, on veut que les tâches consécutives soit si possible faites par les mêmes personnes
+  - [x] Sur les scènes, on veut que les tâches consécutives soit si possible faites par les mêmes personnes
   - [ ] A la fin de la semaine, c'est cool si tout le monde a fait chaque type de quêtes
 """
 
