@@ -61,7 +61,7 @@ for q in quêtes:
 
 def member(l, x):
     for e in l:
-        if l == x:
+        if e == x:
             return True
     return False
 
@@ -70,10 +70,10 @@ def member(l, x):
 for b in bénévoles:
     quêtes_restantes = quêtes
     while len(quêtes_restantes) > 0:
-        q = quêtes[0]
+        q = quêtes_restantes[0]
         en_même_temps = q.en_même_temps()
         quêtes_restantes = list(
-            filter(lambda q: member(en_même_temps, q), quêtes_restantes)
+            filter(lambda q: not (member(en_même_temps, q)), quêtes_restantes)
         )
         model.add_at_most_one(
             assignations[(b, q_en_même_temps)] for q_en_même_temps in en_même_temps
