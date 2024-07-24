@@ -43,6 +43,9 @@ class Type_de_quête:
         self.sécable: bool = sécable
         Type_de_quête.tous[self.id] = self
 
+    def __hash__(self):
+        return hash(self.id)
+
     def __cmp__(self, lautre):
         return (self.id > lautre.id) - (self.id < lautre.id)
 
