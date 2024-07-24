@@ -198,7 +198,44 @@ for b in bénévoles:
     c_est_la_pause(b)
 
 
+""" Diversité des activités """
+
+quêtes_par_type: Dict[Type_de_quête, List[Quête]] = {}
+for q in quêtes:
+    for t in q.types:
+        quêtes_du_même_type = quêtes_par_type.get(t, [])
+        if quêtes_du_même_type == []:
+            quêtes_par_type[t] = [q]
+        else:
+            quêtes_du_même_type.append(q)
+
+# On pourra peut-être activer plus tard, pour le moment ça n'est pas une
+# contrainte satisfiable:
+
+# for b in bénévoles:
+#     for quêtes_du_même_type in quêtes_par_type.values():
+#         # TODO: check that b a le droit de faire ce type de quêtes!
+#         #       sinon ce sera contradictoire avec les autres contraintes
+#         model.add_at_least_one(assignations[(b, q)] for q in quêtes_du_même_type)
+
 """ Calcul de la qualité d'une réponse """
+
+""" Diversité des activités """
+
+
+diversité_par_bénévole: Dict[Bénévole, cp_model.IntVar] = {}
+
+
+for b in bénévoles:
+    vars: List[cp_model.IntVar] = []
+    for t, quêtes_du_même_type in quêtes_par_type.items():
+        v = model.new_bool_var(f"{b}_fait_{t.nom}")
+        # model.add(v == ((sum(assignations[(b, q)] for q in quêtes_du_même_type))))
+        # model.add_linear_constraint(v, 0, 1)
+        vars.append(v)
+    somme = sum(vars)
+    diversité_par_bénévole[b] = somme
+
 
 """ Contrôle du temps de travail """
 
@@ -291,7 +328,10 @@ def amplitudes(b: Bénévole):
 
 model.minimize(
     sum(
-        2 * diffs[b] - appréciation_du_planning(b, quêtes) + 2 * amplitudes(b)
+        2 * diffs[b]
+        - appréciation_du_planning(b, quêtes)
+        + 2 * amplitudes(b)
+        + 2 * diversité_par_bénévole[b]
         for b in bénévoles
     )
 )
@@ -381,11 +421,12 @@ if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
         for b in bénévoles:
             minutes = solver.value(sum(temps_total_bénévole(b).values()))
             diff = solver.value(sum(diff_temps(b).values()))
+            diversitéb = solver.value(diversité_par_bénévole[b])
             if abs(diff) > max_diff_abs:
                 max_diff = diff
                 max_diff_abs = abs(diff)
             text_file.write(
-                f"{b.surnom}: {int(minutes // 60):0=2d}h{int(minutes % 60):0=2d} ({diff/60:.1f})\n"
+                f"{b.surnom}: {diversitéb} quêtes différentes {int(minutes // 60):0=2d}h{int(minutes % 60):0=2d} ({diff/60:.1f})\n"
             )
     print(
         f"Objective value = {solver.objective_value}",
@@ -450,7 +491,7 @@ write_json(result)
   - [ ] Équilibrer les déficits ou les excès, notamment de la "satisfaction"
   - [x] Pause de 15 minutes entre deux missions qui ne sont pas dans le même lieu
   - [x] Sur les scènes, on veut que les tâches consécutives soit si possible faites par les mêmes personnes
-  - [ ] A la fin de la semaine, c'est cool si tout le monde a fait chaque type de quêtes
+  - [x] A la fin de la semaine, c'est cool si tout le monde a fait chaque type de quêtes
 """
 
 """ ICAL export """
