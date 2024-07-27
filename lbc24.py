@@ -204,20 +204,23 @@ for b in bénévoles:
 
 
 # Temps de travail d'un bénévole sur un ensemble de quêtes
-def temps_bev(b, quêtes):
+def temps_bev(b, quêtes, assignations):
     return sum(q.durée_minutes() * assignations[(b, q)] for q in quêtes)
 
 
 # Temps de travail, par jour, d'un bénévole
-def temps_total_bénévole(b) -> Dict[date, cp_model.IntVar]:
-    return {date: temps_bev(b, quêtes) for date, quêtes in Quête.par_jour.items()}
+def temps_total_bénévole(b, assignations):
+    return {
+        date: temps_bev(b, quêtes, assignations)
+        for date, quêtes in Quête.par_jour.items()
+    }
 
 
 # Différence avec le tdt prévu par jour:
-def diff_temps(b):
+def diff_temps(b, assignations):
     return {
         date: tdt - (b.heures_théoriques * 60)
-        for date, tdt in temps_total_bénévole(b).items()
+        for date, tdt in temps_total_bénévole(b, assignations).items()
     }
 
 
@@ -234,9 +237,26 @@ def squared(id, value):
 # Au carré:
 diffs: Dict[Bénévole, cp_model.IntVar] = {}
 for b in bénévoles:
-    diff_par_jour = diff_temps(b)
+    diff_par_jour = diff_temps(b, assignations)
     diffs[b] = sum(
         squared(f"diff_{date}_béné_{b}", diff) for date, diff in diff_par_jour.items()
+    )
+
+# TODO: we should actually compute the mean déviation and minimize the standard deviation to that mean.
+
+
+def filter_positive(value, name):
+    v = model.new_int_var(0, 6 * 60, name)
+    model.add_max_equality(v, [0, value])
+    return v
+
+
+excès: Dict[Bénévole, cp_model.IntVar] = {}
+for b in bénévoles:
+    diff_par_jour = diff_temps(b, assignations)
+    excès[b] = sum(
+        filter_positive(diff, f"excès_{date}_{b}")
+        for date, diff in diff_par_jour.items()
     )
 
 # max_diff = model.NewIntVar(0, 100000, f"max_diff")
@@ -291,7 +311,11 @@ def amplitudes(b: Bénévole):
 
 model.minimize(
     sum(
-        2 * diffs[b] - appréciation_du_planning(b, quêtes) + 2 * amplitudes(b)
+        # Idéalement, personne ne doit trop travailler. Sauf Popi bien sûr
+        1000 * excès[b]
+        + 100 * diffs[b]
+        - 10 * appréciation_du_planning(b, quêtes)
+        + 2 * amplitudes(b)
         for b in bénévoles
     )
 )
@@ -302,11 +326,11 @@ model.minimize(
 
 def smile_of_appréciation(app):
     smile = "🙂"
-    if app >= 2:
+    if app >= 1:
         smile = "🤗"
     if app < 0:
         smile = "😰"
-    if app < -10:
+    if app < -1:
         smile = "😭"
     return smile
 
@@ -321,10 +345,15 @@ class VarArraySolutionPrinter(cp_model.CpSolverSolutionCallback):
 
     def on_solution_callback(self) -> None:
         self._solution_count += 1
+
+        assignations_val = {
+            key: self.value(val) for key, val in self._assignations.items()
+        }
+
         smiles = {}
         for q in quêtes:
             for b in bénévoles:
-                if self.value(self._assignations[(b, q)]) == 1:
+                if assignations_val[(b, q)] == 1:
                     app = appréciation_dune_quête(b, q)
                     smile = smile_of_appréciation(app)
                     smile_count = smiles.get(smile, 0)
@@ -335,10 +364,29 @@ class VarArraySolutionPrinter(cp_model.CpSolverSolutionCallback):
         smile_line = ""
         for smile in smile_kinds:
             n = smiles[smile]
-            n = math.ceil(n * 30 / total_smiles)
-            for _ in range(n):
-                smile_line = f"{smile_line}{smile}"
-        print(f"Solution {self._solution_count}: {smile_line}")
+            n100 = (n * 100) / total_smiles
+            smile_line = f"{smile_line}[{smile}{n100:=04.1f}%]"
+        smile_line = f"{smile_line}"
+
+        écarts_line = "["
+        écarts = {}
+        nombre_bénévoles = len(bénévoles)
+        for b in bénévoles:
+            diff_par_jour_ = diff_temps(b, assignations_val)
+            for d, écart in diff_par_jour_.items():
+                (min_, somme, max_) = écarts.get(d, (0, 0, 0))
+                écarts[d] = (
+                    min(min_, écart),
+                    (somme + abs(écart)),
+                    max(max_, écart),
+                )
+
+        for _, (min_, écart_total, max_) in écarts.items():
+            écart_type = math.sqrt(écart_total / nombre_bénévoles)
+            écarts_line = f"{écarts_line} {écart_type:=.1f} [{min_};{max_}]"
+        écarts_line = f"{écarts_line}]"
+
+        print(f"Solution {self._solution_count:0=3d}:\n\t{écarts_line}\n\t{smile_line}")
 
     @property
     def solution_count(self) -> int:
@@ -379,8 +427,8 @@ if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
         max_diff = 0
         max_diff_abs = 0
         for b in bénévoles:
-            minutes = solver.value(sum(temps_total_bénévole(b).values()))
-            diff = solver.value(sum(diff_temps(b).values()))
+            minutes = solver.value(sum(temps_total_bénévole(b, assignations).values()))
+            diff = solver.value(sum(diff_temps(b, assignations).values()))
             if abs(diff) > max_diff_abs:
                 max_diff = diff
                 max_diff_abs = abs(diff)
