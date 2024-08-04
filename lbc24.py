@@ -212,10 +212,11 @@ temps_de_travail_disponible_quotidien = (
     * sum(b.heures_théoriques for b in bénévoles)
 )
 
-# On va normaliser le temps de travail, on choisit le ppcm des heures théoriques
-# des bénévoles comme cible pour s'assurer que le coefficient multiplicateur de
-# normalisation soit toujours entier. On ajoute aussi la somme de ces heures
-# théoriques pour pouvoir normaliser l'écart total sur une journée.
+# On va normaliser le temps de travail (merci Malou), on choisit le ppcm des
+# heures théoriques des bénévoles comme cible pour s'assurer que le coefficient
+# multiplicateur de normalisation soit toujours entier. On ajoute aussi la somme
+# de ces heures théoriques pour pouvoir normaliser l'écart total sur une
+# journée.
 ppcm_heures_théoriques = math.lcm(
     temps_de_travail_disponible_quotidien,
     *[60 * b.heures_théoriques for b in bénévoles],
