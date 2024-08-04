@@ -291,19 +291,25 @@ def écarts_du_bénévole(b):
     )
 
 
+""" Punition des excès """
+# On filtre les écarts de temps de travail positif pour leur attribuer un poids
+# plus fort. Dans l'idéal, s'il y a suffisamment de main d'oeuvre, personne ne
+# devrait travailler plus que prévu.
+
+
 def filter_positive(value, name):
-    v = model.new_int_var(0, 6 * 60, name)
+    v = model.new_int_var(0, ppcm_heures_théoriques, name)
     model.add_max_equality(v, [0, value])
     return v
 
 
-excès: Dict[Bénévole, cp_model.IntVar] = {}
-for b in bénévoles:
-    diff_par_jour = diff_temps(b, assignations)
-    excès[b] = sum(
+def excès_de_travail(b):
+    diff_par_jour = diff_temps(b, assignations, coef=coef_de(b))
+    return sum(
         filter_positive(diff, f"excès_{date}_{b}")
         for date, diff in diff_par_jour.items()
     )
+
 
 """ Pondération des préférences des bénévoles """
 
@@ -354,9 +360,9 @@ def amplitudes(b: Bénévole):
 model.minimize(
     sum(
         # Idéalement, personne ne doit trop travailler. Sauf Popi bien sûr
-        1000 * excès[b]
+        1000 * excès_de_travail(b)
         + 100 * écarts_du_bénévole(b)
-        - 1 * appréciation_du_planning(b, quêtes)
+        - 10 * appréciation_du_planning(b, quêtes)
         + 1 * amplitudes(b)
         for b in bénévoles
     )
