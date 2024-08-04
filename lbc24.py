@@ -202,47 +202,93 @@ for b in bénévoles:
 
 """ Contrôle du temps de travail """
 
+# Le temps de travail quotidien maximal de chaque bénévole est stocké, en
+# heures, dans le champ `heures_théoriques`. On les converti systématiquement en
+# minutes
+
+temps_de_travail_disponible_quotidien = (
+    # TODO: this might be different everyday
+    60
+    * sum(b.heures_théoriques for b in bénévoles)
+)
+
+# On va normaliser le temps de travail, on choisit le ppcm des heures théoriques
+# des bénévoles comme cible pour s'assurer que le coefficient multiplicateur de
+# normalisation soit toujours entier. On ajoute aussi la somme de ces heures
+# théoriques pour pouvoir normaliser l'écart total sur une journée.
+ppcm_heures_théoriques = math.lcm(
+    temps_de_travail_disponible_quotidien,
+    *[60 * b.heures_théoriques for b in bénévoles],
+)
+
+
+# coef_de(b) renvoie le coefficient de normalisation pour le bénévole b
+def coef_de(b: Bénévole):
+    # t / heures_théoriques = x / ppcm_heures_theoriques)
+    return int(ppcm_heures_théoriques / (b.heures_théoriques * 60))
+
 
 # Temps de travail d'un bénévole sur un ensemble de quêtes
 def temps_bev(b, quêtes, assignations):
+    # assignations[(b, q)] pour un bénévole b et une quête q vaut 0 ou 1 et
+    # indique si le bénévole a été assigné à cette quête.
     return sum(q.durée_minutes() * assignations[(b, q)] for q in quêtes)
 
 
 # Temps de travail, par jour, d'un bénévole
 def temps_total_bénévole(b, assignations):
+    # On renvoie un dictionnaire date -> temps de travail
     return {
         date: temps_bev(b, quêtes, assignations)
         for date, quêtes in Quête.par_jour.items()
     }
 
 
-# Différence avec le tdt prévu par jour:
-def diff_temps(b, assignations):
+def temps_total_quêtes(quêtes: List[Quête]):
+    return sum(q.durée_minutes() * q.nombre_bénévoles for q in quêtes)
+
+
+# Moyenne normalisée : sur une journée, comme toutes les quêtes doivent être
+# assignée, la somme des écarts de chaque bénévole par rapport à leur temps de
+# travail prévu est constante. Donc (?) la moyenne des écarts est indépendante
+# de l'assignation des bénévoles et est égale à l'écart entre la force totale de
+# travail disponible et la durée effective des quêtes.
+# On renvoie un dictionnaire date -> "moyenne"
+moyenne_tdc_norm = {
+    date: (
+        int(
+            (temps_total_quêtes(quêtes) - temps_de_travail_disponible_quotidien)
+            * (ppcm_heures_théoriques / temps_de_travail_disponible_quotidien)
+            / len(bénévoles)
+        )
+    )
+    for date, quêtes in Quête.par_jour.items()
+}
+
+
+# Écart de l'écart du temps de travail d'un bénévole par rapport à la moyenne
+# Renvoie un dictionnaire indexé par les jours
+def diff_temps(b, assignations, coef=1):
     return {
-        date: tdt - (b.heures_théoriques * 60)
+        date: (((tdt - b.heures_théoriques * 60) * coef) - moyenne_tdc_norm[date])
         for date, tdt in temps_total_bénévole(b, assignations).items()
     }
 
 
-def squared(id, value):
-    var = model.NewIntVar(0, 12 * 60, f"v_squared_{id}")
-    diff = model.NewIntVar(-12 * 60, 12 * 60, f"v_{id}")
-    model.Add(diff == value)
-    # Multiplication is very expensive
-    # model.AddMultiplicationEquality(var, [diff, diff])
-    model.AddAbsEquality(var, diff)
+# Calcule la valeur absolue via une variable et une contrainte supplémentaires
+def abs_var(id, value):
+    var = model.NewIntVar(0, ppcm_heures_théoriques, f"v_abs_{id}")
+    model.AddAbsEquality(var, value)
     return var
 
 
-# Au carré:
-diffs: Dict[Bénévole, cp_model.IntVar] = {}
-for b in bénévoles:
-    diff_par_jour = diff_temps(b, assignations)
-    diffs[b] = sum(
-        squared(f"diff_{date}_béné_{b}", diff) for date, diff in diff_par_jour.items()
+# Calcule la somme pour chaque jour de la valeur absolue de écarts à la moyenne
+# des écarts du bénévole `b`
+def écarts_du_bénévole(b):
+    diff_par_jour = diff_temps(b, assignations, coef=coef_de(b))
+    return sum(
+        abs_var(f"diff_{date}_béné_{b}", diff) for date, diff in diff_par_jour.items()
     )
-
-# TODO: we should actually compute the mean déviation and minimize the standard deviation to that mean.
 
 
 def filter_positive(value, name):
@@ -258,10 +304,6 @@ for b in bénévoles:
         filter_positive(diff, f"excès_{date}_{b}")
         for date, diff in diff_par_jour.items()
     )
-
-# max_diff = model.NewIntVar(0, 100000, f"max_diff")
-# model.AddMaxEquality(max_diff, diffs.values())
-# écart type ?
 
 """ Pondération des préférences des bénévoles """
 
@@ -313,9 +355,9 @@ model.minimize(
     sum(
         # Idéalement, personne ne doit trop travailler. Sauf Popi bien sûr
         1000 * excès[b]
-        + 100 * diffs[b]
-        - 10 * appréciation_du_planning(b, quêtes)
-        + 2 * amplitudes(b)
+        + 100 * écarts_du_bénévole(b)
+        - 1 * appréciation_du_planning(b, quêtes)
+        + 1 * amplitudes(b)
         for b in bénévoles
     )
 )
