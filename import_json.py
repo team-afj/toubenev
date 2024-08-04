@@ -57,22 +57,24 @@ def load_bénévoles(obj):
         props = p["properties"]
         id = p["id"]
         sérénité = props["Team S\u00e9r\u00e9nit\u00e9"]["checkbox"]
-        indisponibilités = []
-        pref_horaires = {}
-        update_pref_horaire(0, props, pref_horaires, indisponibilités)
-        for i in range(9, 23 + 1):
-            update_pref_horaire(i, props, pref_horaires, indisponibilités)
-        # print(props["Name"]["title"][0]["plain_text"], pref_horaires)
-        b = Bénévole(
-            id,
-            props["Pseudo"]["title"][0]["plain_text"],
-            props["Pr\u00e9nom"]["rich_text"][0]["plain_text"],
-            props["Nom"]["rich_text"][0]["plain_text"],
-            int(props["heures th\u00e9oriques par jour"]["number"]),
-            indisponibilités,
-            pref_horaires,
-            sérénité,
-        )
+        heures_théoriques = int(props["heures th\u00e9oriques par jour"]["number"])
+        if heures_théoriques > 0:
+            indisponibilités = []
+            pref_horaires = {}
+            update_pref_horaire(0, props, pref_horaires, indisponibilités)
+            for i in range(9, 23 + 1):
+                update_pref_horaire(i, props, pref_horaires, indisponibilités)
+            # print(props["Name"]["title"][0]["plain_text"], pref_horaires)
+            b = Bénévole(
+                id,
+                props["Pseudo"]["title"][0]["plain_text"],
+                props["Pr\u00e9nom"]["rich_text"][0]["plain_text"],
+                props["Nom"]["rich_text"][0]["plain_text"],
+                heures_théoriques,
+                indisponibilités,
+                pref_horaires,
+                sérénité,
+            )
 
 
 def parse_horaires(horaire: str):
