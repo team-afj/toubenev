@@ -510,7 +510,7 @@ if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
             if diff >= 0:
                 diff_str = f"+{print_duration(diff)}"
             else:
-                diff_str = f"{print_duration(diff)}"
+                diff_str = f"-{print_duration(abs(diff))}"
             all.append(
                 {
                     "d": diff,
