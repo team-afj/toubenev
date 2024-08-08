@@ -483,6 +483,10 @@ with open("cp_sat_log.txt", "w") as text_file:
     status = solver.solve(model, solution_printer)
 
 
+def print_duration(minutes):
+    return f"{int(minutes // 60):0=2d}h{int(minutes % 60):0=2d}"
+
+
 # Best solution:
 if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
     if status == cp_model.OPTIMAL:
@@ -492,29 +496,31 @@ if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
 
     """ Dumb result dump"""
     with open("results.md", "w") as text_file:
-        for q in quêtes:
-            result = ""
-            for b in bénévoles:
-                if solver.value(assignations[(b, q)]) == 1:
-                    app = appréciation_dune_quête(b, q)
-                    if result == "":
-                        result = f"{b} ({app})"
-                    else:
-                        result = f"{result}, {b} ({app})"
-            text_file.write(f"Quête {q}: {result}\n")
         max_diff = 0
         max_diff_abs = 0
-        text_file.write(f"Moyenne: {moyenne_tdc_norm}")
+        text_file.write(f"Moyenne: {moyenne_tdc_norm}\n")
+        all = []
         for b in bénévoles:
-            minutes = solver.value(sum(temps_total_bénévole(b, assignations).values()))
-            théorique = b.heures_théoriques * 4 * 60
-            diff = solver.value(sum(diff_temps(b, assignations, coef_de(b)).values()))
+            tdt = solver.value(sum(temps_total_bénévole(b, assignations).values()))
+            tdt_théorique = b.heures_théoriques * 4 * 60
+            diff = tdt - tdt_théorique
             if abs(diff) > max_diff_abs:
                 max_diff = diff
                 max_diff_abs = abs(diff)
-            text_file.write(
-                f"{b.surnom}: {int(minutes // 60):0=2d}h{int(minutes % 60):0=2d} / {int(théorique // 60):0=2d}h{int(théorique % 60):0=2d} ({diff/60:.1f})\n"
+            if diff >= 0:
+                diff_str = f"+{print_duration(diff)}"
+            else:
+                diff_str = f"{print_duration(diff)}"
+            all.append(
+                {
+                    "d": diff,
+                    "s": f"{b.surnom}:\t{print_duration(tdt)} / {print_duration (tdt_théorique)}\t({diff_str})\n",
+                }
             )
+        text_file.write(f"\nMax diff: {print_duration(max_diff)}\n\n")
+        all.sort(key = lambda l: l["d"], reverse = True)
+        for l in all:
+            text_file.write(f"{l["s"]}")
     print(
         f"Objective value = {solver.objective_value}",
     )
