@@ -269,7 +269,7 @@ moyenne_tdc_norm = {
 # Renvoie un dictionnaire indexé par les jours
 def diff_temps(b, assignations, coef=1):
     return {
-        date: (((tdt - b.heures_théoriques * 60) * coef) - moyenne_tdc_norm[date])
+        date: (((b.heures_théoriques * 60 - tdt) * coef) - moyenne_tdc_norm[date])
         for date, tdt in temps_total_bénévole(b, assignations).items()
     }
 
