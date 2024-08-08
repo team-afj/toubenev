@@ -15,11 +15,31 @@ quêtes = sorted(Quête.toutes)
 bénévoles = Bénévole.tous.values()
 
 
+def member_f(l, f):
+    for e in l:
+        if f(e):
+            return True
+    return False
+
+
+def member(l, x):
+    for e in l:
+        if e == x:
+            return True
+    return False
+
+
 def quêtes_dun_lieu(lieu):
     return filter(lambda q: q.lieu == lieu, quêtes)
 
 
+def quêtes_dun_type(t):
+    return filter(lambda q: member(q.types, t), quêtes)
+
+
 id_quête_sérénité = "784fc134-cab5-4797-8be2-7a7a91e57795"
+
+id_tdq_gradinage = "987ad365-0032-42c6-8455-8fbf66d6179d"
 
 """ Outils """
 
@@ -59,13 +79,6 @@ for q in quêtes:
     model.add(sum(assignations[(b, q)] for b in bénévoles) == q.nombre_bénévoles)
 
 
-def member(l, x):
-    for e in l:
-        if e == x:
-            return True
-    return False
-
-
 """ Un même bénévole ne peut pas remplir plusieurs quêtes en même temps """
 
 for q in quêtes:
@@ -86,7 +99,7 @@ quêtes_liées_des_spectacles: List[List[Quête]] = []
 for date, quêtes_du_jour in Quête.par_jour.items():
     quêtes_des_spectacles: Dict[str, List[Quête]] = {}
     for q in quêtes_du_jour:
-        if q.spectacle:
+        if q.spectacle and not (member_f(q.types, lambda t: t.id == id_tdq_gradinage)):
             quêtes_du_spectacle = quêtes_des_spectacles.get(q.spectacle.id, [])
             if quêtes_du_spectacle == []:
                 quêtes_des_spectacles[q.spectacle.id] = [q]
@@ -147,6 +160,12 @@ for b in bénévoles:
 for b in bénévoles:
     for lieu in b.lieux_interdits:
         for q in quêtes_dun_lieu(lieu):
+            model.add(assignations[(b, q)] == 0)
+
+""" Les quêtes interdites sont interdites """
+for b in bénévoles:
+    for t in b.types_de_quête_interdits:
+        for q in quêtes_dun_type(t):
             model.add(assignations[(b, q)] == 0)
 
 

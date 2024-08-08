@@ -133,6 +133,7 @@ class Bénévole:
         indisponibilités,
         pref_horaires,
         sérénité,
+        types_de_quête_interdits=[],
     ):
         self.id: str = id
         self.surnom: str = surnom if surnom else prénom
@@ -143,6 +144,7 @@ class Bénévole:
         self.score_types_de_quêtes: Dict[Type_de_quête, int] = {}
         self.binômes_interdits: List[Bénévole] = []
         self.lieux_interdits: List[Lieu] = []
+        self.types_de_quête_interdits: List[Type_de_quête] = types_de_quête_interdits
         self.indisponibilités: List[time] = indisponibilités
         self.pref_horaires: Dict[time, int] = pref_horaires
         Bénévole.tous[self.id] = self

@@ -58,6 +58,12 @@ def load_bénévoles(obj):
         id = p["id"]
         sérénité = props["Team S\u00e9r\u00e9nit\u00e9"]["checkbox"]
         heures_théoriques = int(props["heures th\u00e9oriques par jour"]["number"])
+        types_de_quête_interdits = list(
+            map(
+                lambda tdq: Type_de_quête.tous[tdq["id"]],
+                props["type de Quete interdit"]["relation"],
+            )
+        )
         if heures_théoriques > 0:
             indisponibilités = []
             pref_horaires = {}
@@ -65,7 +71,7 @@ def load_bénévoles(obj):
             for i in range(9, 23 + 1):
                 update_pref_horaire(i, props, pref_horaires, indisponibilités)
             # print(props["Name"]["title"][0]["plain_text"], pref_horaires)
-            b = Bénévole(
+            Bénévole(
                 id,
                 props["Pseudo"]["title"][0]["plain_text"],
                 props["Pr\u00e9nom"]["rich_text"][0]["plain_text"],
@@ -74,6 +80,7 @@ def load_bénévoles(obj):
                 indisponibilités,
                 pref_horaires,
                 sérénité,
+                types_de_quête_interdits,
             )
 
 
