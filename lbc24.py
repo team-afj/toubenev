@@ -265,6 +265,13 @@ moyenne_tdc_norm = {
 }
 
 
+# Calcule la valeur absolue via une variable et une contrainte supplémentaires
+def abs_var(id, value: cp_model.LinearExprT):
+    var = model.NewIntVar(0, ppcm_heures_théoriques, f"v_abs_{id}")
+    model.AddAbsEquality(var, value)
+    return var
+
+
 # Écart de l'écart du temps de travail d'un bénévole par rapport à la moyenne
 # Renvoie un dictionnaire indexé par les jours
 def diff_temps(b, assignations, coef=1):
@@ -274,10 +281,13 @@ def diff_temps(b, assignations, coef=1):
     }
 
 
-# Calcule la valeur absolue via une variable et une contrainte supplémentaires
-def abs_var(id, value):
-    var = model.NewIntVar(0, ppcm_heures_théoriques, f"v_abs_{id}")
-    model.AddAbsEquality(var, value)
+def squared_var(id, value):
+    var = model.NewIntVar(0, pow(ppcm_heures_théoriques, 2), f"v_pow_{id}")
+    var_diff = model.NewIntVar(
+        -ppcm_heures_théoriques, ppcm_heures_théoriques, f"v_diff_{id}"
+    )
+    model.add(var_diff == value)
+    model.add_multiplication_equality(var, [var_diff, var_diff])
     return var
 
 
@@ -286,7 +296,9 @@ def abs_var(id, value):
 def écarts_du_bénévole(b):
     diff_par_jour = diff_temps(b, assignations, coef=coef_de(b))
     return sum(
-        abs_var(f"diff_{date}_béné_{b}", diff) for date, diff in diff_par_jour.items()
+        # abs_var(f"diff_{date}_béné_{b}", diff)
+        squared_var(f"diff_{date}_béné_{b}", diff)
+        for date, diff in diff_par_jour.items()
     )
 
 
