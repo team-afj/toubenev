@@ -485,14 +485,16 @@ if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
             text_file.write(f"Quête {q}: {result}\n")
         max_diff = 0
         max_diff_abs = 0
+        text_file.write(f"Moyenne: {moyenne_tdc_norm}")
         for b in bénévoles:
             minutes = solver.value(sum(temps_total_bénévole(b, assignations).values()))
-            diff = solver.value(sum(diff_temps(b, assignations).values()))
+            théorique = b.heures_théoriques * 4 * 60
+            diff = solver.value(sum(diff_temps(b, assignations, coef_de(b)).values()))
             if abs(diff) > max_diff_abs:
                 max_diff = diff
                 max_diff_abs = abs(diff)
             text_file.write(
-                f"{b.surnom}: {int(minutes // 60):0=2d}h{int(minutes % 60):0=2d} ({diff/60:.1f})\n"
+                f"{b.surnom}: {int(minutes // 60):0=2d}h{int(minutes % 60):0=2d} / {int(théorique // 60):0=2d}h{int(théorique % 60):0=2d} ({diff/60:.1f})\n"
             )
     print(
         f"Objective value = {solver.objective_value}",
