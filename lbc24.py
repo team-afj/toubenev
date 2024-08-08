@@ -105,16 +105,18 @@ def suivi_quêtes_dun_spectacles(quêtes: List[Quête]):
             min_quête = q
 
     # On s'assure que les quêtes groupées ne se chevauchent pas, cela évite des
-    # erreurs incompréhensible:
-    for q in min_quête.en_même_temps():
-        if not (q == min_quête):
-            for q2 in quêtes:
-                if q == q2:
+    # erreurs incompréhensibles:
+    for q in quêtes:
+        for q2 in q.en_même_temps():
+            for q3 in quêtes:
+                if q != q3 and q2 == q3:
                     print("Arg, des quêtes groupées se chevauchent:")
-                    print(f"{q2} chevauche {q}")
+                    print(f"{q2} chevauche {q3}")
                     exit()
 
     for b in bénévoles:
+        # Tout bénévole participant à la quête qui requiert le moins de bénévoles
+        # dans le groupe de quêtes doit participer aux autres quêtes du groupe.
         model.add_bool_and(assignations[(b, q)] for q in quêtes).only_enforce_if(
             assignations[(b, min_quête)]
         )
