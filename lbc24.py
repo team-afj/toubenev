@@ -409,7 +409,7 @@ def amplitudes(b: Bénévole):
 model.minimize(
     sum(
         # Idéalement, personne ne doit trop travailler. Sauf Popi bien sûr
-        1000 * excès_de_travail(b)
+        100000 * excès_de_travail(b)
         + 1 * écarts_du_bénévole(b)
         - 100 * appréciation_du_planning(b, quêtes)
         + 1 * amplitudes(b)
