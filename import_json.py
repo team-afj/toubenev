@@ -127,26 +127,7 @@ def load_quêtes(obj):
         if len(props["Spectacle"]["relation"]) > 0:
             spectacle = Spectacle.tous[props["Spectacle"]["relation"][0]["id"]]
 
-        if all(t.sécable for t in types_de_quête):
-            fin_acc = début
-            i = 0
-            while fin_acc < fin:
-                début_acc = fin_acc
-                # fin_acc = min(fin_acc + timedelta(minutes=15), fin)
-                fin_acc = min(fin_acc + timedelta(minutes=120), fin)
-                i = i + 1
-                Quête(
-                    id,
-                    f"{name} #{i}",
-                    types_de_quête,
-                    place,
-                    spectacle,
-                    needed,
-                    début_acc,
-                    fin_acc,
-                    bénévoles,
-                )
-        else:
+        def new_quête(id, name, début: date, fin):
             Quête(
                 id,
                 name,
@@ -157,6 +138,56 @@ def load_quêtes(obj):
                 début,
                 fin,
                 bénévoles,
+            )
+
+        def new_quêtes(name, début: date, fin):
+            dup = False
+            for t in types_de_quête:
+                if not ("Affichage" in t.nom):
+                    dup = True
+            new_quête(
+                id,
+                name,
+                début,
+                fin,
+            )
+            if dup:
+                new_quête(
+                    f"{id}+",
+                    f"{name}+",
+                    début + timedelta(days=1),
+                    fin + timedelta(days=1),
+                )
+                new_quête(
+                    f"{id}+",
+                    f"{name}+",
+                    début + timedelta(days=2),
+                    fin + timedelta(days=2),
+                )
+                new_quête(
+                    f"{id}+",
+                    f"{name}+",
+                    début + timedelta(days=3),
+                    fin + timedelta(days=3),
+                )
+
+        if all(t.sécable for t in types_de_quête):
+            fin_acc = début
+            i = 0
+            while fin_acc < fin:
+                début_acc = fin_acc
+                fin_acc = min(fin_acc + timedelta(minutes=120), fin)
+                i = i + 1
+                new_quêtes(
+                    f"{name} #{i}",
+                    début_acc,
+                    fin_acc,
+                )
+        else:
+            new_quêtes(
+                name,
+                début,
+                fin,
             )
 
 
