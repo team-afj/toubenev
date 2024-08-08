@@ -486,6 +486,12 @@ with open("cp_sat_log.txt", "w") as text_file:
 def print_duration(minutes):
     return f"{int(minutes // 60):0=2d}h{int(minutes % 60):0=2d}"
 
+def print_signed_duration(minutes):
+    if minutes >= 0:
+        return f"+{print_duration(minutes)}"
+    else:
+        return f"-{print_duration(abs(minutes))}"
+
 
 # Best solution:
 if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
@@ -498,26 +504,25 @@ if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
     with open("results.md", "w") as text_file:
         max_diff = 0
         max_diff_abs = 0
+        total_diff = 0
         text_file.write(f"Moyenne: {moyenne_tdc_norm}\n")
         all = []
         for b in bénévoles:
             tdt = solver.value(sum(temps_total_bénévole(b, assignations).values()))
             tdt_théorique = b.heures_théoriques * 4 * 60
             diff = tdt - tdt_théorique
+            total_diff += diff
             if abs(diff) > max_diff_abs:
                 max_diff = diff
                 max_diff_abs = abs(diff)
-            if diff >= 0:
-                diff_str = f"+{print_duration(diff)}"
-            else:
-                diff_str = f"-{print_duration(abs(diff))}"
             all.append(
                 {
                     "d": diff,
-                    "s": f"{b.surnom}:\t{print_duration(tdt)} / {print_duration (tdt_théorique)}\t({diff_str})\n",
+                    "s": f"{b.surnom}:\t{print_duration(tdt)} / {print_duration (tdt_théorique)}\t({print_signed_duration(diff)})\n",
                 }
             )
-        text_file.write(f"\nMax diff: {print_duration(max_diff)}\n\n")
+        text_file.write(f"\nMax diff: {print_duration(max_diff)}\n")
+        text_file.write(f"Total diff: {print_signed_duration(total_diff)}\n\n")
         all.sort(key = lambda l: l["d"], reverse = True)
         for l in all:
             text_file.write(f"{l["s"]}")
