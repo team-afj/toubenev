@@ -36,10 +36,15 @@ def quêtes_dun_lieu(lieu):
 def quêtes_dun_type(t):
     return filter(lambda q: member(q.types, t), quêtes)
 
+id_ulysse = "3e261775-94f3-4673-aca7-f8c367fb9008"
 
 id_quête_sérénité = "784fc134-cab5-4797-8be2-7a7a91e57795"
 
 id_tdq_gradinage = "987ad365-0032-42c6-8455-8fbf66d6179d"
+
+b_ulysse = Bénévole.tous[id_ulysse]
+b_ulysse.date_arrivée = datetime.fromisoformat("2024-08-15T14:00:00.000000+02:00")
+
 
 """ Outils """
 
@@ -138,6 +143,20 @@ def suivi_quêtes_dun_spectacles(quêtes: List[Quête]):
 for quêtes_dun_spectacle in quêtes_liées_des_spectacles:
     suivi_quêtes_dun_spectacles(quêtes_dun_spectacle)
 
+""" Certains bénévoles ne sont pas là pendant la totalité de l'évènement """
+for b in bénévoles:
+    if b.date_arrivée:
+        for q in quêtes:
+            # On vérifie que ce n'est pas une quête forcée:
+            if not (contains(q.bénévoles, b)):
+                if q.début < b.date_arrivée:
+                    model.add(assignations[(b, q)] == 0)
+    if b.date_départ:
+        for q in quêtes:
+            # On vérifie que ce n'est pas une quête forcée:
+            if not (contains(q.bénévoles, b)):
+                if q.fin > b.date_départ:
+                    model.add(assignations[(b, q)] == 0)
 
 """ Certains bénévoles sont indisponibles à certains horaires """
 for b in bénévoles:
