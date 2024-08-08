@@ -124,7 +124,7 @@ def suivi_quêtes_dun_spectacles(quêtes: List[Quête]):
             for q3 in quêtes:
                 if q != q3 and q2 == q3:
                     print("Arg, des quêtes groupées se chevauchent:")
-                    print(f"{q2} chevauche {q3}")
+                    print(f"{q} chevauche {q3}")
                     exit()
 
     for b in bénévoles:
@@ -391,8 +391,8 @@ model.minimize(
     sum(
         # Idéalement, personne ne doit trop travailler. Sauf Popi bien sûr
         1000 * excès_de_travail(b)
-        + 100 * écarts_du_bénévole(b)
-        - 10 * appréciation_du_planning(b, quêtes)
+        + 1 * écarts_du_bénévole(b)
+        - 100 * appréciation_du_planning(b, quêtes)
         + 1 * amplitudes(b)
         for b in bénévoles
     )

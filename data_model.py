@@ -81,7 +81,7 @@ class Quête:
         Quête.toutes.append(self)
 
         date_début = self.début.date()
-        if self.début.time() < time(4):
+        if self.début.time() < time(hour=4):
             # Day starts at 4 am
             date_début = date_début - timedelta(days=1)
 
