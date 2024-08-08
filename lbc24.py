@@ -567,6 +567,12 @@ def total_temps_dispo(bénévoles: List[Bénévole]):
 temps_total = total_temps_travail(quêtes)
 temps_dispo = total_temps_dispo(bénévoles)
 print()
+
+for d, qs in Quête.par_jour.items():
+    temps = total_temps_travail(qs)
+    print(
+        f"Temps de travail {d} jour: {int(temps // 60):0=2d}h{int(temps % 60):0=2d}"
+    )
 print(
     f"Temps de travail total: {int(temps_total // 60):0=2d}h{int(temps_total % 60):0=2d}"
 )
