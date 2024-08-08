@@ -67,17 +67,13 @@ def member(l, x):
 
 
 """ Un même bénévole ne peut pas remplir plusieurs quêtes en même temps """
-for b in bénévoles:
-    quêtes_restantes = quêtes
-    while len(quêtes_restantes) > 0:
-        q = quêtes_restantes[0]
-        en_même_temps = q.en_même_temps()
-        quêtes_restantes = list(
-            filter(lambda q: not (member(en_même_temps, q)), quêtes_restantes)
-        )
-        model.add_at_most_one(
-            assignations[(b, q_en_même_temps)] for q_en_même_temps in en_même_temps
-        )
+
+for q in quêtes:
+    en_même_temps = list(q.en_même_temps())
+    for q2 in en_même_temps:
+        for b in bénévoles:
+            if q != q2:
+                model.add_at_most_one([assignations[(b, q)], assignations[(b, q2)]])
 
 """ Certaines quêtes sont déjà assignées """
 for q in quêtes:
