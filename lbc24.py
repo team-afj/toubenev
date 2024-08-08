@@ -256,7 +256,7 @@ def temps_total_quêtes(quêtes: List[Quête]):
 moyenne_tdc_norm = {
     date: (
         int(
-            (temps_total_quêtes(quêtes) - temps_de_travail_disponible_quotidien)
+            abs(temps_de_travail_disponible_quotidien - temps_total_quêtes(quêtes))
             * (ppcm_heures_théoriques / temps_de_travail_disponible_quotidien)
             / len(bénévoles)
         )
