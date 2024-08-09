@@ -84,6 +84,7 @@ class Quête:
         if self.début.time() < time(hour=4):
             # Day starts at 4 am
             date_début = date_début - timedelta(days=1)
+        self.jour: date = date_début
 
         quêtes_du_jour: List[Quête] = Quête.par_jour.get(date_début, [])
         if quêtes_du_jour == []:
@@ -134,6 +135,7 @@ class Bénévole:
         pref_horaires,
         sérénité,
         types_de_quête_interdits=[],
+        date_départ=None,
     ):
         self.id: str = id
         self.surnom: str = surnom if surnom else prénom
@@ -148,7 +150,8 @@ class Bénévole:
         self.indisponibilités: List[time] = indisponibilités
         self.pref_horaires: Dict[time, int] = pref_horaires
         self.date_arrivée: Optional[datetime] = None
-        self.date_départ: Optional[datetime] = None
+        self.date_départ: Optional[datetime] = date_départ
+        self.quêtes_assignées: List[Quête] = []
         Bénévole.tous[self.id] = self
 
     def __hash__(self):
@@ -173,3 +176,13 @@ class Bénévole:
         for (b, q, n), _ in enumerate(filter(lambda q: q == 1, planning)):
             if self == Bénévole.tous[b]:
                 print(q, n)
+
+    """ Certains bénévole ont un ensemble de tâches préçis à faire et ne doivent
+    pas participer aux autres """
+
+    def est_assigné(self, date):
+        temps_assigné = 0
+        for q in self.quêtes_assignées:
+            if q.jour == date:
+                temps_assigné += q.durée_minutes()
+        return temps_assigné >= self.heures_théoriques * 60

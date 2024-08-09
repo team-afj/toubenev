@@ -58,6 +58,11 @@ def load_bénévoles(obj):
         id = p["id"]
         sérénité = props["Team S\u00e9r\u00e9nit\u00e9"]["checkbox"]
         heures_théoriques = int(props["heures th\u00e9oriques par jour"]["number"])
+        date_départ = None
+        if props["Date d\u00e9part"]["date"]:
+            date_départ = datetime.fromisoformat(
+                props["Date d\u00e9part"]["date"]["start"]
+            )
         types_de_quête_interdits = list(
             map(
                 lambda tdq: Type_de_quête.tous[tdq["id"]],
@@ -81,6 +86,7 @@ def load_bénévoles(obj):
                 pref_horaires,
                 sérénité,
                 types_de_quête_interdits,
+                date_départ,
             )
 
 
@@ -128,7 +134,7 @@ def load_quêtes(obj):
             spectacle = Spectacle.tous[props["Spectacle"]["relation"][0]["id"]]
 
         def new_quête(id, name, début: date, fin):
-            Quête(
+            q = Quête(
                 id,
                 name,
                 types_de_quête,
@@ -139,6 +145,9 @@ def load_quêtes(obj):
                 fin,
                 bénévoles,
             )
+
+            for b in bénévoles:
+                b.quêtes_assignées.append(q)
 
         def new_quêtes(name, début: date, fin):
             dup = False

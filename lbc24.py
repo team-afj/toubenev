@@ -40,6 +40,9 @@ id_ulysse = "3e261775-94f3-4673-aca7-f8c367fb9008"
 
 id_quête_sérénité = "784fc134-cab5-4797-8be2-7a7a91e57795"
 
+id_tdg_clean = "9f95caf2-a32b-4454-9994-6ce17a5e75e6"
+id_tdg_suivi = "78250bf9-fb52-41ac-af5b-879d2ca7ff1c"
+
 id_tdq_gradinage = "987ad365-0032-42c6-8455-8fbf66d6179d"
 
 b_ulysse = Bénévole.tous[id_ulysse]
@@ -56,6 +59,20 @@ def time_to_minutes(t: time):
 def diff_minutes(t1: time, t2: time):
     return time_to_minutes(t2) - time_to_minutes(t1)
 
+
+def print_duration(minutes):
+    return f"{int(minutes // 60):0=2d}h{int(minutes % 60):0=2d}"
+
+def print_signed_duration(minutes):
+    if minutes >= 0:
+        return f"+{print_duration(minutes)}"
+    else:
+        return f"-{print_duration(abs(minutes))}"
+
+for b in Bénévole.tous.values():
+    for d in Quête.par_jour.keys():
+        if b.est_assigné(d):
+            print(f"{b} est assignée le  {d}")
 
 """Préparation du modèle et des contraintes"""
 
@@ -97,6 +114,40 @@ for q in quêtes:
 for q in quêtes:
     for b in q.bénévoles:
         model.add(assignations[(b, q)] == 1)
+
+""" Et certains bénévoles ne devrait rien faire d'autre """
+for d, quêtes in Quête.par_jour.items():
+    for b in bénévoles:
+        if b.est_assigné(d):
+            for q in quêtes:
+                if not(member(q.bénévoles, b)):
+                    model.add(assignations[(b, q)] == 0)
+
+""" On aimerait que tout le monde participe à certaines tâches """
+def tout_le_monde_fait(t : Type_de_quête):
+    for b in bénévoles:
+        assigné = True
+        for d in Quête.par_jour.keys():
+            assigné = assigné and b.est_assigné(d)
+        if not(assigné) and not(member(b.types_de_quête_interdits, t)):
+            # Todo there are more checks to do here such has place interdiction
+            print(f"{b} fait du clean")
+            model.add_at_least_one(assignations[(b,q)] for q in quêtes_dun_type(t))
+
+# tout_le_monde_fait(Type_de_quête.tous[id_tdg_suivi])
+
+
+""" On aimerait certaines tâches soient faites par un maximum de personnes différentes """
+def un_max_de_monde_fait(t : Type_de_quête):
+    for b in bénévoles:
+        assigné = True
+        for d in Quête.par_jour.keys():
+            assigné = assigné and b.est_assigné(d)
+        if not(assigné) and not(member(b.types_de_quête_interdits, t)):
+            # Todo there are more checks to do here such has place interdiction
+            model.add_at_most_one(assignations[(b,q)] for q in quêtes_dun_type(t))
+
+un_max_de_monde_fait(Type_de_quête.tous[id_tdg_clean])
 
 """ Les tâches consécutives d'une scène sont faites par les mêmes bénévoles """
 
@@ -155,7 +206,7 @@ for b in bénévoles:
         for q in quêtes:
             # On vérifie que ce n'est pas une quête forcée:
             if not (contains(q.bénévoles, b)):
-                if q.fin > b.date_départ:
+                if not(q.fin < b.date_départ):
                     model.add(assignations[(b, q)] == 0)
 
 """ Certains bénévoles sont indisponibles à certains horaires """
@@ -501,15 +552,6 @@ with open("cp_sat_log.txt", "w") as text_file:
     solver.log_callback = lambda str: text_file.write(f"{str}\n")
     status = solver.solve(model, solution_printer)
 
-
-def print_duration(minutes):
-    return f"{int(minutes // 60):0=2d}h{int(minutes % 60):0=2d}"
-
-def print_signed_duration(minutes):
-    if minutes >= 0:
-        return f"+{print_duration(minutes)}"
-    else:
-        return f"-{print_duration(abs(minutes))}"
 
 
 # Best solution:
