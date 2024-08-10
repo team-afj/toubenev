@@ -2,17 +2,33 @@ from __future__ import annotations  # allows class type usage in class decl
 from typing import List, Dict
 from datetime import date, time, datetime, timedelta
 from operator import contains
-import math
+import os, sys, math
 from ortools.sat.python import cp_model
 from data_model import Bénévole, Type_de_quête, Quête
 
-# import import_csv
+# prepare log folder and file
+date_now = datetime.now().strftime("%Y%m%d %Hh%Mm%Ss")
+log_folder = f"runs/{date_now}"
+if not os.path.exists(log_folder):
+    os.makedirs(log_folder)
+
+log_file_path = f"{log_folder}/log.txt"
+log_file = open(log_file_path, "w")
+def print(str="\n"):
+    log_file.write(f"{str}\n")
+    sys.stdout.write(f"{str}\n")
+
+# open log file
+
+# Import data
 from import_json import from_file
 
 from_file("data/db.json")
 
 quêtes = sorted(Quête.toutes)
 bénévoles = Bénévole.tous.values()
+
+""" Outils """
 
 
 def member_f(l, f):
@@ -47,10 +63,6 @@ id_tdq_gradinage = "987ad365-0032-42c6-8455-8fbf66d6179d"
 
 b_ulysse = Bénévole.tous[id_ulysse]
 b_ulysse.date_arrivée = datetime.fromisoformat("2024-08-15T14:00:00.000000+02:00")
-
-
-""" Outils """
-
 
 def time_to_minutes(t: time):
     return t.hour * 60 + t.minute
@@ -548,7 +560,7 @@ solver.parameters.log_search_progress = True
 solver.parameters.num_workers = 16
 solver.parameters.log_to_stdout = False
 
-with open("cp_sat_log.txt", "w") as text_file:
+with open(f"{log_folder}/cp_sat_log.txt", "w") as text_file:
     solver.log_callback = lambda str: text_file.write(f"{str}\n")
     status = solver.solve(model, solution_printer)
 
@@ -562,16 +574,18 @@ if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
         print("Non-optimal solution:")
 
     """ Dumb result dump"""
-    with open("results.md", "w") as text_file:
+    with open(f"{log_folder}/results.md", "w") as text_file:
         max_diff = 0
         max_diff_abs = 0
         total_diff = 0
-        text_file.write(f"Moyenne: {moyenne_tdc_norm}\n")
         all = []
         for b in bénévoles:
             tdt = solver.value(sum(temps_total_bénévole(b, assignations).values()))
             tdt_théorique = b.heures_théoriques * 4 * 60
-            diff = tdt - tdt_théorique
+            tdt_ajusté = sum(
+                horaires_ajustés_bénévole(d, b)
+                for d in Quête.par_jour.keys())
+            diff = tdt - tdt_ajusté
             total_diff += diff
             if abs(diff) > max_diff_abs:
                 max_diff = diff
@@ -579,7 +593,7 @@ if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
             all.append(
                 {
                     "d": diff,
-                    "s": f"{b.surnom}:\t{print_duration(tdt)} / {print_duration (tdt_théorique)}\t({print_signed_duration(diff)})\n",
+                    "s": f"{b.surnom}:\t{print_duration(tdt)} / {print_duration(tdt_ajusté)} / {print_duration (tdt_théorique)}\t({print_signed_duration(diff)})\n",
                 }
             )
         text_file.write(f"\nMax diff: {print_duration(max_diff)}\n")
@@ -642,7 +656,7 @@ for q in quêtes:
 
 from export_json import write_json
 
-write_json(result)
+write_json(result, file=f"{log_folder}/results.json")
 
 """
   Autres contraintes:
@@ -689,9 +703,9 @@ for q in quêtes:
 
 import os
 
-path = os.path.join(os.getcwd(), "example.ics")
+path = os.path.join(os.getcwd(), f"{log_folder}/events.ics")
 f = open(path, "wb")
 f.write(cal.to_ical())
 f.close()
 
-print(path)
+log_file.close()
