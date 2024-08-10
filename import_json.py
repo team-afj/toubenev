@@ -162,20 +162,20 @@ def load_quêtes(obj):
             )
             if dup:
                 new_quête(
-                    f"{id}+",
-                    f"{name}+",
+                    f"{id}",
+                    f"{name}+1",
                     début + timedelta(days=1),
                     fin + timedelta(days=1),
                 )
                 new_quête(
-                    f"{id}+",
-                    f"{name}+",
+                    f"{id}",
+                    f"{name}+2",
                     début + timedelta(days=2),
                     fin + timedelta(days=2),
                 )
                 new_quête(
-                    f"{id}+",
-                    f"{name}+",
+                    f"{id}",
+                    f"{name}+3",
                     début + timedelta(days=3),
                     fin + timedelta(days=3),
                 )
