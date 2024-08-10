@@ -128,10 +128,10 @@ for q in quêtes:
         model.add(assignations[(b, q)] == 1)
 
 """ Et certains bénévoles ne devrait rien faire d'autre """
-for d, quêtes in Quête.par_jour.items():
+for d, quêtes_du_jour in Quête.par_jour.items():
     for b in bénévoles:
         if b.est_assigné(d):
-            for q in quêtes:
+            for q in quêtes_du_jour:
                 if not(member(q.bénévoles, b)):
                     model.add(assignations[(b, q)] == 0)
 
