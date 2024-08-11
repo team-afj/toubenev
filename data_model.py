@@ -18,6 +18,15 @@ class Spectacle:
         self.nom = nom
         Spectacle.tous[self.id] = self
 
+    def __hash__(self):
+        return hash(self.id)
+
+    def __cmp__(self, lautre):
+        return (self.id > lautre.id) - (self.id < lautre.id)
+
+    def __eq__(self, lautre):
+        return self.__cmp__(lautre) == 0
+
 
 class Lieu:
     tous: Dict[str, Lieu] = {}
@@ -142,7 +151,7 @@ class Bénévole:
         self.prénom: str = prénom
         self.nom: str = nom
         self.sérénité: bool = sérénité
-        self.heures_théoriques: int = heures_théoriques
+        self.heures_théoriques: float = heures_théoriques
         self.score_types_de_quêtes: Dict[Type_de_quête, int] = {}
         self.binômes_interdits: List[Bénévole] = []
         self.lieux_interdits: List[Lieu] = []
