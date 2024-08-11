@@ -81,10 +81,10 @@ def print_signed_duration(minutes):
     else:
         return f"-{print_duration(abs(minutes))}"
 
-for b in Bénévole.tous.values():
-    for d in Quête.par_jour.keys():
-        if b.est_assigné(d):
-            print(f"{b} est assignée le  {d}")
+# for b in Bénévole.tous.values():
+#     for d in Quête.par_jour.keys():
+#         if b.est_assigné(d):
+#             print(f"{b} est assignée le  {d}")
 
 """Préparation du modèle et des contraintes"""
 
@@ -143,10 +143,10 @@ def tout_le_monde_fait(t : Type_de_quête):
             assigné = assigné and b.est_assigné(d)
         if not(assigné) and not(member(b.types_de_quête_interdits, t)):
             # Todo there are more checks to do here such has place interdiction
-            print(f"{b} fait du clean")
+            # print(f"{b} fait du clean")
             model.add_at_least_one(assignations[(b,q)] for q in quêtes_dun_type(t))
 
-# tout_le_monde_fait(Type_de_quête.tous[id_tdg_suivi])
+tout_le_monde_fait(Type_de_quête.tous[id_tdg_suivi])
 
 
 """ On aimerait certaines tâches soient faites par un maximum de personnes différentes """
@@ -160,6 +160,21 @@ def un_max_de_monde_fait(t : Type_de_quête):
             model.add_at_most_one(assignations[(b,q)] for q in quêtes_dun_type(t))
 
 un_max_de_monde_fait(Type_de_quête.tous[id_tdg_clean])
+
+""" Un même bénévole ne fait pas plusieurs fois le suivi du même spectacle """
+
+quêtes_suivi_des_spectacles: Dict[str, List[Quête]] = {}
+for q in quêtes:
+    if member_f(q.types, lambda t: t.id == id_tdg_suivi):
+        quêtes_spe = quêtes_suivi_des_spectacles.get(q.spectacle.id, [])
+        if quêtes_spe == []:
+            quêtes_suivi_des_spectacles[q.spectacle.id] = [q]
+        else:
+            quêtes_spe.append(q)
+
+for b in bénévoles:
+    for quêtes_spe in quêtes_suivi_des_spectacles.values():
+        model.add_at_most_one(assignations[(b,q)] for q in quêtes_spe)
 
 """ Les tâches consécutives d'une scène sont faites par les mêmes bénévoles """
 
