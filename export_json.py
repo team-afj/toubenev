@@ -21,9 +21,25 @@ def to_json(result: Dict[Quête, List[Bénévole]]):
 
 
 def write_json(result: Dict[Quête, List[Bénévole]], file="result.json"):
-    result = to_json(result)
-    with open(file, "w") as text_file:
-        text_file.write(result)
+    acc = {}
+    splits = []
+    i = 0
+    for q, l in result.items():
+        i += 1
+        acc[q] = l
+        if i >= 50:
+            splits.append(acc)
+            acc = {}
+            i = 0
+    if i >= 0:
+        splits.append(acc)
+    i = 0
+    for split in splits:
+        i += 1
+        name = f"{file}.{i}.json"
+        result = to_json(split)
+        with open(name, "w") as text_file:
+            text_file.write(result)
 
 
 # [
