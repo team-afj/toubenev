@@ -57,7 +57,7 @@ def load_bénévoles(obj):
         props = p["properties"]
         id = p["id"]
         sérénité = props["Team S\u00e9r\u00e9nit\u00e9"]["checkbox"]
-        heures_théoriques = int(props["heures th\u00e9oriques par jour"]["number"])
+        heures_théoriques = float(props["heures th\u00e9oriques par jour"]["number"])
         date_départ = None
         if props["Date d\u00e9part"]["date"]:
             date_départ = datetime.fromisoformat(
@@ -163,19 +163,19 @@ def load_quêtes(obj):
             if dup:
                 new_quête(
                     f"{id}",
-                    f"{name}+1",
+                    f"{name}",
                     début + timedelta(days=1),
                     fin + timedelta(days=1),
                 )
                 new_quête(
                     f"{id}",
-                    f"{name}+2",
+                    f"{name}",
                     début + timedelta(days=2),
                     fin + timedelta(days=2),
                 )
                 new_quête(
                     f"{id}",
-                    f"{name}+3",
+                    f"{name}",
                     début + timedelta(days=3),
                     fin + timedelta(days=3),
                 )
