@@ -2,15 +2,15 @@ from __future__ import annotations  # allows class type usage in class decl
 from typing import List, Dict
 from datetime import date, time, datetime, timedelta
 from operator import contains
-import os, sys, math
+import os, sys, math, random
 from ortools.sat.python import cp_model
-from data_model import Bénévole, Type_de_quête, Quête
+from data_model import Bénévole, Type_de_quête, Quête, Spectacle
 
 # prepare log folder and file
 date_now = datetime.now().strftime("%Y%m%d %Hh%Mm%Ss")
 log_folder = f"runs/{date_now}"
 if not os.path.exists(log_folder):
-    os.makedirs(log_folder)
+    os.makedirs(f"{log_folder}/solutions")
 
 log_file_path = f"{log_folder}/log.txt"
 log_file = open(log_file_path, "w")
@@ -494,6 +494,34 @@ def smile_of_appréciation(app):
         smile = "😭"
     return smile
 
+def dumb_dump(file, assignations):
+    with open(file, "w") as text_file:
+        max_diff = 0
+        max_diff_abs = 0
+        total_diff = 0
+        all = []
+        for b in bénévoles:
+            tdt = sum(temps_total_bénévole(b, assignations).values())
+            tdt_théorique = b.heures_théoriques * 4 * 60
+            tdt_ajusté = sum(
+                horaires_ajustés_bénévole(d, b)
+                for d in Quête.par_jour.keys())
+            diff = tdt - tdt_ajusté
+            total_diff += diff
+            if abs(diff) > max_diff_abs:
+                max_diff = diff
+                max_diff_abs = abs(diff)
+            all.append(
+                {
+                    "d": diff,
+                    "s": f"{b.surnom}:\t{print_duration(tdt)} / {print_duration(tdt_ajusté)} / {print_duration (tdt_théorique)}\t({print_signed_duration(diff)})\n",
+                }
+            )
+        text_file.write(f"\nMax diff: {print_duration(max_diff)}\n")
+        text_file.write(f"Total diff: {print_signed_duration(total_diff)}\n\n")
+        all.sort(key = lambda l: l["d"], reverse = True)
+        for l in all:
+            text_file.write(f"{l["s"]}")
 
 class VarArraySolutionPrinter(cp_model.CpSolverSolutionCallback):
     """Print intermediate solutions."""
@@ -547,6 +575,7 @@ class VarArraySolutionPrinter(cp_model.CpSolverSolutionCallback):
         écarts_line = f"{écarts_line}]"
 
         print(f"Solution {self._solution_count:0=3d}:\n\t{écarts_line}\n\t{smile_line}")
+        dumb_dump(f"{log_folder}/solutions/{self._solution_count:0=3d}_results.md", assignations_val)
 
     @property
     def solution_count(self) -> int:
@@ -565,7 +594,6 @@ with open(f"{log_folder}/cp_sat_log.txt", "w") as text_file:
     status = solver.solve(model, solution_printer)
 
 
-
 # Best solution:
 if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
     if status == cp_model.OPTIMAL:
@@ -574,37 +602,15 @@ if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
         print("Non-optimal solution:")
 
     """ Dumb result dump"""
-    with open(f"{log_folder}/results.md", "w") as text_file:
-        max_diff = 0
-        max_diff_abs = 0
-        total_diff = 0
-        all = []
-        for b in bénévoles:
-            tdt = solver.value(sum(temps_total_bénévole(b, assignations).values()))
-            tdt_théorique = b.heures_théoriques * 4 * 60
-            tdt_ajusté = sum(
-                horaires_ajustés_bénévole(d, b)
-                for d in Quête.par_jour.keys())
-            diff = tdt - tdt_ajusté
-            total_diff += diff
-            if abs(diff) > max_diff_abs:
-                max_diff = diff
-                max_diff_abs = abs(diff)
-            all.append(
-                {
-                    "d": diff,
-                    "s": f"{b.surnom}:\t{print_duration(tdt)} / {print_duration(tdt_ajusté)} / {print_duration (tdt_théorique)}\t({print_signed_duration(diff)})\n",
-                }
-            )
-        text_file.write(f"\nMax diff: {print_duration(max_diff)}\n")
-        text_file.write(f"Total diff: {print_signed_duration(total_diff)}\n\n")
-        all.sort(key = lambda l: l["d"], reverse = True)
-        for l in all:
-            text_file.write(f"{l["s"]}")
+    assignations_values = {
+        k: solver.value(v)
+        for k, v in assignations.items()
+    }
+    dumb_dump(f"{log_folder}/results.md", assignations_values)
+
     print(
         f"Objective value = {solver.objective_value}",
     )
-    print(f"Deviation horaire maximale = {max_diff}")
 else:
     print("No solution found !")
 
