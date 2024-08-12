@@ -526,7 +526,7 @@ def appréciation_dune_quête(bénévole: Bénévole, quête: Quête):
         time = acc.time()
         for pref_t, p in bénévole.pref_horaires.items():
             if time.hour == pref_t.hour:
-                somme_prefs += p * 2
+                somme_prefs += p
                 break
         acc = min(acc + timedelta(minutes=15), quête.fin)
     return somme_prefs
@@ -564,10 +564,10 @@ def amplitudes(b: Bénévole):
 model.minimize(
     sum(
         # Idéalement, personne ne doit trop travailler. Sauf Popi bien sûr
-        100000 * excès_de_travail(b)
-        + 1 * écarts_du_bénévole(b)
-        - 100 * appréciation_du_planning(b, quêtes)
-        + 1 * amplitudes(b)
+        # 1000000 * excès_de_travail(b)
+        + 1000000 * écarts_du_bénévole(b)
+        - 15 * appréciation_du_planning(b, quêtes)
+        + 0.5 * amplitudes(b)
         for b in bénévoles
     )
 )
