@@ -238,13 +238,19 @@ for b in bénévoles:
 
 """ Certains bénévoles sont indisponibles à certains horaires """
 for b in bénévoles:
-    for q in quêtes:
-        # On vérifie que ce n'est pas une quête forcée:
-        if not (contains(q.bénévoles, b)):
-            for début_indispo in b.indisponibilités:
-                fin_indispo = time((début_indispo.hour + 1) % 24)
-                if not (fin_indispo <= q.début.time() or début_indispo >= q.fin.time()):
-                    model.add(assignations[(b, q)] == 0)
+    for date, quêtes_du_jour in Quête.par_jour.items():
+        for q in quêtes_du_jour:
+            # On vérifie que ce n'est pas une quête forcée:
+            if not (contains(q.bénévoles, b)):
+                for début_indispo in b.indisponibilités:
+                    # On compare des datetime pour éviter les erreurs bêtes:
+                    début_indispo = datetime.combine(date, début_indispo, q.début.tzinfo)
+                    if début_indispo.hour < 5:
+                        début_indispo += timedelta(days=1)
+                    fin_indispo = début_indispo + timedelta(hours=1)
+
+                    if not (fin_indispo <= q.début or début_indispo >= q.fin):
+                        model.add(assignations[(b, q)] == 0)
 
 """ Tout le monde ne peut pas assumer les quêtes sérénité """
 for b in bénévoles:
@@ -482,8 +488,8 @@ def diff_temps(b, assignations):
 def écarts_du_bénévole(b):
     diff_par_jour = diff_temps(b, assignations)
     return sum(
-        abs_var(f"diff_{date}_béné_{b}", diff)
-        # squared_var(f"diff_{date}_béné_{b}", diff)
+        # abs_var(f"diff_{date}_béné_{b}", diff)
+        squared_var(f"diff_{date}_béné_{b}", diff)
         for date, diff in diff_par_jour.items()
     )
 
