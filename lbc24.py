@@ -371,10 +371,11 @@ for d in Quête.par_jour.keys():
                     temps_reste -= 1
                     ajustement += 1
         return ajustement
-
+    l = list(par_bénévole.items())
+    shuffled = dict(random.sample(l, len(l)))
     temps_de_travail_quotidiens[d]["par_bénévole"] = {
         b: { "time": v["time"], "ajustable": v["ajustable"], "ajustement": ajuste(v)}
-        for b, v in par_bénévole.items()
+        for b, v in shuffled.items()
     }
 
 
