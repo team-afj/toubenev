@@ -457,9 +457,10 @@ def abs_var(id, value: cp_model.LinearExprT):
     return var
 
 def squared_var(id, value):
-    var = model.NewIntVar(0, pow(12*60, 2), f"v_pow_{id}")
+    limit = 30
+    var = model.NewIntVar(0, pow(limit, 2), f"v_pow_{id}")
     var_diff = model.NewIntVar(
-        -12*60, 12*60, f"v_diff_{id}"
+        -1 * limit, limit, f"v_diff_{id}"
     )
     model.add(var_diff == value)
     model.add_multiplication_equality(var, [var_diff, var_diff])
@@ -501,7 +502,7 @@ def écarts_du_bénévole(b):
 
 
 def filter_positive(value, name):
-    v = model.new_int_var(0, 24*60, name)
+    v = model.new_int_var(0, 15*60, name)
     model.add_max_equality(v, [0, value])
     return v
 
