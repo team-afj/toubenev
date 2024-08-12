@@ -43,6 +43,8 @@ def update_pref_horaire(heure_début, data, prefs, indisponibilités):
     val = 0
     if pref == "E>t^":  # Indisponible
         indisponibilités.append(time(hour=heure_début))
+        if heure_début == 0:
+            indisponibilités.append(time(hour=(heure_début + 1)))
         return
     if pref == "P;>X":  # Sous la contrainte
         val = -200000
