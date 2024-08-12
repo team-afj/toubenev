@@ -508,11 +508,10 @@ def filter_positive(value, name):
 
 def excès_de_travail(b):
     diff_par_jour = diff_temps(b, assignations)
-    return sum(
-        filter_positive(diff, f"excès_{date}_{b}")
-        for date, diff in diff_par_jour.items()
-    )
 
+    return filter_positive(sum(
+        diff
+        for _, diff in diff_par_jour.items()), f"excès_{b}")
 
 """ Pondération des préférences des bénévoles """
 
