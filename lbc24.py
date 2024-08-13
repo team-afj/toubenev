@@ -458,7 +458,7 @@ def abs_var(id, value: cp_model.LinearExprT):
     return var
 
 def squared_var(id, value):
-    limit = 30
+    limit = 20
     var = model.NewIntVar(0, pow(limit, 2), f"v_pow_{id}")
     var_diff = model.NewIntVar(
         -1 * limit, limit, f"v_diff_{id}"
@@ -564,9 +564,9 @@ def amplitudes(b: Bénévole):
 model.minimize(
     sum(
         # Idéalement, personne ne doit trop travailler. Sauf Popi bien sûr
-        # 1000000 * excès_de_travail(b)
-        + 1000000 * écarts_du_bénévole(b)
-        - 15 * appréciation_du_planning(b, quêtes)
+        1000000 * excès_de_travail(b)
+        + 100000 * écarts_du_bénévole(b)
+        - 30 * appréciation_du_planning(b, quêtes)
         + 0.5 * amplitudes(b)
         for b in bénévoles
     )
@@ -678,7 +678,7 @@ class VarArraySolutionPrinter(cp_model.CpSolverSolutionCallback):
 solver = cp_model.CpSolver()
 solution_printer = VarArraySolutionPrinter(assignations)
 solver.parameters.log_search_progress = True
-solver.parameters.num_workers = 16
+solver.parameters.num_workers = 23
 solver.parameters.log_to_stdout = False
 
 with open(f"{log_folder}/cp_sat_log.txt", "w") as text_file:

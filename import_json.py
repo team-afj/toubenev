@@ -47,7 +47,7 @@ def update_pref_horaire(heure_début, data, prefs, indisponibilités):
             indisponibilités.append(time(hour=(heure_début + 1)))
         return
     if pref == "P;>X":  # Sous la contrainte
-        val = -200000
+        val = -2000000
     if pref == "Sa=z":  # Horaire de prédilection
         val = 1
     prefs[time(hour=heure_début)] = val
@@ -77,7 +77,6 @@ def load_bénévoles(obj):
             update_pref_horaire(0, props, pref_horaires, indisponibilités)
             for i in range(9, 23 + 1):
                 update_pref_horaire(i, props, pref_horaires, indisponibilités)
-            # print(props["Name"]["title"][0]["plain_text"], pref_horaires)
             Bénévole(
                 id,
                 props["Pseudo"]["title"][0]["plain_text"],
