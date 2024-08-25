@@ -538,6 +538,9 @@ def appréciation_du_planning(bénévole: Bénévole, quêtes: List[Quête]):
         for q in quêtes
     )
 
+# This might not always be satisfiable
+for b in bénévoles:
+    model.add(appréciation_du_planning(b, quêtes) >= 0).with_name(f"plaisant_{b}")
 
 """ Distance entre la première et la dernière quête """
 
