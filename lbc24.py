@@ -5,11 +5,12 @@ from operator import contains
 import os, sys, math, random
 from ortools.sat.python import cp_model
 from data_model import Bénévole, Type_de_quête, Quête, Spectacle
+from export_json import write_json
 
 # prepare log folder and file
 date_now = datetime.now().strftime("%Y%m%d %Hh%Mm%Ss")
 log_folder = f"runs/{date_now}"
-if not os.path.exists(log_folder):
+if not os.path.exists(f"{log_folder}/solutions"):
     os.makedirs(f"{log_folder}/solutions")
 
 log_file_path = f"{log_folder}/log.txt"
@@ -666,8 +667,22 @@ class VarArraySolutionPrinter(cp_model.CpSolverSolutionCallback):
             écarts_line = f"{écarts_line} {écart_type:=.1f} [{min_};{max_}]"
         écarts_line = f"{écarts_line}]"
 
+        if not os.path.exists(f"{log_folder}/solutions/{self._solution_count:0=3d}"):
+            os.makedirs(f"{log_folder}/solutions/{self._solution_count:0=3d}")
+
         print(f"Solution {self._solution_count:0=3d}:\n\t{écarts_line}\n\t{smile_line}")
-        dumb_dump(f"{log_folder}/solutions/{self._solution_count:0=3d}_results.md", assignations_val)
+        dumb_dump(f"{log_folder}/solutions/{self._solution_count:0=3d}/results.md", assignations_val)
+
+
+        result: Dict[Quête, List[Bénévole]] = {}
+        for q in quêtes:
+            participants = []
+            for b in bénévoles:
+                if assignations_val[(b, q)]:
+                    participants.append(b)
+            result[q] = participants
+        write_json(result, file=f"{log_folder}/solutions/{self._solution_count:0=3d}/results")
+
 
     @property
     def solution_count(self) -> int:
@@ -751,8 +766,6 @@ for q in quêtes:
         if solver.value(assignations[(b, q)]):
             participants.append(b)
     result[q] = participants
-
-from export_json import write_json
 
 write_json(result, file=f"{log_folder}/results.json")
 
