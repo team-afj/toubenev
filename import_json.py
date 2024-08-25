@@ -201,6 +201,20 @@ def load_quêtes(obj):
             )
 
 
+def load_assignations(obj):
+    affectations = obj["affectations"]
+    for a in affectations["pages"]:
+        props = a["properties"]
+        début = datetime.fromisoformat(props["Horaire"]["date"]["start"])
+        fin = datetime.fromisoformat(props["Horaire"]["date"]["end"])
+        id_quête = props["Qu\u00eate"]["relation"][0]["id"]
+        bénévoles = []
+        for id_b in props["B\u00e9n\u00e9voles"]["relation"]:
+            bénévoles.append(Bénévole.tous[id_b["id"]])
+        sécable = p["properties"]["D\u00e9coupable ?"]["checkbox"]
+        Type_de_quête(id, name, sécable)
+
+
 def from_file(src):
     with open(src, "r") as file:
         obj = json.load(file)
