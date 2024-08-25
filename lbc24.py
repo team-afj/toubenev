@@ -511,9 +511,9 @@ def filter_positive(value, name):
 def excès_de_travail(b):
     diff_par_jour = diff_temps(b, assignations)
 
-    return filter_positive(sum(
-        diff
-        for _, diff in diff_par_jour.items()), f"excès_{b}")
+    return sum(
+        filter_positive(diff, f"excès_{d}_{b}")
+        for d, diff in diff_par_jour.items())
 
 """ Pondération des préférences des bénévoles """
 
@@ -567,9 +567,9 @@ def amplitudes(b: Bénévole):
 model.minimize(
     sum(
         # Idéalement, personne ne doit trop travailler. Sauf Popi bien sûr
-        1000000 * excès_de_travail(b)
-        + 100000 * écarts_du_bénévole(b)
-        - 30 * appréciation_du_planning(b, quêtes)
+        excès_de_travail(b)
+        # +  écarts_du_bénévole(b)
+        - appréciation_du_planning(b, quêtes)
         + 0.5 * amplitudes(b)
         for b in bénévoles
     )
