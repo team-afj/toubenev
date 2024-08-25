@@ -47,7 +47,7 @@ def update_pref_horaire(heure_début, data, prefs, indisponibilités):
             indisponibilités.append(time(hour=(heure_début + 1)))
         return
     if pref == "P;>X":  # Sous la contrainte
-        val = -2000000
+        val = -4000000
     if pref == "Sa=z":  # Horaire de prédilection
         val = 1
     prefs[time(hour=heure_début)] = val

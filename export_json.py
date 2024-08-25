@@ -27,7 +27,7 @@ def write_json(result: Dict[Quête, List[Bénévole]], file="result.json"):
     for q, l in result.items():
         i += 1
         acc[q] = l
-        if i >= 50:
+        if i >= 100:
             splits.append(acc)
             acc = {}
             i = 0
