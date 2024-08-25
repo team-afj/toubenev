@@ -54,6 +54,7 @@ def quêtes_dun_type(t):
     return filter(lambda q: member(q.types, t), quêtes)
 
 id_ulysse = "3e261775-94f3-4673-aca7-f8c367fb9008"
+id_yohan = "63339524-5dbc-49f5-8e83-d85311feee29"
 
 id_quête_sérénité = "784fc134-cab5-4797-8be2-7a7a91e57795"
 
@@ -327,6 +328,9 @@ for b in bénévoles:
 # minutes
 
 def temps_bénévole(b : Bénévole, date):
+    # TODO: take into account indisponibilities this needs complete rework
+    if b.id == id_yohan and date.day == 17:
+        return { "time": int(2*60),  "ajustable": False }
     if ((not(b.date_arrivée) or date >= b.date_arrivée.date())
         and (not(b.date_départ) or date < b.date_départ.date())):
         return { "time": int(60 * b.heures_théoriques), "ajustable": not b.est_assigné(date)}
