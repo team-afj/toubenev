@@ -111,7 +111,7 @@ for b in bénévoles:
 
 """ Tous les slots de toutes les quêtes doivent être peuplés """
 for q in quêtes:
-    model.add(sum(assignations[(b, q)] for b in bénévoles) == q.nombre_bénévoles)
+    model.add(sum(assignations[(b, q)] for b in bénévoles) == q.nombre_bénévoles).with_name(f"tout_est_rempli_{b}_{q}")
 
 
 """ Un même bénévole ne peut pas remplir plusieurs quêtes en même temps """
@@ -121,7 +121,7 @@ for q in quêtes:
     for q2 in en_même_temps:
         for b in bénévoles:
             if q != q2:
-                model.add_at_most_one([assignations[(b, q)], assignations[(b, q2)]])
+                model.add_at_most_one([assignations[(b, q)], assignations[(b, q2)]]).with_name(f"en_meme_temps_{b}_{q}_{q2}")
 
 """ Certaines quêtes sont déjà assignées """
 for q in quêtes:
@@ -134,7 +134,7 @@ for d, quêtes_du_jour in Quête.par_jour.items():
         if b.est_assigné(d):
             for q in quêtes_du_jour:
                 if not(member(q.bénévoles, b)):
-                    model.add(assignations[(b, q)] == 0)
+                    model.add(assignations[(b, q)] == 0).with_name(f"assigné_peut_pas_faire_{b}_{q}")
 
 """ On aimerait que tout le monde participe à certaines tâches """
 def tout_le_monde_fait(t : Type_de_quête):
@@ -145,7 +145,7 @@ def tout_le_monde_fait(t : Type_de_quête):
         if not(assigné) and not(member(b.types_de_quête_interdits, t)):
             # Todo there are more checks to do here such has place interdiction
             # print(f"{b} fait du clean")
-            model.add_at_least_one(assignations[(b,q)] for q in quêtes_dun_type(t))
+            model.add_at_least_one(assignations[(b,q)] for q in quêtes_dun_type(t)).with_name(f"un_seul_{b}_{t}")
 
 tout_le_monde_fait(Type_de_quête.tous[id_tdg_suivi])
 
@@ -158,7 +158,7 @@ def un_max_de_monde_fait(t : Type_de_quête):
             assigné = assigné and b.est_assigné(d)
         if not(assigné) and not(member(b.types_de_quête_interdits, t)):
             # Todo there are more checks to do here such has place interdiction
-            model.add_at_most_one(assignations[(b,q)] for q in quêtes_dun_type(t))
+            model.add_at_most_one(assignations[(b,q)] for q in quêtes_dun_type(t)).with_name(f"au_plus_un_{b}_{t}")
 
 un_max_de_monde_fait(Type_de_quête.tous[id_tdg_clean])
 
@@ -175,7 +175,7 @@ for q in quêtes:
 
 for b in bénévoles:
     for quêtes_spe in quêtes_suivi_des_spectacles.values():
-        model.add_at_most_one(assignations[(b,q)] for q in quêtes_spe)
+        model.add_at_most_one(assignations[(b,q)] for q in quêtes_spe).with_name(f"no_double_show_{b}_{quêtes_spe[0]}")
 
 """ Les tâches consécutives d'une scène sont faites par les mêmes bénévoles """
 
@@ -216,7 +216,7 @@ def suivi_quêtes_dun_spectacles(quêtes: List[Quête]):
         # dans le groupe de quêtes doit participer aux autres quêtes du groupe.
         model.add_bool_and(assignations[(b, q)] for q in quêtes).only_enforce_if(
             assignations[(b, min_quête)]
-        )
+        ).with_name(f"suivi_{b}_{quêtes[0]}")
 
 
 for quêtes_dun_spectacle in quêtes_liées_des_spectacles:
@@ -224,18 +224,17 @@ for quêtes_dun_spectacle in quêtes_liées_des_spectacles:
 
 """ Certains bénévoles ne sont pas là pendant la totalité de l'évènement """
 for b in bénévoles:
-    if b.date_arrivée:
-        for q in quêtes:
+    for q in quêtes:
+        if b.date_arrivée:
             # On vérifie que ce n'est pas une quête forcée:
             if not (contains(q.bénévoles, b)):
                 if q.début < b.date_arrivée:
-                    model.add(assignations[(b, q)] == 0)
-    if b.date_départ:
-        for q in quêtes:
+                    model.add(assignations[(b, q)] == 0).with_name(f"before_arrival_{b}_{q}")
+        if b.date_départ:
             # On vérifie que ce n'est pas une quête forcée:
             if not (contains(q.bénévoles, b)):
-                if not(q.fin < b.date_départ):
-                    model.add(assignations[(b, q)] == 0)
+                if q.fin > b.date_départ:
+                    model.add(assignations[(b, q)] == 0).with_name(f"after_leave_{b}_{q}")
 
 """ Certains bénévoles sont indisponibles à certains horaires """
 for b in bénévoles:
@@ -251,33 +250,33 @@ for b in bénévoles:
                     fin_indispo = début_indispo + timedelta(hours=1)
 
                     if not (fin_indispo <= q.début or début_indispo >= q.fin):
-                        model.add(assignations[(b, q)] == 0)
+                        model.add(assignations[(b, q)] == 0).with_name(f"indispo_{b}_{q}")
 
 """ Tout le monde ne peut pas assumer les quêtes sérénité """
 for b in bénévoles:
     if not (b.sérénité):
         for q in quêtes:
             if contains(q.types, Type_de_quête.tous[id_quête_sérénité]):
-                model.add(assignations[(b, q)] == 0)
+                model.add(assignations[(b, q)] == 0).with_name(f"pas_serein_{b}_{q}")
 
 """ Les lieux interdits sont interdits """
 for b in bénévoles:
     for lieu in b.lieux_interdits:
         for q in quêtes_dun_lieu(lieu):
-            model.add(assignations[(b, q)] == 0)
+            model.add(assignations[(b, q)] == 0).with_name(f"lieu_interdit_{b}_{q}")
 
 """ Les quêtes interdites sont interdites """
 for b in bénévoles:
     for t in b.types_de_quête_interdits:
         for q in quêtes_dun_type(t):
-            model.add(assignations[(b, q)] == 0)
+            model.add(assignations[(b, q)] == 0).with_name(f"tdq_interdit_{b}_{q}")
 
 
 """ Ils se détestent, séparez-les ! """
 for b in bénévoles:
     for e in b.binômes_interdits:
         for q in quêtes:
-            model.add(assignations[(b, q)] + assignations[(e, q)] <= 1)
+            model.add(assignations[(b, q)] + assignations[(e, q)] <= 1).with_name(f"blaire_pas_{b}_{e}_{q}")
 
 """ Chacun a un trou dans son emploi du temps """
 
@@ -312,7 +311,7 @@ def c_est_la_pause(b: Bénévole):
         overlaps = [interval_pause]
         for q in quêtes:
             overlaps.append(intervalles[(b, q)])
-        model.add_no_overlap(overlaps)
+        model.add_no_overlap(overlaps).with_name(f"noverlap_{b}_{date}")
 
 
 for b in bénévoles:
@@ -459,13 +458,13 @@ def abs_var(id, value: cp_model.LinearExprT):
     return var
 
 def squared_var(id, value):
-    limit = 20
+    limit = 30 # This value is very important: it can help starting the optimisation closer to the optimal by hard-rejecting too divergent solutions. Be careful: if it is too small the model becomes UNSAT.
     var = model.NewIntVar(0, pow(limit, 2), f"v_pow_{id}")
     var_diff = model.NewIntVar(
         -1 * limit, limit, f"v_diff_{id}"
     )
-    model.add(var_diff == value)
-    model.add_multiplication_equality(var, [var_diff, var_diff])
+    model.add(var_diff == value).with_name(f"square_eq_{id}")
+    model.add_multiplication_equality(var, [var_diff, var_diff]).with_name(f"square_{id}")
     return var
 
 def horaires_ajustés_bénévole(date, b):
@@ -505,7 +504,7 @@ def écarts_du_bénévole(b):
 
 def filter_positive(value, name):
     v = model.new_int_var(0, 15*60, name)
-    model.add_max_equality(v, [0, value])
+    model.add_max_equality(v, [0, value]).with_name(f"max_{name}")
     return v
 
 
@@ -548,8 +547,8 @@ def amplitude_horaire(b: Bénévole, quêtes: List[Quête]):
     fin = model.new_int_var(0, 60 * 24, f"fin_journée_{b}")
     model.add_min_equality(
         début, map(lambda q: intervalles[(b, q)].start_expr(), quêtes)
-    )
-    model.add_max_equality(fin, map(lambda q: intervalles[(b, q)].end_expr(), quêtes))
+    ).with_name(f"amp_min_{b}")
+    model.add_max_equality(fin, map(lambda q: intervalles[(b, q)].end_expr(), quêtes)).with_name(f"amp_max_{b}")
     return fin - début
 
 
