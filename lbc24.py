@@ -692,7 +692,7 @@ class VarArraySolutionPrinter(cp_model.CpSolverSolutionCallback):
 solver = cp_model.CpSolver()
 solution_printer = VarArraySolutionPrinter(assignations)
 solver.parameters.log_search_progress = True
-solver.parameters.num_workers = 23
+solver.parameters.num_workers = 10
 solver.parameters.log_to_stdout = False
 
 with open(f"{log_folder}/cp_sat_log.txt", "w") as text_file:
