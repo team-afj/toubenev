@@ -367,9 +367,8 @@ for d in Quête.par_jour.keys():
                 # 1/2 chance to distribute the rest THATS NOT PERFECT: the last
                 # benevole might get more^^ Additionaly, bénévole higher in the
                 # list have more chance to get these.
-                if i >= len(working_benevoles) or random.choice([True, False]):
-                    temps_reste -= 1
-                    ajustement += 1
+                temps_reste -= 1
+                ajustement += 1
         return ajustement
     l = list(par_bénévole.items())
     shuffled = dict(random.sample(l, len(l)))
