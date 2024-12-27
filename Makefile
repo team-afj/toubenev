@@ -12,9 +12,14 @@ venv: .venv/touchfile
 .PHONY: all
 all: venv
 	. .venv/bin/activate; \
-	sh run.sh
+	time sh run.sh
 
 .PHONY: watch
 watch: venv
 	. .venv/bin/activate; \
 	sh watch.sh
+
+.PHONY: gapi-test
+gapi-test: venv
+	. .venv/bin/activate; \
+	python gapi-test.py
