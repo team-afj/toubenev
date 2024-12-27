@@ -15,9 +15,12 @@ if not os.path.exists(f"{log_folder}/solutions"):
 
 log_file_path = f"{log_folder}/log.txt"
 log_file = open(log_file_path, "w")
+
+
 def print(str="\n"):
     log_file.write(f"{str}\n")
     sys.stdout.write(f"{str}\n")
+
 
 # open log file
 
@@ -53,6 +56,7 @@ def quêtes_dun_lieu(lieu):
 def quêtes_dun_type(t):
     return filter(lambda q: member(q.types, t), quêtes)
 
+
 id_ulysse = "3e261775-94f3-4673-aca7-f8c367fb9008"
 id_yohan = "63339524-5dbc-49f5-8e83-d85311feee29"
 
@@ -66,6 +70,7 @@ id_tdq_gradinage = "987ad365-0032-42c6-8455-8fbf66d6179d"
 b_ulysse = Bénévole.tous[id_ulysse]
 b_ulysse.date_arrivée = datetime.fromisoformat("2024-08-15T14:45:00.000000+02:00")
 
+
 def time_to_minutes(t: time):
     return t.hour * 60 + t.minute
 
@@ -77,11 +82,13 @@ def diff_minutes(t1: time, t2: time):
 def print_duration(minutes):
     return f"{int(minutes // 60):0=2d}h{int(minutes % 60):0=2d}"
 
+
 def print_signed_duration(minutes):
     if minutes >= 0:
         return f"+{print_duration(minutes)}"
     else:
         return f"-{print_duration(abs(minutes))}"
+
 
 # for b in Bénévole.tous.values():
 #     for d in Quête.par_jour.keys():
@@ -112,7 +119,9 @@ for b in bénévoles:
 
 """ Tous les slots de toutes les quêtes doivent être peuplés """
 for q in quêtes:
-    model.add(sum(assignations[(b, q)] for b in bénévoles) == q.nombre_bénévoles).with_name(f"tout_est_rempli_{b}_{q}")
+    model.add(
+        sum(assignations[(b, q)] for b in bénévoles) == q.nombre_bénévoles
+    ).with_name(f"tout_est_rempli_{b}_{q}")
 
 
 """ Un même bénévole ne peut pas remplir plusieurs quêtes en même temps """
@@ -122,7 +131,9 @@ for q in quêtes:
     for q2 in en_même_temps:
         for b in bénévoles:
             if q != q2:
-                model.add_at_most_one([assignations[(b, q)], assignations[(b, q2)]]).with_name(f"en_meme_temps_{b}_{q}_{q2}")
+                model.add_at_most_one(
+                    [assignations[(b, q)], assignations[(b, q2)]]
+                ).with_name(f"en_meme_temps_{b}_{q}_{q2}")
 
 """ Certaines quêtes sont déjà assignées """
 for q in quêtes:
@@ -134,32 +145,44 @@ for d, quêtes_du_jour in Quête.par_jour.items():
     for b in bénévoles:
         if b.est_assigné(d):
             for q in quêtes_du_jour:
-                if not(member(q.bénévoles, b)):
-                    model.add(assignations[(b, q)] == 0).with_name(f"assigné_peut_pas_faire_{b}_{q}")
+                if not (member(q.bénévoles, b)):
+                    model.add(assignations[(b, q)] == 0).with_name(
+                        f"assigné_peut_pas_faire_{b}_{q}"
+                    )
 
 """ On aimerait que tout le monde participe à certaines tâches """
-def tout_le_monde_fait(t : Type_de_quête):
+
+
+def tout_le_monde_fait(t: Type_de_quête):
     for b in bénévoles:
         assigné = True
         for d in Quête.par_jour.keys():
             assigné = assigné and b.est_assigné(d)
-        if not(assigné) and not(member(b.types_de_quête_interdits, t)):
+        if not (assigné) and not (member(b.types_de_quête_interdits, t)):
             # Todo there are more checks to do here such has place interdiction
             # print(f"{b} fait du clean")
-            model.add_at_least_one(assignations[(b,q)] for q in quêtes_dun_type(t)).with_name(f"un_seul_{b}_{t}")
+            model.add_at_least_one(
+                assignations[(b, q)] for q in quêtes_dun_type(t)
+            ).with_name(f"un_seul_{b}_{t}")
+
 
 tout_le_monde_fait(Type_de_quête.tous[id_tdg_suivi])
 
 
 """ On aimerait certaines tâches soient faites par un maximum de personnes différentes """
-def un_max_de_monde_fait(t : Type_de_quête):
+
+
+def un_max_de_monde_fait(t: Type_de_quête):
     for b in bénévoles:
         assigné = True
         for d in Quête.par_jour.keys():
             assigné = assigné and b.est_assigné(d)
-        if not(assigné) and not(member(b.types_de_quête_interdits, t)):
+        if not (assigné) and not (member(b.types_de_quête_interdits, t)):
             # Todo there are more checks to do here such has place interdiction
-            model.add_at_most_one(assignations[(b,q)] for q in quêtes_dun_type(t)).with_name(f"au_plus_un_{b}_{t}")
+            model.add_at_most_one(
+                assignations[(b, q)] for q in quêtes_dun_type(t)
+            ).with_name(f"au_plus_un_{b}_{t}")
+
 
 un_max_de_monde_fait(Type_de_quête.tous[id_tdg_clean])
 
@@ -176,7 +199,9 @@ for q in quêtes:
 
 for b in bénévoles:
     for quêtes_spe in quêtes_suivi_des_spectacles.values():
-        model.add_at_most_one(assignations[(b,q)] for q in quêtes_spe).with_name(f"no_double_show_{b}_{quêtes_spe[0]}")
+        model.add_at_most_one(assignations[(b, q)] for q in quêtes_spe).with_name(
+            f"no_double_show_{b}_{quêtes_spe[0]}"
+        )
 
 """ Les tâches consécutives d'une scène sont faites par les mêmes bénévoles """
 
@@ -230,12 +255,16 @@ for b in bénévoles:
             # On vérifie que ce n'est pas une quête forcée:
             if not (contains(q.bénévoles, b)):
                 if q.début < b.date_arrivée:
-                    model.add(assignations[(b, q)] == 0).with_name(f"before_arrival_{b}_{q}")
+                    model.add(assignations[(b, q)] == 0).with_name(
+                        f"before_arrival_{b}_{q}"
+                    )
         if b.date_départ:
             # On vérifie que ce n'est pas une quête forcée:
             if not (contains(q.bénévoles, b)):
                 if q.fin > b.date_départ:
-                    model.add(assignations[(b, q)] == 0).with_name(f"after_leave_{b}_{q}")
+                    model.add(assignations[(b, q)] == 0).with_name(
+                        f"after_leave_{b}_{q}"
+                    )
 
 """ Certains bénévoles sont indisponibles à certains horaires """
 for b in bénévoles:
@@ -245,13 +274,17 @@ for b in bénévoles:
             if not (contains(q.bénévoles, b)):
                 for début_indispo in b.indisponibilités:
                     # On compare des datetime pour éviter les erreurs bêtes:
-                    début_indispo = datetime.combine(date, début_indispo, q.début.tzinfo)
+                    début_indispo = datetime.combine(
+                        date, début_indispo, q.début.tzinfo
+                    )
                     if début_indispo.hour < 5:
                         début_indispo += timedelta(days=1)
                     fin_indispo = début_indispo + timedelta(hours=1)
 
                     if not (fin_indispo <= q.début or début_indispo >= q.fin):
-                        model.add(assignations[(b, q)] == 0).with_name(f"indispo_{b}_{q}")
+                        model.add(assignations[(b, q)] == 0).with_name(
+                            f"indispo_{b}_{q}"
+                        )
 
 """ Tout le monde ne peut pas assumer les quêtes sérénité """
 for b in bénévoles:
@@ -277,7 +310,9 @@ for b in bénévoles:
 for b in bénévoles:
     for e in b.binômes_interdits:
         for q in quêtes:
-            model.add(assignations[(b, q)] + assignations[(e, q)] <= 1).with_name(f"blaire_pas_{b}_{e}_{q}")
+            model.add(assignations[(b, q)] + assignations[(e, q)] <= 1).with_name(
+                f"blaire_pas_{b}_{e}_{q}"
+            )
 
 """ Chacun a un trou dans son emploi du temps """
 
@@ -327,22 +362,27 @@ for b in bénévoles:
 # heures, dans le champ `heures_théoriques`. On les converti systématiquement en
 # minutes
 
-def temps_bénévole(b : Bénévole, date):
+
+def temps_bénévole(b: Bénévole, date):
     # TODO: take into account indisponibilities this needs complete rework
     if b.id == id_yohan and date.day == 17:
-        return { "time": int(2*60),  "ajustable": False }
-    if ((not(b.date_arrivée) or date >= b.date_arrivée.date())
-        and (not(b.date_départ) or date < b.date_départ.date())):
-        return { "time": int(60 * b.heures_théoriques), "ajustable": not b.est_assigné(date)}
+        return {"time": int(2 * 60), "ajustable": False}
+    if (not (b.date_arrivée) or date >= b.date_arrivée.date()) and (
+        not (b.date_départ) or date < b.date_départ.date()
+    ):
+        return {
+            "time": int(60 * b.heures_théoriques),
+            "ajustable": not b.est_assigné(date),
+        }
     else:
-        return { "time": 0,  "ajustable": False }
+        return {"time": 0, "ajustable": False}
 
 
 # Dict[Date, { "bénévoles": Dict[Bénévole, int], "quêtes" : int] }
 temps_de_travail_quotidiens = {
     date: {
-        "par_bénévole": { b: temps_bénévole(b, date) for b in bénévoles },
-        "durée_quêtes": sum(q.durée_minutes() * q.nombre_bénévoles for q in quêtes)
+        "par_bénévole": {b: temps_bénévole(b, date) for b in bénévoles},
+        "durée_quêtes": sum(q.durée_minutes() * q.nombre_bénévoles for q in quêtes),
     }
     for date, quêtes in Quête.par_jour.items()
 }
@@ -352,14 +392,21 @@ for d in Quête.par_jour.keys():
     total = sum(item["time"] for item in par_bénévole.values())
     temps_de_travail_quotidiens[d]["total_dispo"] = total
     missing = temps_de_travail_quotidiens[d]["durée_quêtes"] - total
-    working_benevoles = list(filter(lambda  item: item["ajustable"], par_bénévole.values()))
-    print(f"Diff: {missing} num_bev:{ len(working_benevoles)} mean: {missing / len(working_benevoles)}")
+    working_benevoles = list(
+        filter(lambda item: item["ajustable"], par_bénévole.values())
+    )
+    print(
+        f"Diff: {missing} num_bev:{ len(working_benevoles)} mean: {missing / len(working_benevoles)}"
+    )
     sign = missing / missing
     temps_additionnel = int(sign * (abs(missing) // len(working_benevoles)))
     temps_reste = int(sign * (abs(missing) % len(working_benevoles)))
-    temps_de_travail_quotidiens[d]["ajustement"] = math.ceil(missing / len(working_benevoles))
+    temps_de_travail_quotidiens[d]["ajustement"] = math.ceil(
+        missing / len(working_benevoles)
+    )
     temps_rest_distribué = False
     i = 0
+
     def ajuste(v):
         global temps_reste
         global i
@@ -374,26 +421,34 @@ for d in Quête.par_jour.keys():
                 temps_reste -= 1
                 ajustement += 1
         return ajustement
+
     l = list(par_bénévole.items())
     shuffled = dict(random.sample(l, len(l)))
     temps_de_travail_quotidiens[d]["par_bénévole"] = {
-        b: { "time": v["time"], "ajustable": v["ajustable"], "ajustement": ajuste(v)}
+        b: {"time": v["time"], "ajustable": v["ajustable"], "ajustement": ajuste(v)}
         for b, v in shuffled.items()
     }
 
 
-def print_stats (tdtq):
+def print_stats(tdtq):
     for d, v in tdtq.items():
         # todo: this is outdated
-        working_benevoles = list(filter(lambda  item: item["ajustable"], par_bénévole.values()))
-        print(f"{d}: {print_duration(v["total_dispo"])}/{print_duration(v["durée_quêtes"])} ({v["ajustement"]:+} * {len(working_benevoles)})")
+        working_benevoles = list(
+            filter(lambda item: item["ajustable"], par_bénévole.values())
+        )
+        print(
+            f"{d}: {print_duration(v["total_dispo"])}/{print_duration(v["durée_quêtes"])} ({v["ajustement"]:+} * {len(working_benevoles)})"
+        )
 
         for b, t in v["par_bénévole"].items():
-            print(f"{b}: {print_duration(t["time"])} {t["ajustable"]} + {t["ajustement"]}")
+            print(
+                f"{b}: {print_duration(t["time"])} {t["ajustable"]} + {t["ajustement"]}"
+            )
+
 
 print_stats(temps_de_travail_quotidiens)
 
-    # TODO: this might be different everyday
+# TODO: this might be different everyday
 # temps_de_travail_disponible_quotidien = (
 #     60
 #     * sum(b.heures_théoriques for b in bénévoles)
@@ -454,29 +509,14 @@ def temps_total_quêtes(quêtes: List[Quête]):
 # }
 
 
-# Calcule la valeur absolue via une variable et une contrainte supplémentaires
-def abs_var(id, value: cp_model.LinearExprT):
-    var = model.NewIntVar(0, 12*60, f"v_abs_{id}")
-    model.AddAbsEquality(var, value)
-    return var
-
-def squared_var(id, value):
-    limit = 30 # This value is very important: it can help starting the optimisation closer to the optimal by hard-rejecting too divergent solutions. Be careful: if it is too small the model becomes UNSAT.
-    var = model.NewIntVar(0, pow(limit, 2), f"v_pow_{id}")
-    var_diff = model.NewIntVar(
-        -1 * limit, limit, f"v_diff_{id}"
-    )
-    model.add(var_diff == value).with_name(f"square_eq_{id}")
-    model.add_multiplication_equality(var, [var_diff, var_diff]).with_name(f"square_{id}")
-    return var
-
 def horaires_ajustés_bénévole(date, b):
-  item = temps_de_travail_quotidiens[date]["par_bénévole"][b]
-  théorie = item["time"]
-  if item["ajustable"]:
-      # This could be simplified now
-      théorie += item["ajustement"]
-  return théorie
+    item = temps_de_travail_quotidiens[date]["par_bénévole"][b]
+    théorie = item["time"]
+    if item["ajustable"]:
+        # This could be simplified now
+        théorie += item["ajustement"]
+    return théorie
+
 
 # Écart de l'écart du temps de travail d'un bénévole par rapport à la moyenne
 # Renvoie un dictionnaire indexé par les jours
@@ -487,36 +527,22 @@ def diff_temps(b, assignations):
     }
 
 
-
-# Calcule la somme pour chaque jour de la valeur absolue de écarts à la moyenne
-# des écarts du bénévole `b`
-def écarts_du_bénévole(b):
-    diff_par_jour = diff_temps(b, assignations)
-    return sum(
-        # abs_var(f"diff_{date}_béné_{b}", diff)
-        squared_var(f"diff_{date}_béné_{b}", diff)
-        for date, diff in diff_par_jour.items()
-    )
+""" Équilibrage du temps de travail """
 
 
-""" Punition des excès """
-# On filtre les écarts de temps de travail positif pour leur attribuer un poids
-# plus fort. Dans l'idéal, s'il y a suffisamment de main d'oeuvre, personne ne
-# devrait travailler plus que prévu.
+def bornage_des_excès(bénévoles, écart_quotidien_max=30):
+    """The goal is to minimize work excess differences on the whole event by allowing some day-to-day differences below the threshold."""
+    borne_inf = model.new_int_var(-1000, 0, "borne_inf_des_diffs")
+    borne_sup = model.new_int_var(0, 1000, "borne_sup_des_diffs")
+    for b in bénévoles:
+        diff_par_jour = diff_temps(b, assignations)
+        for _, diff in diff_par_jour.items():
+            model.add(diff <= écart_quotidien_max)
+        diff = sum(diff for _, diff in diff_par_jour.items())
+        model.add(diff <= borne_sup)
+        model.add(diff >= borne_inf)
+    return borne_sup - borne_inf
 
-
-def filter_positive(value, name):
-    v = model.new_int_var(0, 15*60, name)
-    model.add_max_equality(v, [0, value]).with_name(f"max_{name}")
-    return v
-
-
-def excès_de_travail(b):
-    diff_par_jour = diff_temps(b, assignations)
-
-    return sum(
-        filter_positive(diff, f"excès_{d}_{b}")
-        for d, diff in diff_par_jour.items())
 
 """ Pondération des préférences des bénévoles """
 
@@ -541,9 +567,11 @@ def appréciation_du_planning(bénévole: Bénévole, quêtes: List[Quête]):
         for q in quêtes
     )
 
+
 # This might not always be satisfiable
 for b in bénévoles:
-    model.add(appréciation_du_planning(b, quêtes) >= 0).with_name(f"plaisant_{b}")
+    for q in quêtes:
+        model.add(appréciation_dune_quête(b, q) >= 0)
 
 """ Distance entre la première et la dernière quête """
 
@@ -554,7 +582,9 @@ def amplitude_horaire(b: Bénévole, quêtes: List[Quête]):
     model.add_min_equality(
         début, map(lambda q: intervalles[(b, q)].start_expr(), quêtes)
     ).with_name(f"amp_min_{b}")
-    model.add_max_equality(fin, map(lambda q: intervalles[(b, q)].end_expr(), quêtes)).with_name(f"amp_max_{b}")
+    model.add_max_equality(
+        fin, map(lambda q: intervalles[(b, q)].end_expr(), quêtes)
+    ).with_name(f"amp_max_{b}")
     return fin - début
 
 
@@ -568,14 +598,9 @@ def amplitudes(b: Bénévole):
 """ Formule finale """
 
 model.minimize(
-    sum(
-        # Idéalement, personne ne doit trop travailler. Sauf Popi bien sûr
-        excès_de_travail(b)
-        # +  écarts_du_bénévole(b)
-        - appréciation_du_planning(b, quêtes)
-        + 0.5 * amplitudes(b)
-        for b in bénévoles
-    )
+    10 * bornage_des_excès(bénévoles)
+    # + 0.5 * sum(amplitudes(b) for b in bénévoles)
+    - sum(appréciation_du_planning(b, quêtes) for b in bénévoles)
 )
 
 
@@ -592,6 +617,7 @@ def smile_of_appréciation(app):
         smile = "😭"
     return smile
 
+
 def dumb_dump(file, assignations):
     with open(file, "w") as text_file:
         max_diff = 0
@@ -602,8 +628,8 @@ def dumb_dump(file, assignations):
             tdt = sum(temps_total_bénévole(b, assignations).values())
             tdt_théorique = b.heures_théoriques * 4 * 60
             tdt_ajusté = sum(
-                horaires_ajustés_bénévole(d, b)
-                for d in Quête.par_jour.keys())
+                horaires_ajustés_bénévole(d, b) for d in Quête.par_jour.keys()
+            )
             diff = tdt - tdt_ajusté
             total_diff += diff
             if abs(diff) > max_diff_abs:
@@ -617,9 +643,10 @@ def dumb_dump(file, assignations):
             )
         text_file.write(f"\nMax diff: {print_duration(max_diff)}\n")
         text_file.write(f"Total diff: {print_signed_duration(total_diff)}\n\n")
-        all.sort(key = lambda l: l["d"], reverse = True)
+        all.sort(key=lambda l: l["d"], reverse=True)
         for l in all:
             text_file.write(f"{l["s"]}")
+
 
 class VarArraySolutionPrinter(cp_model.CpSolverSolutionCallback):
     """Print intermediate solutions."""
@@ -676,8 +703,10 @@ class VarArraySolutionPrinter(cp_model.CpSolverSolutionCallback):
             os.makedirs(f"{log_folder}/solutions/{self._solution_count:0=3d}")
 
         print(f"Solution {self._solution_count:0=3d}:\n\t{écarts_line}\n\t{smile_line}")
-        dumb_dump(f"{log_folder}/solutions/{self._solution_count:0=3d}/results.md", assignations_val)
-
+        dumb_dump(
+            f"{log_folder}/solutions/{self._solution_count:0=3d}/results.md",
+            assignations_val,
+        )
 
         result: Dict[Quête, List[Bénévole]] = {}
         for q in quêtes:
@@ -686,8 +715,9 @@ class VarArraySolutionPrinter(cp_model.CpSolverSolutionCallback):
                 if assignations_val[(b, q)]:
                     participants.append(b)
             result[q] = participants
-        write_json(result, file=f"{log_folder}/solutions/{self._solution_count:0=3d}/results")
-
+        write_json(
+            result, file=f"{log_folder}/solutions/{self._solution_count:0=3d}/results"
+        )
 
     @property
     def solution_count(self) -> int:
@@ -714,10 +744,7 @@ if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
         print("Non-optimal solution:")
 
     """ Dumb result dump"""
-    assignations_values = {
-        k: solver.value(v)
-        for k, v in assignations.items()
-    }
+    assignations_values = {k: solver.value(v) for k, v in assignations.items()}
     dumb_dump(f"{log_folder}/results.md", assignations_values)
 
     print(
@@ -744,9 +771,7 @@ print()
 
 for d, qs in Quête.par_jour.items():
     temps = total_temps_travail(qs)
-    print(
-        f"Temps de travail {d} jour: {int(temps // 60):0=2d}h{int(temps % 60):0=2d}"
-    )
+    print(f"Temps de travail {d} jour: {int(temps // 60):0=2d}h{int(temps % 60):0=2d}")
 print(
     f"Temps de travail total: {int(temps_total // 60):0=2d}h{int(temps_total % 60):0=2d}"
 )
