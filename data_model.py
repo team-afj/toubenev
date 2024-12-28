@@ -144,7 +144,9 @@ class Bénévole:
         pref_horaires,
         sérénité,
         binômes_préférés=[],
+        binômes_interdits=[],
         types_de_quête_interdits=[],
+        date_arrivée=None,
         date_départ=None,
     ):
         self.id: str = id
@@ -154,13 +156,13 @@ class Bénévole:
         self.sérénité: bool = sérénité
         self.heures_théoriques: float = heures_théoriques
         self.score_types_de_quêtes: Dict[Type_de_quête, int] = {}
-        self.binômes_préférés: List[Bénévole] = []
-        self.binômes_interdits: List[Bénévole] = []
+        self.binômes_préférés: List[Bénévole] = binômes_préférés
+        self.binômes_interdits: List[Bénévole] = binômes_interdits
         self.lieux_interdits: List[Lieu] = []
         self.types_de_quête_interdits: List[Type_de_quête] = types_de_quête_interdits
         self.indisponibilités: List[time] = indisponibilités
         self.pref_horaires: Dict[time, int] = pref_horaires
-        self.date_arrivée: Optional[datetime] = None
+        self.date_arrivée: Optional[datetime] = date_arrivée
         self.date_départ: Optional[datetime] = date_départ
         self.quêtes_assignées: List[Quête] = []
         Bénévole.tous[self.id] = self

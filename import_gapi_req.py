@@ -6,6 +6,8 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
+from itertools import zip_longest
+
 # If modifying these scopes, delete the file token.json.
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
 
@@ -20,10 +22,10 @@ def dict_of_list(l: list):
     the keys and the following lists are the values.
     """
     keys = l.pop(0)
-    return list(map(lambda row: dict(zip(keys, row)), l))
+    return list(map(lambda row: dict(zip_longest(keys, row, fillvalue=None)), l))
 
 
-def main():
+def get():
     creds = None
     # The file token.json stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
@@ -78,7 +80,3 @@ def main():
     except HttpError as err:
         print(err)
         return None
-
-
-if __name__ == "__main__":
-    main()

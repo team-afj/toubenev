@@ -22,4 +22,4 @@ watch: venv
 .PHONY: gapi-test
 gapi-test: venv
 	. .venv/bin/activate; \
-	python gapi-test.py
+	python import_gapi.py
