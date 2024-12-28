@@ -3,11 +3,16 @@ from typing import List, Dict, Optional
 from datetime import date, time, datetime, timedelta
 import string
 
-""" Paramêtres """
+""" Paramètres """
 
 temps_inter_quêtes = 15  # minutes
 
 """ Sales types """
+
+
+def resolve(src, l):
+    for i, elt in enumerate(l):
+        l[i] = src.get(elt)
 
 
 class Spectacle:
@@ -126,11 +131,6 @@ class Quête:
         return filter(self.chevauche, Quête.toutes)
 
 
-def resolve(src, l):
-    for i, elt in enumerate(l):
-        l[i] = src.get(elt)
-
-
 class Bénévole:
     """Classe permettant de gérer les bénévoles et maintenant à jour une liste de tous les bénévoles
 
@@ -139,9 +139,12 @@ class Bénévole:
     tous: Dict[str, Bénévole] = {}
 
     def strengthen():
+        """Populates relations' ids lists with the corresponding
+        objects"""
         for _key, bénévole in Bénévole.tous.items():
             resolve(Bénévole.tous, bénévole.binômes_préférés)
             resolve(Bénévole.tous, bénévole.binômes_interdits)
+            resolve(Type_de_quête.tous, bénévole.types_de_quête_interdits)
 
     def __init__(
         self,
@@ -169,7 +172,9 @@ class Bénévole:
         self.binômes_préférés: List[str | Bénévole] = binômes_préférés
         self.binômes_interdits: List[Bénévole] = binômes_interdits
         self.lieux_interdits: List[Lieu] = []
-        self.types_de_quête_interdits: List[Type_de_quête] = types_de_quête_interdits
+        self.types_de_quête_interdits: List[str | Type_de_quête] = (
+            types_de_quête_interdits
+        )
         self.indisponibilités: List[time] = indisponibilités
         self.pref_horaires: Dict[time, int] = pref_horaires
         self.date_arrivée: Optional[datetime] = date_arrivée
@@ -200,7 +205,7 @@ class Bénévole:
             if self == Bénévole.tous[b]:
                 print(q, n)
 
-    """ Certains bénévole ont un ensemble de tâches préçis à faire et ne doivent
+    """ Certains bénévole ont un ensemble de tâches précis à faire et ne doivent
     pas participer aux autres """
 
     def est_assigné(self, date):

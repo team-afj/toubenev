@@ -29,7 +29,7 @@ def to_datetime(date):
 
 
 def split(s):
-    return [] if s is "" else s.split(",")
+    return [] if s == "" else s.split(",")
 
 
 def load_bénévoles(data):
@@ -45,7 +45,7 @@ def load_bénévoles(data):
         sérénité = True  # TODO avec les "quêtes interdites"
         binômes_préférés = split(b["amis"])
         binômes_interdits = split(b["ennemis"])
-        types_de_quête_interdits = []  # TODO
+        types_de_quête_interdits = split(b["quêtes_interdites"])
         date_arrivée = to_datetime(b["arrivée"])
         date_départ = to_datetime(b["départ"])
         Bénévole(
