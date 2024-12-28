@@ -10,14 +10,20 @@ from googleapiclient.errors import HttpError
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
 
 # The ID and range of a sample spreadsheet.
-SAMPLE_SPREADSHEET_ID = "1CzC46w2jpikSu-8xEWo4lAVDXmDRj8JtbHenTa0C_2s"
-SAMPLE_RANGE_NAME = "S_benevoles"
+spreadsheetId = "1CzC46w2jpikSu-8xEWo4lAVDXmDRj8JtbHenTa0C_2s"
+SAMPLE_RANGE_NAME = "sbénévoles"
+
+
+def dict_of_list(l: list):
+    """
+    Build a list of dicts from a list of list where the first list contains
+    the keys and the following lists are the values.
+    """
+    keys = l.pop(0)
+    return list(map(lambda row: dict(zip(keys, row)), l))
 
 
 def main():
-    """Shows basic usage of the Sheets API.
-    Prints values from a sample spreadsheet.
-    """
     creds = None
     # The file token.json stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
@@ -42,18 +48,36 @@ def main():
         sheet = service.spreadsheets()
         result = (
             sheet.values()
-            .get(spreadsheetId=SAMPLE_SPREADSHEET_ID, range=SAMPLE_RANGE_NAME)
+            .batchGet(
+                spreadsheetId=spreadsheetId,
+                dateTimeRenderOption="SERIAL_NUMBER",
+                valueRenderOption="UNFORMATTED_VALUE",
+                ranges=["stypes", "slieux", "sbénévoles", "squêtes"],
+            )
             .execute()
         )
-        values = result.get("values", [])
+        values = result.get("valueRanges", [])
 
         if not values:
             print("No data found.")
-            return
+            return None
 
-        print(values)
+        stypes = values.pop(0)["values"]
+        slieux = values.pop(0)["values"]
+        sbénévoles = values.pop(0)["values"]
+        squêtes = values.pop(0)["values"]
+
+        result = {
+            "types_de_quêtes": dict_of_list(stypes),
+            "lieux": dict_of_list(slieux),
+            "bénévoles": dict_of_list(sbénévoles),
+            "quêtes": dict_of_list(squêtes),
+        }
+        print(result)
+        return result
     except HttpError as err:
         print(err)
+        return None
 
 
 if __name__ == "__main__":
