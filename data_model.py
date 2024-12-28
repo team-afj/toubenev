@@ -126,12 +126,22 @@ class Quête:
         return filter(self.chevauche, Quête.toutes)
 
 
+def resolve(src, l):
+    for i, elt in enumerate(l):
+        l[i] = src.get(elt)
+
+
 class Bénévole:
     """Classe permettant de gérer les bénévoles et maintenant à jour une liste de tous les bénévoles
 
     Les bénévoles sont identifiés par leur surnom qui doit donc être unique."""
 
     tous: Dict[str, Bénévole] = {}
+
+    def strengthen():
+        for _key, bénévole in Bénévole.tous.items():
+            resolve(Bénévole.tous, bénévole.binômes_préférés)
+            resolve(Bénévole.tous, bénévole.binômes_interdits)
 
     def __init__(
         self,
@@ -156,7 +166,7 @@ class Bénévole:
         self.sérénité: bool = sérénité
         self.heures_théoriques: float = heures_théoriques
         self.score_types_de_quêtes: Dict[Type_de_quête, int] = {}
-        self.binômes_préférés: List[Bénévole] = binômes_préférés
+        self.binômes_préférés: List[str | Bénévole] = binômes_préférés
         self.binômes_interdits: List[Bénévole] = binômes_interdits
         self.lieux_interdits: List[Lieu] = []
         self.types_de_quête_interdits: List[Type_de_quête] = types_de_quête_interdits

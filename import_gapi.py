@@ -28,10 +28,14 @@ def to_datetime(date):
     return None
 
 
+def split(s):
+    return [] if s is "" else s.split(",")
+
+
 def load_bénévoles(data):
     bénévoles = data["bénévoles"]
     for b in bénévoles:
-        id = b["id"]
+        id = str(b["id"])
         surnom = b["pseudo"]
         prénom = ""
         nom = ""
@@ -39,8 +43,8 @@ def load_bénévoles(data):
         indisponibilités = []  # TODO
         pref_horaires = {}  # TODO
         sérénité = True  # TODO avec les "quêtes interdites"
-        binômes_préférés = []  # TODO
-        binômes_interdits = []  # TODO
+        binômes_préférés = split(b["amis"])
+        binômes_interdits = split(b["ennemis"])
         types_de_quête_interdits = []  # TODO
         date_arrivée = to_datetime(b["arrivée"])
         date_départ = to_datetime(b["départ"])
@@ -68,6 +72,7 @@ def main():
         load_lieux(data)
         load_types(data)
         load_bénévoles(data)
+    Bénévole.strengthen()
 
 
 if __name__ == "__main__":
