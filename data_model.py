@@ -11,8 +11,13 @@ temps_inter_quêtes = 15  # minutes
 
 
 def resolve(src, l):
+    """
+    `resolve(src, l)` replaces all strings in `l` by the value indexed by
+    that string in `src`
+    """
     for i, elt in enumerate(l):
-        l[i] = src.get(elt)
+        if isinstance(elt, str):
+            l[i] = src.get(elt)
 
 
 class Spectacle:
@@ -132,19 +137,17 @@ class Quête:
 
 
 class Bénévole:
-    """Classe permettant de gérer les bénévoles et maintenant à jour une liste de tous les bénévoles
-
-    Les bénévoles sont identifiés par leur surnom qui doit donc être unique."""
+    """Classe permettant de gérer les bénévoles et maintenant à jour une liste
+    de tous les bénévoles dans `Bénévole.tous`."""
 
     tous: Dict[str, Bénévole] = {}
 
     def strengthen():
-        """Populates relations' ids lists with the corresponding
-        objects"""
         for _key, bénévole in Bénévole.tous.items():
             resolve(Bénévole.tous, bénévole.binômes_préférés)
             resolve(Bénévole.tous, bénévole.binômes_interdits)
             resolve(Type_de_quête.tous, bénévole.types_de_quête_interdits)
+            resolve(Type_de_quête.tous, bénévole.spécialités)
 
     def __init__(
         self,
@@ -159,6 +162,7 @@ class Bénévole:
         binômes_préférés=[],
         binômes_interdits=[],
         types_de_quête_interdits=[],
+        spécialités=[],
         date_arrivée=None,
         date_départ=None,
     ):
@@ -175,6 +179,7 @@ class Bénévole:
         self.types_de_quête_interdits: List[str | Type_de_quête] = (
             types_de_quête_interdits
         )
+        self.spécialités: List[str | Type_de_quête] = spécialités
         self.indisponibilités: List[time] = indisponibilités
         self.pref_horaires: Dict[time, int] = pref_horaires
         self.date_arrivée: Optional[datetime] = date_arrivée
@@ -214,3 +219,11 @@ class Bénévole:
             if q.jour == date:
                 temps_assigné += q.durée_minutes()
         return temps_assigné >= self.heures_théoriques * 60
+
+
+def strengthen():
+    """
+    Dereferences all relations by looking in the tables. Must be called AFTER
+    all data has been declared.
+    """
+    Bénévole.strengthen()

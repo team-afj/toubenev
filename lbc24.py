@@ -4,7 +4,7 @@ from datetime import date, time, datetime, timedelta
 from operator import contains
 import os, sys, math, random
 from ortools.sat.python import cp_model
-from data_model import Bénévole, Type_de_quête, Quête, Spectacle
+from data_model import Bénévole, Type_de_quête, Quête, Spectacle, strengthen
 from export_json import write_json
 
 # prepare log folder and file
@@ -28,6 +28,9 @@ def print(str="\n"):
 from import_json import from_file
 
 from_file("data/db.json")
+
+# Once all the data is loaded, resolve references:
+strengthen()
 
 quêtes = sorted(Quête.toutes)
 bénévoles = Bénévole.tous.values()
