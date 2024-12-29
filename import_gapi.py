@@ -112,6 +112,22 @@ def load_bénévoles(data):
         )
 
 
+def load_quêtes(data):
+    quêtes = data["quêtes"]
+    # TODO GROUPES
+    for q in quêtes:
+        id = str(q["id"])
+        nom = str(q["nom"])
+        types = map(Type_de_quête.tous.get, split(q["types"]))
+        lieu = Lieu.tous[str(q["lieu"])]
+        spectacle = None
+        nombre_bénévoles = int(q["nombre_bénévoles"])
+        début = to_datetime(q["début"])
+        fin = to_datetime(q["fin"])
+        bénévoles = map(Bénévole.tous.get, split(q["fixés"]))
+        Quête(id, nom, types, lieu, spectacle, nombre_bénévoles, début, fin, bénévoles)
+
+
 def main():
     data = get()
     if not (data is None):
@@ -119,6 +135,7 @@ def main():
         load_lieux(data)
         load_types(data)
         load_bénévoles(data)
+        load_quêtes(data)
     Bénévole.strengthen()
 
 
