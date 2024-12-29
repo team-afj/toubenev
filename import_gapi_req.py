@@ -75,7 +75,6 @@ def get():
             "bénévoles": dict_of_list(sbénévoles),
             "quêtes": dict_of_list(squêtes),
         }
-        print(result)
         return result
     except HttpError as err:
         print(err)

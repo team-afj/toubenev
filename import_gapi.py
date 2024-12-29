@@ -17,7 +17,6 @@ def load_lieux(data):
 def load_types(data):
     types = data["types_de_quêtes"]
     for t in types:
-        print(t)
         id = str(t["id"])
         nom = t["nom"]
         sécable = False
@@ -31,7 +30,7 @@ def to_datetime(date):
 
 
 def split(s):
-    return [] if s == "" else s.split(",")
+    return [] if s == None or s == "" else s.split(",")
 
 
 def load_bénévoles(data):
@@ -131,7 +130,6 @@ def load_quêtes(data):
 def main():
     data = get()
     if not (data is None):
-        print(data)
         load_lieux(data)
         load_types(data)
         load_bénévoles(data)

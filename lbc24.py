@@ -25,12 +25,25 @@ def print(str="\n"):
 # open log file
 
 # Import data
-from import_json import from_file
+# from import_json import from_file
 
-from_file("data/db.json")
+# from_file("data/db.json")
+from import_gapi import main
+
+main()
 
 # Once all the data is loaded, resolve references:
 strengthen()
+
+print("Liste des bénévoles:\n")
+for b in Bénévole.tous.values():
+    print(b.détails())
+    print()
+
+print("Liste des quêtes:\n")
+for q in Quête.toutes:
+    print(q.détails())
+    print()
 
 quêtes = sorted(Quête.toutes)
 bénévoles = Bénévole.tous.values()
@@ -60,20 +73,6 @@ def quêtes_dun_type(t):
     return filter(lambda q: member(q.types, t), quêtes)
 
 
-id_ulysse = "3e261775-94f3-4673-aca7-f8c367fb9008"
-id_yohan = "63339524-5dbc-49f5-8e83-d85311feee29"
-
-id_quête_sérénité = "784fc134-cab5-4797-8be2-7a7a91e57795"
-
-id_tdg_clean = "9f95caf2-a32b-4454-9994-6ce17a5e75e6"
-id_tdg_suivi = "78250bf9-fb52-41ac-af5b-879d2ca7ff1c"
-
-id_tdq_gradinage = "987ad365-0032-42c6-8455-8fbf66d6179d"
-
-b_ulysse = Bénévole.tous[id_ulysse]
-b_ulysse.date_arrivée = datetime.fromisoformat("2024-08-15T14:45:00.000000+02:00")
-
-
 def time_to_minutes(t: time):
     return t.hour * 60 + t.minute
 
@@ -93,10 +92,12 @@ def print_signed_duration(minutes):
         return f"-{print_duration(abs(minutes))}"
 
 
-# for b in Bénévole.tous.values():
-#     for d in Quête.par_jour.keys():
-#         if b.est_assigné(d):
-#             print(f"{b} est assignée le  {d}")
+# id_quête_sérénité = "784fc134-cab5-4797-8be2-7a7a91e57795"
+
+# id_tdg_clean = "9f95caf2-a32b-4454-9994-6ce17a5e75e6"
+# id_tdg_suivi = "78250bf9-fb52-41ac-af5b-879d2ca7ff1c"
+
+# id_tdq_gradinage = "987ad365-0032-42c6-8455-8fbf66d6179d"
 
 """Préparation du modèle et des contraintes"""
 
@@ -169,7 +170,7 @@ def tout_le_monde_fait(t: Type_de_quête):
             ).with_name(f"un_seul_{b}_{t}")
 
 
-tout_le_monde_fait(Type_de_quête.tous[id_tdg_suivi])
+# tout_le_monde_fait(Type_de_quête.tous[id_tdg_suivi])
 
 
 """ On aimerait certaines tâches soient faites par un maximum de personnes différentes """
@@ -187,69 +188,69 @@ def un_max_de_monde_fait(t: Type_de_quête):
             ).with_name(f"au_plus_un_{b}_{t}")
 
 
-un_max_de_monde_fait(Type_de_quête.tous[id_tdg_clean])
+# un_max_de_monde_fait(Type_de_quête.tous[id_tdg_clean])
 
 """ Un même bénévole ne fait pas plusieurs fois le suivi du même spectacle """
 
-quêtes_suivi_des_spectacles: Dict[str, List[Quête]] = {}
-for q in quêtes:
-    if member_f(q.types, lambda t: t.id == id_tdg_suivi):
-        quêtes_spe = quêtes_suivi_des_spectacles.get(q.spectacle.id, [])
-        if quêtes_spe == []:
-            quêtes_suivi_des_spectacles[q.spectacle.id] = [q]
-        else:
-            quêtes_spe.append(q)
+# quêtes_suivi_des_spectacles: Dict[str, List[Quête]] = {}
+# for q in quêtes:
+#     if member_f(q.types, lambda t: t.id == id_tdg_suivi):
+#         quêtes_spe = quêtes_suivi_des_spectacles.get(q.spectacle.id, [])
+#         if quêtes_spe == []:
+#             quêtes_suivi_des_spectacles[q.spectacle.id] = [q]
+#         else:
+#             quêtes_spe.append(q)
 
-for b in bénévoles:
-    for quêtes_spe in quêtes_suivi_des_spectacles.values():
-        model.add_at_most_one(assignations[(b, q)] for q in quêtes_spe).with_name(
-            f"no_double_show_{b}_{quêtes_spe[0]}"
-        )
+# for b in bénévoles:
+#     for quêtes_spe in quêtes_suivi_des_spectacles.values():
+#         model.add_at_most_one(assignations[(b, q)] for q in quêtes_spe).with_name(
+#             f"no_double_show_{b}_{quêtes_spe[0]}"
+#         )
 
 """ Les tâches consécutives d'une scène sont faites par les mêmes bénévoles """
 
-quêtes_liées_des_spectacles: List[List[Quête]] = []
-for date, quêtes_du_jour in Quête.par_jour.items():
-    quêtes_des_spectacles: Dict[str, List[Quête]] = {}
-    for q in quêtes_du_jour:
-        if q.spectacle and not (member_f(q.types, lambda t: t.id == id_tdq_gradinage)):
-            quêtes_du_spectacle = quêtes_des_spectacles.get(q.spectacle.id, [])
-            if quêtes_du_spectacle == []:
-                quêtes_des_spectacles[q.spectacle.id] = [q]
-            else:
-                quêtes_du_spectacle.append(q)
-    for l in quêtes_des_spectacles.values():
-        quêtes_liées_des_spectacles.append(l)
+# quêtes_liées_des_spectacles: List[List[Quête]] = []
+# for date, quêtes_du_jour in Quête.par_jour.items():
+#     quêtes_des_spectacles: Dict[str, List[Quête]] = {}
+#     for q in quêtes_du_jour:
+#         if q.spectacle and not (member_f(q.types, lambda t: t.id == id_tdq_gradinage)):
+#             quêtes_du_spectacle = quêtes_des_spectacles.get(q.spectacle.id, [])
+#             if quêtes_du_spectacle == []:
+#                 quêtes_des_spectacles[q.spectacle.id] = [q]
+#             else:
+#                 quêtes_du_spectacle.append(q)
+#     for l in quêtes_des_spectacles.values():
+#         quêtes_liées_des_spectacles.append(l)
 
 
-def suivi_quêtes_dun_spectacles(quêtes: List[Quête]):
-    min_nb = 99
-    min_quête = None
-    for q in quêtes:
-        if q.nombre_bénévoles < min_nb:
-            min_nb = q.nombre_bénévoles
-            min_quête = q
+# def suivi_quêtes_dun_spectacles(quêtes: List[Quête]):
+#     min_nb = 99
+#     min_quête = None
+#     for q in quêtes:
+#         if q.nombre_bénévoles < min_nb:
+#             min_nb = q.nombre_bénévoles
+#             min_quête = q
 
-    # On s'assure que les quêtes groupées ne se chevauchent pas, cela évite des
-    # erreurs incompréhensibles:
-    for q in quêtes:
-        for q2 in q.en_même_temps():
-            for q3 in quêtes:
-                if q != q3 and q2 == q3:
-                    print("Arg, des quêtes groupées se chevauchent:")
-                    print(f"{q} chevauche {q3}")
-                    exit()
+#     # On s'assure que les quêtes groupées ne se chevauchent pas, cela évite des
+#     # erreurs incompréhensibles:
+#     for q in quêtes:
+#         for q2 in q.en_même_temps():
+#             for q3 in quêtes:
+#                 if q != q3 and q2 == q3:
+#                     print("Arg, des quêtes groupées se chevauchent:")
+#                     print(f"{q} chevauche {q3}")
+#                     exit()
 
-    for b in bénévoles:
-        # Tout bénévole participant à la quête qui requiert le moins de bénévoles
-        # dans le groupe de quêtes doit participer aux autres quêtes du groupe.
-        model.add_bool_and(assignations[(b, q)] for q in quêtes).only_enforce_if(
-            assignations[(b, min_quête)]
-        ).with_name(f"suivi_{b}_{quêtes[0]}")
+#     for b in bénévoles:
+#         # Tout bénévole participant à la quête qui requiert le moins de bénévoles
+#         # dans le groupe de quêtes doit participer aux autres quêtes du groupe.
+#         model.add_bool_and(assignations[(b, q)] for q in quêtes).only_enforce_if(
+#             assignations[(b, min_quête)]
+#         ).with_name(f"suivi_{b}_{quêtes[0]}")
 
 
-for quêtes_dun_spectacle in quêtes_liées_des_spectacles:
-    suivi_quêtes_dun_spectacles(quêtes_dun_spectacle)
+# for quêtes_dun_spectacle in quêtes_liées_des_spectacles:
+#     suivi_quêtes_dun_spectacles(quêtes_dun_spectacle)
 
 """ Certains bénévoles ne sont pas là pendant la totalité de l'évènement """
 for b in bénévoles:
@@ -290,11 +291,11 @@ for b in bénévoles:
                         )
 
 """ Tout le monde ne peut pas assumer les quêtes sérénité """
-for b in bénévoles:
-    if not (b.sérénité):
-        for q in quêtes:
-            if contains(q.types, Type_de_quête.tous[id_quête_sérénité]):
-                model.add(assignations[(b, q)] == 0).with_name(f"pas_serein_{b}_{q}")
+# for b in bénévoles:
+#     if not (b.sérénité):
+#         for q in quêtes:
+#             if contains(q.types, Type_de_quête.tous[id_quête_sérénité]):
+#                 model.add(assignations[(b, q)] == 0).with_name(f"pas_serein_{b}_{q}")
 
 """ Les lieux interdits sont interdits """
 for b in bénévoles:
@@ -368,8 +369,6 @@ for b in bénévoles:
 
 def temps_bénévole(b: Bénévole, date):
     # TODO: take into account indisponibilities this needs complete rework
-    if b.id == id_yohan and date.day == 17:
-        return {"time": int(2 * 60), "ajustable": False}
     if (not (b.date_arrivée) or date >= b.date_arrivée.date()) and (
         not (b.date_départ) or date < b.date_départ.date()
     ):

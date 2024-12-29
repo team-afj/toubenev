@@ -83,6 +83,7 @@ class Type_de_quête:
 
 class Quête:
     toutes: List[Quête] = []
+    par_id: Dict[str, Quête] = {}
     par_jour: Dict[date, List[Quête]] = {}
 
     def __init__(
@@ -107,6 +108,7 @@ class Quête:
         self.début: datetime = début
         self.fin: datetime = fin
         Quête.toutes.append(self)
+        Quête.par_id[self.id] = self
 
         date_début = self.début.date()
         if self.début.time() < time(hour=5):
@@ -122,6 +124,11 @@ class Quête:
 
     def __str__(self) -> str:
         return f"{self.nom}, {self.début.strftime('%a %H:%M')} -> {self.fin.strftime('%H:%M')}"
+
+    def détails(self) -> str:
+        types = ", ".join(f"{k}" for k in self.types)
+        bénévoles = ", ".join(f"{k}" for k in self.bénévoles)
+        return f"{self.id}: {self.nom} ({self.nombre_bénévoles} bénévoles)\n{types} à {self.lieu}\nDébut: {self.début} Fin: {self.fin}\nBénévoles fixés: {bénévoles}"
 
     def __lt__(self, other):
         return self.début < other.début
