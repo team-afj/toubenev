@@ -28,6 +28,9 @@ class Spectacle:
         self.nom = nom
         Spectacle.tous[self.id] = self
 
+    def __str__(self) -> str:
+        return f"{self.id}:{self.nom}"
+
     def __hash__(self):
         return hash(self.id)
 
@@ -46,6 +49,9 @@ class Lieu:
         self.nom = nom
         Lieu.tous[self.id] = self
 
+    def __str__(self) -> str:
+        return f"{self.id}:{self.nom}"
+
     def __cmp__(self, lautre):
         return (self.id > lautre.id) - (self.id < lautre.id)
 
@@ -61,6 +67,9 @@ class Type_de_quête:
         self.nom = nom
         self.sécable: bool = sécable
         Type_de_quête.tous[self.id] = self
+
+    def __str__(self) -> str:
+        return f"{self.id}:{self.nom}"
 
     def __hash__(self):
         return hash(self.id)
@@ -201,6 +210,17 @@ class Bénévole:
 
     def equal(self, lautre):
         self.id == lautre.id
+
+    def détails(self) -> str:
+        amis = ", ".join("{}".format(k) for k in self.binômes_préférés)
+        ennemis = ", ".join("{}".format(k) for k in self.binômes_interdits)
+        pref_horaires = ", ".join(
+            f"{h.hour}:{v}" for h, v in self.pref_horaires.items()
+        )
+        indisponibilités = ", ".join(f"{k.hour}" for k in self.indisponibilités)
+        interdictions = ", ".join(f"{k}" for k in self.types_de_quête_interdits)
+        spécialités = ", ".join(f"{k}" for k in self.spécialités)
+        return f"{self.id}: {self.surnom} ({self.nom} {self.prénom}) ({self.heures_théoriques}h par jour)\nArrivée: {self.date_arrivée} Départ: {self.date_départ}\nAmis: {amis}\nEnnemis: {ennemis}\nPrefs: {pref_horaires}\nIndisponibilités: {indisponibilités}\nInterdictions: {interdictions}\nSpécialités: {spécialités}"
 
     # def appréciation_dune_quête(self, quête):
     #     return self.score_types_de_quêtes.get(quête.type, 0)

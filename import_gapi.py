@@ -9,7 +9,7 @@ from datetime import date, time, datetime, timedelta
 def load_lieux(data):
     lieux = data["lieux"]
     for p in lieux:
-        id = p["id"]
+        id = str(p["id"])
         nom = p["nom"]
         Lieu(id, nom)
 
@@ -17,7 +17,8 @@ def load_lieux(data):
 def load_types(data):
     types = data["types_de_quêtes"]
     for t in types:
-        id = t["id"]
+        print(t)
+        id = str(t["id"])
         nom = t["nom"]
         sécable = False
         Type_de_quête(id, nom, sécable)
@@ -45,16 +46,16 @@ def load_bénévoles(data):
                     return 1
                 return 0
 
-            if 0 >= hour and hour <= 5:
+            if 0 <= hour and hour <= 5:
                 return score_of(b["nuit"])
 
-            if 6 >= hour and hour <= 11:
+            if 6 <= hour and hour <= 11:
                 return score_of(b["matin"])
 
-            if 12 >= hour and hour <= 17:
+            if 12 <= hour and hour <= 17:
                 return score_of(b["aprem"])
 
-            if 18 >= hour and hour <= 23:
+            if 18 <= hour and hour <= 23:
                 return score_of(b["soir"])
 
         def make_pref_horaires():
