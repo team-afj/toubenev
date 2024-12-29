@@ -142,7 +142,7 @@ for q in quêtes:
 """ Certaines quêtes sont déjà assignées """
 for q in quêtes:
     for b in q.bénévoles:
-        model.add(assignations[(b, q)] == 1)
+        model.add(assignations[(b, q)] == 1).with_name(f"fixé_{b}_{q}")
 
 """ Et certains bénévoles ne devrait rien faire d'autre """
 for d, quêtes_du_jour in Quête.par_jour.items():
@@ -346,7 +346,9 @@ def c_est_la_pause(b: Bénévole):
             f"interval_pause_{b}_{date}",
         )
         # La pause est suffisamment longue:
-        model.add(size >= durée_pause_min)
+        model.add(size >= durée_pause_min).with_name(
+            f"pause_{size}_>=_{durée_pause_min}"
+        )
         # Le bénévole n'a aucune quête pendant sa pause:
         overlaps = [interval_pause]
         for q in quêtes:
@@ -538,11 +540,11 @@ def bornage_des_excès(bénévoles, écart_quotidien_max=30):
     borne_sup = model.new_int_var(0, 1000, "borne_sup_des_diffs")
     for b in bénévoles:
         diff_par_jour = diff_temps(b, assignations)
-        for _, diff in diff_par_jour.items():
-            model.add(diff <= écart_quotidien_max)
+        for d, diff in diff_par_jour.items():
+            model.add(diff <= écart_quotidien_max).with_name(f"écart_{b}_{d}")
         diff = sum(diff for _, diff in diff_par_jour.items())
-        model.add(diff <= borne_sup)
-        model.add(diff >= borne_inf)
+        model.add(diff <= borne_sup).with_name(f"sup_{b}")
+        model.add(diff >= borne_inf).with_name(f"inf_{b}")
     return borne_sup - borne_inf
 
 
@@ -573,7 +575,7 @@ def appréciation_du_planning(bénévole: Bénévole, quêtes: List[Quête]):
 # This might not always be satisfiable
 for b in bénévoles:
     for q in quêtes:
-        model.add(appréciation_dune_quête(b, q) >= 0)
+        model.add(appréciation_dune_quête(b, q) >= 0).with_name(f"appréciation_{b}_{q}")
 
 """ Distance entre la première et la dernière quête """
 
