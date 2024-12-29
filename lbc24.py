@@ -526,7 +526,7 @@ def horaires_ajustés_bénévole(date, b):
 # Renvoie un dictionnaire indexé par les jours
 def diff_temps(b, assignations):
     return {
-        date: (tdt - horaires_ajustés_bénévole(date, b))
+        date: (tdt - (b.heures_théoriques * 60))
         for date, tdt in temps_total_bénévole(b, assignations).items()
     }
 
@@ -536,8 +536,9 @@ def diff_temps(b, assignations):
 
 def bornage_des_excès(bénévoles, écart_quotidien_max=30):
     """The goal is to minimize work excess differences on the whole event by allowing some day-to-day differences below the threshold."""
-    borne_inf = model.new_int_var(-1000, 0, "borne_inf_des_diffs")
-    borne_sup = model.new_int_var(0, 1000, "borne_sup_des_diffs")
+    max_tdt = 60 * max([b.heures_théoriques for b in Bénévole.tous.values()])
+    borne_inf = model.new_int_var(-2 * max_tdt, 0, "borne_inf_des_diffs")
+    borne_sup = model.new_int_var(0, 2 * max_tdt, "borne_sup_des_diffs")
     for b in bénévoles:
         diff_par_jour = diff_temps(b, assignations)
         for d, diff in diff_par_jour.items():
