@@ -1,3 +1,4 @@
+from functools import reduce
 from import_gapi_req import get
 from data_model import Bénévole, Spectacle, Lieu, Type_de_quête, Quête
 
@@ -35,17 +36,61 @@ def split(s):
 def load_bénévoles(data):
     bénévoles = data["bénévoles"]
     for b in bénévoles:
+
+        def pref_of_hour(hour):
+            def score_of(s):
+                if s == "Contraint":
+                    return -1
+                if s == "Préféré":
+                    return 1
+                return 0
+
+            if 0 >= hour and hour <= 5:
+                return score_of(b["nuit"])
+
+            if 6 >= hour and hour <= 11:
+                return score_of(b["matin"])
+
+            if 12 >= hour and hour <= 17:
+                return score_of(b["aprem"])
+
+            if 18 >= hour and hour <= 23:
+                return score_of(b["soir"])
+
+        def make_pref_horaires():
+            acc = {}
+            for h in range(0, 23 + 1):
+                acc[time(hour=h)] = pref_of_hour(h)
+            return acc
+
+        def make_indisponibilités():
+            indisponibilités = []
+            if b["nuit"] == "Indisponible":
+                for h in range(0, 6):
+                    indisponibilités.append(time(hour=h))
+            if b["matin"] == "Indisponible":
+                for h in range(6, 12):
+                    indisponibilités.append(time(hour=h))
+            if b["aprem"] == "Indisponible":
+                for h in range(12, 18):
+                    indisponibilités.append(time(hour=h))
+            if b["soir"] == "Indisponible":
+                for h in range(12, 24):
+                    indisponibilités.append(time(hour=h))
+            return indisponibilités
+
         id = str(b["id"])
         surnom = b["pseudo"]
         prénom = ""
         nom = ""
         heures_théoriques = b["heures_théoriques"]
-        indisponibilités = []  # TODO
-        pref_horaires = {}  # TODO
+        indisponibilités = make_indisponibilités()
+        pref_horaires = make_pref_horaires()
         sérénité = True  # TODO avec les "quêtes interdites"
         binômes_préférés = split(b["amis"])
         binômes_interdits = split(b["ennemis"])
         types_de_quête_interdits = split(b["quêtes_interdites"])
+        spécialités = split(b["spécialités"])
         date_arrivée = to_datetime(b["arrivée"])
         date_départ = to_datetime(b["départ"])
         Bénévole(
@@ -60,6 +105,7 @@ def load_bénévoles(data):
             binômes_préférés,
             binômes_interdits,
             types_de_quête_interdits,
+            spécialités,
             date_arrivée,
             date_départ,
         )
