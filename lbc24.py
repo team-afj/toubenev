@@ -332,16 +332,19 @@ for b in bénévoles:
 
 
 """ Ils se détestent, séparez-les ! """
+inimitiés: Dict[Bénévole, set[Bénévole]] = {}
 for b in bénévoles:
-    for e in b.binômes_interdits:  # TODO: remove symmetries
-        for q in quêtes:
-            explain_var = model.new_bool_var(
-                f"{b} ne peut pas travailler avec {e} lors de {q}"
-            )
-            model.add_assumption(explain_var)
-            model.add(assignations[(b, q)] + assignations[(e, q)] <= 1).with_name(
-                f"blaire_pas_{b}_{e}_{q}"
-            ).only_enforce_if(explain_var)
+    inimitiés[b] = set(b.binômes_interdits)
+    for e in b.binômes_interdits:
+        if b not in inimitiés.get(e, set()):
+            for q in quêtes:
+                explain_var = model.new_bool_var(
+                    f"{b} ne peut pas travailler avec {e} lors de {q}"
+                )
+                model.add_assumption(explain_var)
+                model.add(assignations[(b, q)] + assignations[(e, q)] <= 1).with_name(
+                    f"blaire_pas_{b}_{e}_{q}"
+                ).only_enforce_if(explain_var)
 
 """ Chacun a un trou dans son emploi du temps """
 
