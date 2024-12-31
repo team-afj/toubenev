@@ -259,16 +259,20 @@ for b in bénévoles:
             # On vérifie que ce n'est pas une quête forcée:
             if not (contains(q.bénévoles, b)):
                 if q.début < b.date_arrivée:
+                    explain_var = model.new_bool_var(f"{b} pas encore arrivé pour {q}")
+                    model.add_assumption(explain_var)
                     model.add(assignations[(b, q)] == 0).with_name(
                         f"before_arrival_{b}_{q}"
-                    )
+                    ).only_enforce_if(explain_var)
         if b.date_départ:
             # On vérifie que ce n'est pas une quête forcée:
             if not (contains(q.bénévoles, b)):
                 if q.fin > b.date_départ:
+                    explain_var = model.new_bool_var(f"{b} déjà parti pour {q}")
+                    model.add_assumption(explain_var)
                     model.add(assignations[(b, q)] == 0).with_name(
                         f"after_leave_{b}_{q}"
-                    )
+                    ).only_enforce_if(explain_var)
 
 """ Certains bénévoles sont indisponibles à certains horaires """
 for b in bénévoles:
@@ -281,14 +285,19 @@ for b in bénévoles:
                     début_indispo = datetime.combine(
                         date, début_indispo, q.début.tzinfo
                     )
-                    if début_indispo.hour < 5:
+                    if début_indispo.hour < 5:  # TODO: check ? configurable ?
                         début_indispo += timedelta(days=1)
                     fin_indispo = début_indispo + timedelta(hours=1)
 
                     if not (fin_indispo <= q.début or début_indispo >= q.fin):
+                        explain_var = model.new_bool_var(
+                            f"{b} indisponible pour {q}\n({q.début} -> {q.fin}) \n({début_indispo} -> {fin_indispo})"
+                        )
+                        model.add_assumption(explain_var)
                         model.add(assignations[(b, q)] == 0).with_name(
                             f"indispo_{b}_{q}"
-                        )
+                        ).only_enforce_if(explain_var)
+                        break
 
 """ Tout le monde ne peut pas assumer les quêtes sérénité """
 # for b in bénévoles:
@@ -301,33 +310,49 @@ for b in bénévoles:
 for b in bénévoles:
     for lieu in b.lieux_interdits:
         for q in quêtes_dun_lieu(lieu):
-            model.add(assignations[(b, q)] == 0).with_name(f"lieu_interdit_{b}_{q}")
+            explain_var = model.new_bool_var(
+                f"{b} ne peut pas assumer {q} (lieu interdit: {lieu})"
+            )
+            model.add_assumption(explain_var)
+            model.add(assignations[(b, q)] == 0).with_name(
+                f"lieu_interdit_{b}_{q}"
+            ).only_enforce_if(explain_var)
 
 """ Les quêtes interdites sont interdites """
 for b in bénévoles:
     for t in b.types_de_quête_interdits:
         for q in quêtes_dun_type(t):
-            model.add(assignations[(b, q)] == 0).with_name(f"tdq_interdit_{b}_{q}")
+            explain_var = model.new_bool_var(
+                f"{b} ne peut pas assumer {q} (type de quête interdit: {t})"
+            )
+            model.add_assumption(explain_var)
+            model.add(assignations[(b, q)] == 0).with_name(
+                f"tdq_interdit_{b}_{q}"
+            ).only_enforce_if(explain_var)
 
 
 """ Ils se détestent, séparez-les ! """
 for b in bénévoles:
     for e in b.binômes_interdits:  # TODO: remove symmetries
-        enforce_var = model.new_bool_var(f"{b} ne peut pas travailler avec {e}")
-        model.add_assumption(enforce_var)
         for q in quêtes:
+            explain_var = model.new_bool_var(
+                f"{b} ne peut pas travailler avec {e} lors de {q}"
+            )
+            model.add_assumption(explain_var)
             model.add(assignations[(b, q)] + assignations[(e, q)] <= 1).with_name(
                 f"blaire_pas_{b}_{e}_{q}"
-            ).only_enforce_if(enforce_var)
+            ).only_enforce_if(explain_var)
 
 """ Chacun a un trou dans son emploi du temps """
 
 
-début_période_pause = 9 * 60
-fin_période_pause = 23 * 60
-durée_pause_min = 5 * 60  # 5h en minutes
+début_période_pause = 9 * 60  # minutes
+fin_période_pause = 23 * 60  # minutes
+durée_pause_min = 5 * 60  # minutes
 
 
+# TODO: la pause devrait durer plus longtemps et commencer à n'importe quel
+# moment
 def c_est_la_pause(b: Bénévole):
     for date, quêtes in Quête.par_jour.items():
         début_pause = model.new_int_var(
@@ -494,7 +519,7 @@ def horaires_ajustés_bénévole(date, b):
 # Renvoie un dictionnaire indexé par les jours
 def diff_temps(b, assignations):
     return {
-        date: (tdt - (b.heures_théoriques * 60))
+        date: (tdt - (b.heures_théoriques * 60))  # TODO Ajuster la théorie !
         for date, tdt in temps_total_bénévole(b, assignations).items()
     }
 
@@ -725,6 +750,7 @@ if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
     )
 else:
     print("Aucune solution trouvée. Raisons possibles:")
+    # https://github.com/google/or-tools/issues/973#issuecomment-718220753
     # Added "enforcement variables" that are assumed to be TRUE allows us to
     # provide an explanation in some cases. An example of this is the "Ils se
     # détestent, séparez-les !" constraint.
