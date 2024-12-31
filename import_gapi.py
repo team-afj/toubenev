@@ -123,7 +123,7 @@ def load_quêtes(data):
         nombre_bénévoles = int(q["nombre_bénévoles"])
         début = to_datetime(q["début"])
         fin = to_datetime(q["fin"])
-        bénévoles = map(Bénévole.tous.get, split(q["fixés"]))
+        bénévoles = list(map(Bénévole.tous.get, split(q["fixés"])))
         Quête(id, nom, types, lieu, spectacle, nombre_bénévoles, début, fin, bénévoles)
 
 
