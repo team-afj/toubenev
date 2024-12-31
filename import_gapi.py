@@ -75,7 +75,7 @@ def load_bénévoles(data):
                 for h in range(12, 18):
                     indisponibilités.append(time(hour=h))
             if b["soir"] == "Indisponible":
-                for h in range(12, 24):
+                for h in range(18, 24):
                     indisponibilités.append(time(hour=h))
             return indisponibilités
 
