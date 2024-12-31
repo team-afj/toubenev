@@ -399,109 +399,9 @@ for b in bénévoles:
 
 """ Contrôle du temps de travail """
 
-# Le temps de travail quotidien maximal de chaque bénévole est stocké, en
-# heures, dans le champ `heures_théoriques`. On les converti systématiquement en
-# minutes
-
-
-def temps_bénévole(b: Bénévole, date):
-    # TODO: take into account indisponibilities this needs complete rework
-    if (not (b.date_arrivée) or date >= b.date_arrivée.date()) and (
-        not (b.date_départ) or date < b.date_départ.date()
-    ):
-        return {
-            "time": int(60 * b.heures_théoriques),
-            "ajustable": not b.est_assigné(date),
-        }
-    else:
-        return {"time": 0, "ajustable": False}
-
-
-# Dict[Date, { "bénévoles": Dict[Bénévole, int], "quêtes" : int] }
-temps_de_travail_quotidiens = {
-    date: {
-        "par_bénévole": {b: temps_bénévole(b, date) for b in bénévoles},
-        "durée_quêtes": sum(q.durée_minutes() * q.nombre_bénévoles for q in quêtes),
-    }
-    for date, quêtes in Quête.par_jour.items()
-}
-
-for d in Quête.par_jour.keys():
-    par_bénévole = temps_de_travail_quotidiens[d]["par_bénévole"]
-    total = sum(item["time"] for item in par_bénévole.values())
-    temps_de_travail_quotidiens[d]["total_dispo"] = total
-    missing = temps_de_travail_quotidiens[d]["durée_quêtes"] - total
-    working_benevoles = list(
-        filter(lambda item: item["ajustable"], par_bénévole.values())
-    )
-    sign = missing / missing
-    temps_additionnel = int(sign * (abs(missing) // len(working_benevoles)))
-    temps_reste = int(sign * (abs(missing) % len(working_benevoles)))
-    temps_de_travail_quotidiens[d]["ajustement"] = math.ceil(
-        missing / len(working_benevoles)
-    )
-    temps_rest_distribué = False
-    i = 0
-
-    def ajuste(v):
-        global temps_reste
-        global i
-        ajustement = 0
-        if v["ajustable"]:
-            ajustement = temps_additionnel
-            if temps_reste >= 0:
-                i += 1
-                # 1/2 chance to distribute the rest THATS NOT PERFECT: the last
-                # benevole might get more^^ Additionaly, bénévole higher in the
-                # list have more chance to get these.
-                temps_reste -= 1
-                ajustement += 1
-        return ajustement
-
-    l = list(par_bénévole.items())
-    shuffled = dict(random.sample(l, len(l)))
-    temps_de_travail_quotidiens[d]["par_bénévole"] = {
-        b: {"time": v["time"], "ajustable": v["ajustable"], "ajustement": ajuste(v)}
-        for b, v in shuffled.items()
-    }
-
-
-def print_stats(tdtq):
-    for d, v in tdtq.items():
-        # todo: this is outdated
-        working_benevoles = list(
-            filter(lambda item: item["ajustable"], par_bénévole.values())
-        )
-        print(
-            f"{d}: {print_duration(v["total_dispo"])}/{print_duration(v["durée_quêtes"])} ({v["ajustement"]:+} * {len(working_benevoles)})"
-        )
-
-        for b, t in v["par_bénévole"].items():
-            print(
-                f"{b}: {print_duration(t["time"])} {t["ajustable"]} + {t["ajustement"]}"
-            )
-
-
-print_stats(temps_de_travail_quotidiens)
-
-# TODO: this might be different everyday
-# temps_de_travail_disponible_quotidien = (
-#     60
-#     * sum(b.heures_théoriques for b in bénévoles)
-# )
-
 
 def temps_total_quêtes(quêtes: List[Quête]):
     return sum(q.durée_minutes() * q.nombre_bénévoles for q in quêtes)
-
-
-def horaires_ajustés_bénévole(date, b):
-    item = temps_de_travail_quotidiens[date]["par_bénévole"][b]
-    théorie = item["time"]
-    if item["ajustable"]:
-        # This could be simplified now
-        théorie += item["ajustement"]
-    return théorie
 
 
 # Temps de travail d'un bénévole sur un ensemble de quêtes
@@ -541,7 +441,7 @@ def temps_quotidien_théorique_bénévole(b):
 # Renvoie un dictionnaire indexé par les jours
 def diff_temps(b, assignations):
     return {
-        date: (tdt - (temps_travail_théorique(date, b)))  # TODO Ajuster la théorie !
+        date: (tdt - (temps_travail_théorique(date, b)))
         for date, tdt in temps_quotidien_bénévole(b, assignations).items()
     }
 
@@ -646,9 +546,11 @@ def dumb_dump(file, assignations):
         all = []
         for b in bénévoles:
             tdt = sum(temps_quotidien_bénévole(b, assignations).values())
-            tdt_théorique = b.heures_théoriques * 4 * 60
+            tdt_théorique = sum(
+                temps_travail_théorique(d, b) for d in Quête.par_jour.keys()
+            )
             tdt_ajusté = sum(
-                horaires_ajustés_bénévole(d, b) for d in Quête.par_jour.keys()
+                temps_travail_théorique(d, b) for d in Quête.par_jour.keys()
             )
             diff = tdt - tdt_ajusté
             total_diff += diff
@@ -785,8 +687,8 @@ else:
 """ Quelques données sur les quêtes """
 
 
-def total_temps_travail(quêtes: List[Quête]):
-    return sum(q.durée_minutes() * q.nombre_bénévoles for q in quêtes)
+def total_temps_dispo_par_jour(date, bénévoles):
+    return sum(temps_quotidien_théorique_bénévole(b)[date] for b in bénévoles)
 
 
 def total_temps_dispo(bénévoles):
@@ -796,18 +698,18 @@ def total_temps_dispo(bénévoles):
     )
 
 
-temps_total = total_temps_travail(quêtes)
+temps_total = temps_total_quêtes(quêtes)
 temps_dispo = total_temps_dispo(bénévoles)
 print()
 
 for d, qs in Quête.par_jour.items():
-    temps = total_temps_travail(qs)
-    print(f"Temps de travail {d} jour: {int(temps // 60):0=2d}h{int(temps % 60):0=2d}")
+    temps = temps_total_quêtes(qs)
+    dispo = total_temps_dispo_par_jour(d, bénévoles)
+    print(
+        f"Temps de travail {d} : {int(temps // 60):0=2d}h{int(temps % 60):0=2d}, disponible: {int(dispo // 60):0=2d}h{int(dispo % 60):0=2d}"
+    )
 print(
-    f"Temps de travail total: {int(temps_total // 60):0=2d}h{int(temps_total % 60):0=2d}"
-)
-print(
-    f"Temps de travail disponible: {int(temps_dispo // 60):0=2d}h{int(temps_dispo % 60):0=2d}"
+    f"Temps de travail total: {int(temps_total // 60):0=2d}h{int(temps_total % 60):0=2d}, disponible: {int(temps_dispo // 60):0=2d}h{int(temps_dispo % 60):0=2d}"
 )
 
 # Statistics.
