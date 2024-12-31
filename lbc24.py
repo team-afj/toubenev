@@ -460,22 +460,6 @@ print_stats(temps_de_travail_quotidiens)
 #     * sum(b.heures_théoriques for b in bénévoles)
 # )
 
-# On va normaliser le temps de travail (merci Malou), on choisit le ppcm des
-# heures théoriques des bénévoles comme cible pour s'assurer que le coefficient
-# multiplicateur de normalisation soit toujours entier. On ajoute aussi la somme
-# de ces heures théoriques pour pouvoir normaliser l'écart total sur une
-# journée.
-# ppcm_heures_théoriques = math.lcm(
-#     temps_de_travail_disponible_quotidien,
-#     *[60 * b.heures_théoriques for b in bénévoles],
-# )
-
-
-# coef_de(b) renvoie le coefficient de normalisation pour le bénévole b
-def coef_de(b: Bénévole):
-    # t / heures_théoriques = x / ppcm_heures_theoriques)
-    return int(ppcm_heures_théoriques / (b.heures_théoriques * 60))
-
 
 # Temps de travail d'un bénévole sur un ensemble de quêtes
 def temps_bev(b, quêtes, assignations):
@@ -495,24 +479,6 @@ def temps_total_bénévole(b, assignations):
 
 def temps_total_quêtes(quêtes: List[Quête]):
     return sum(q.durée_minutes() * q.nombre_bénévoles for q in quêtes)
-
-
-# Moyenne normalisée : sur une journée, comme toutes les quêtes doivent être
-# assignée, la somme des écarts de chaque bénévole par rapport à leur temps de
-# travail prévu est constante. Donc (?) la moyenne des écarts est indépendante
-# de l'assignation des bénévoles et est égale à l'écart entre la force totale de
-# travail disponible et la durée effective des quêtes.
-# On renvoie un dictionnaire date -> "moyenne"
-# moyenne_tdc_norm = {
-#     date: (
-#         int(
-#             abs(temps_de_travail_disponible_quotidien - temps_total_quêtes(quêtes))
-#             * (ppcm_heures_théoriques / temps_de_travail_disponible_quotidien)
-#             / len(bénévoles)
-#         )
-#     )
-#     for date, quêtes in Quête.par_jour.items()
-# }
 
 
 def horaires_ajustés_bénévole(date, b):
