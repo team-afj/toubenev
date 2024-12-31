@@ -434,9 +434,6 @@ for d in Quête.par_jour.keys():
     working_benevoles = list(
         filter(lambda item: item["ajustable"], par_bénévole.values())
     )
-    print(
-        f"Diff: {missing} num_bev:{ len(working_benevoles)} mean: {missing / len(working_benevoles)}"
-    )
     sign = missing / missing
     temps_additionnel = int(sign * (abs(missing) // len(working_benevoles)))
     temps_reste = int(sign * (abs(missing) % len(working_benevoles)))
@@ -494,22 +491,6 @@ print_stats(temps_de_travail_quotidiens)
 # )
 
 
-# Temps de travail d'un bénévole sur un ensemble de quêtes
-def temps_bev(b, quêtes, assignations):
-    # assignations[(b, q)] pour un bénévole b et une quête q vaut 0 ou 1 et
-    # indique si le bénévole a été assigné à cette quête.
-    return sum(q.durée_minutes() * assignations[(b, q)] for q in quêtes)
-
-
-# Temps de travail, par jour, d'un bénévole
-def temps_total_bénévole(b, assignations):
-    # On renvoie un dictionnaire date -> temps de travail
-    return {
-        date: temps_bev(b, quêtes, assignations)
-        for date, quêtes in Quête.par_jour.items()
-    }
-
-
 def temps_total_quêtes(quêtes: List[Quête]):
     return sum(q.durée_minutes() * q.nombre_bénévoles for q in quêtes)
 
@@ -523,12 +504,45 @@ def horaires_ajustés_bénévole(date, b):
     return théorie
 
 
+# Temps de travail d'un bénévole sur un ensemble de quêtes
+def temps_bev(b, quêtes, assignations):
+    # assignations[(b, q)] pour un bénévole b et une quête q vaut 0 ou 1 et
+    # indique si le bénévole a été assigné à cette quête.
+    return sum(q.durée_minutes() * assignations[(b, q)] for q in quêtes)
+
+
+# Temps de travail, par jour, d'un bénévole
+def temps_quotidien_bénévole(b, assignations):
+    # On renvoie un dictionnaire date -> temps de travail
+    return {
+        date: temps_bev(b, quêtes, assignations)
+        for date, quêtes in Quête.par_jour.items()
+    }
+
+
+def temps_travail_théorique(date, b: Bénévole):
+    if (not (b.date_arrivée) or date >= b.date_arrivée.date()) and (
+        not (b.date_départ) or date < b.date_départ.date()
+    ):
+        return b.heures_théoriques * 60
+    else:
+        return 0
+
+
+def temps_quotidien_théorique_bénévole(b):
+    # On renvoie un dictionnaire date -> temps de travail
+    return {
+        date: temps_travail_théorique(date, b)
+        for date, _quêtes in Quête.par_jour.items()
+    }
+
+
 # Écart de l'écart du temps de travail d'un bénévole par rapport à la moyenne
 # Renvoie un dictionnaire indexé par les jours
 def diff_temps(b, assignations):
     return {
-        date: (tdt - (b.heures_théoriques * 60))  # TODO Ajuster la théorie !
-        for date, tdt in temps_total_bénévole(b, assignations).items()
+        date: (tdt - (temps_travail_théorique(date, b)))  # TODO Ajuster la théorie !
+        for date, tdt in temps_quotidien_bénévole(b, assignations).items()
     }
 
 
@@ -631,7 +645,7 @@ def dumb_dump(file, assignations):
         total_diff = 0
         all = []
         for b in bénévoles:
-            tdt = sum(temps_total_bénévole(b, assignations).values())
+            tdt = sum(temps_quotidien_bénévole(b, assignations).values())
             tdt_théorique = b.heures_théoriques * 4 * 60
             tdt_ajusté = sum(
                 horaires_ajustés_bénévole(d, b) for d in Quête.par_jour.keys()
@@ -775,8 +789,11 @@ def total_temps_travail(quêtes: List[Quête]):
     return sum(q.durée_minutes() * q.nombre_bénévoles for q in quêtes)
 
 
-def total_temps_dispo(bénévoles: List[Bénévole]):
-    return sum(b.heures_théoriques * 60 for b in bénévoles)
+def total_temps_dispo(bénévoles):
+    return sum(
+        sum(v for v in temps_quotidien_théorique_bénévole(b).values())
+        for b in bénévoles
+    )
 
 
 temps_total = total_temps_travail(quêtes)
