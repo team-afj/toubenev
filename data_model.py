@@ -7,6 +7,35 @@ import string
 
 temps_inter_quêtes = 15  # minutes
 
+""" Représentants """
+
+
+class Union_find[T]:
+    def __init__(self, value):
+        self.parent = self
+        self.value: T = value
+        self.rank = 0
+
+    def find(self):
+        if self.parent != self:
+            self.parent = self.parent.find()
+        return self.parent
+
+    def union(self, other, f=lambda x, y: x):
+        self_root = self.find()
+        other_root = other.find()
+        if self_root != other_root:
+            new_value = f(self_root.value, other_root.value)
+            if self_root.rank < other_root.rank:
+                self_root.parent = other_root
+                other_root.value = new_value
+            else:
+                other_root.parent = self_root
+                self_root.value = new_value
+                if self_root.rank == other_root.rank:
+                    self_root.rank += 1
+
+
 """ Sales types """
 
 
@@ -86,6 +115,22 @@ class Quête:
     par_id: Dict[str, Quête] = {}
     par_jour: Dict[date, List[Quête]] = {}
 
+    groupes: Dict[Quête, Union_find[Quête]] = {}
+
+    def strengthen():
+        # Groupes:
+        for q in Quête.toutes:
+            resolve(Quête.par_id, q.groupe)
+            groupe = set(q.groupe)
+            groupe.add(q)
+            groupe_uf = Union_find(groupe)
+            for g in groupe:
+                ancien_groupe = Quête.groupes.get(g)
+                if ancien_groupe is None:
+                    Quête.groupes[g] = groupe_uf
+                else:
+                    ancien_groupe.union(groupe_uf, lambda x, y: x.union(y))
+
     def __init__(
         self,
         id,
@@ -97,6 +142,7 @@ class Quête:
         début,
         fin,
         bénévoles=[],
+        groupe=[],
     ):
         self.id: str = id
         self.nom: str = nom
@@ -107,6 +153,7 @@ class Quête:
         self.bénévoles: List[Bénévole] = bénévoles
         self.début: datetime = début
         self.fin: datetime = fin
+        self.groupe: List[str | Quête] = groupe
         Quête.toutes.append(self)
         Quête.par_id[self.id] = self
 
@@ -128,7 +175,8 @@ class Quête:
     def détails(self) -> str:
         types = ", ".join(f"{k}" for k in self.types)
         bénévoles = ", ".join(f"{k}" for k in self.bénévoles)
-        return f"{self.id}: {self.nom} ({self.nombre_bénévoles} bénévoles)\n{types} à {self.lieu}\nDébut: {self.début} Fin: {self.fin}\nBénévoles fixés: {bénévoles}"
+        groupe = ", ".join("{}".format(k) for k in Quête.groupes[self].value)
+        return f"{self.id}: {self.nom} ({self.nombre_bénévoles} bénévoles)\n{types} à {self.lieu}\nDébut: {self.début} Fin: {self.fin}\nQuêtes groupées: {groupe}\nBénévoles fixés: {bénévoles}"
 
     def __lt__(self, other):
         return self.début < other.début
@@ -253,4 +301,5 @@ def strengthen():
     Dereferences all relations by looking in the tables. Must be called AFTER
     all data has been declared.
     """
+    Quête.strengthen()
     Bénévole.strengthen()
