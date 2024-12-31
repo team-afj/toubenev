@@ -351,8 +351,8 @@ fin_période_pause = 23 * 60  # minutes
 durée_pause_min = 5 * 60  # minutes
 
 
-# TODO: la pause devrait durer plus longtemps et commencer à n'importe quel
-# moment
+# TODO: la pause devrait durer plus longtemps et pouvoir commencer à n'importe
+# quel moment
 def c_est_la_pause(b: Bénévole):
     for date, quêtes in Quête.par_jour.items():
         début_pause = model.new_int_var(
@@ -372,15 +372,23 @@ def c_est_la_pause(b: Bénévole):
             fin_pause,
             f"interval_pause_{b}_{date}",
         )
+        explain_var = model.new_bool_var(
+            f"{b} doit avoir une pause de {durée_pause_min / 60}h le {date}"
+        )
+        model.add_assumption(explain_var)
+
         # La pause est suffisamment longue:
         model.add(size >= durée_pause_min).with_name(
             f"pause_{size}_>=_{durée_pause_min}"
-        )
+        ).only_enforce_if(explain_var)
+
         # Le bénévole n'a aucune quête pendant sa pause:
         overlaps = [interval_pause]
         for q in quêtes:
             overlaps.append(intervalles[(b, q)])
-        model.add_no_overlap(overlaps).with_name(f"noverlap_{b}_{date}")
+        model.add_no_overlap(overlaps).with_name(
+            f"noverlap_{b}_{date}"
+        )  # "only_enforce_if" doesn't work with that constraint
 
 
 for b in bénévoles:
