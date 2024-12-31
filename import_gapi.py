@@ -117,7 +117,7 @@ def load_quêtes(data):
     for q in quêtes:
         id = str(q["id"])
         nom = str(q["nom"])
-        types = map(Type_de_quête.tous.get, split(q["types"]))
+        types = list(map(Type_de_quête.tous.get, split(q["types"])))
         lieu = Lieu.tous[str(q["lieu"])]
         spectacle = None
         nombre_bénévoles = int(q["nombre_bénévoles"])
