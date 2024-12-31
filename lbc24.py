@@ -312,11 +312,13 @@ for b in bénévoles:
 
 """ Ils se détestent, séparez-les ! """
 for b in bénévoles:
-    for e in b.binômes_interdits:
+    for e in b.binômes_interdits:  # TODO: remove symmetries
+        enforce_var = model.new_bool_var(f"{b} ne peut pas travailler avec {e}")
+        model.add_assumption(enforce_var)
         for q in quêtes:
             model.add(assignations[(b, q)] + assignations[(e, q)] <= 1).with_name(
                 f"blaire_pas_{b}_{e}_{q}"
-            )
+            ).only_enforce_if(enforce_var)
 
 """ Chacun a un trou dans son emploi du temps """
 
@@ -756,7 +758,14 @@ if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
         f"Objective value = {solver.objective_value}",
     )
 else:
-    print("No solution found !")
+    print("Aucune solution trouvée. Raisons possibles:")
+    # Added "enforcement variables" that are assumed to be TRUE allows us to
+    # provide an explanation in some cases. An example of this is the "Ils se
+    # détestent, séparez-les !" constraint.
+    # Aucune solution trouvée. Raisons possibles:
+    # Ulysse ne peut pas travailler avec La punaise
+    for index in solver.sufficient_assumptions_for_infeasibility():
+        print(f"- {model.proto.variables[index].name}")
 
 
 """ Quelques données sur les quêtes """
