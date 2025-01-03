@@ -24,7 +24,7 @@ def print(str="\n"):
 
 # open log file
 
-# Import data
+""" Data import """
 # from import_json import from_file
 
 # from_file("data/db.json")
@@ -34,6 +34,10 @@ main()
 
 # Once all the data is loaded, resolve references:
 strengthen()
+
+print("Liste des types quêtes:\n")
+for q in Type_de_quête.tous.values():
+    print(q.détails())
 
 print("Liste des bénévoles:\n")
 for b in Bénévole.tous.values():
@@ -305,6 +309,20 @@ for b in bénévoles:
 #         for q in quêtes:
 #             if contains(q.types, Type_de_quête.tous[id_quête_sérénité]):
 #                 model.add(assignations[(b, q)] == 0).with_name(f"pas_serein_{b}_{q}")
+
+""" Certaines quêtes sont réservées aux spécialistes """
+for q in quêtes:
+    spécialités_requises = set(filter(lambda tdq: tdq.spécialiste_only, q.types))
+    for b in bénévoles:
+        if not (spécialités_requises.issubset(b.spécialités)):
+            explain_var = model.new_bool_var(
+                f"{b} ne peut pas assumer {q} (un(e) spécialiste est requis)"
+            )
+            model.add_assumption(explain_var)
+            model.add(assignations[(b, q)] == 0).with_name(
+                f"pas_spécialiste_{b}_{q}"
+            ).only_enforce_if(explain_var)
+
 
 """ Les lieux interdits sont interdits """
 for b in bénévoles:

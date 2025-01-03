@@ -91,14 +91,18 @@ class Lieu:
 class Type_de_quête:
     tous: Dict[str, Type_de_quête] = {}
 
-    def __init__(self, id, nom, sécable):
+    def __init__(self, id, nom, sécable, spécialiste_only=False):
         self.id: str = id
         self.nom = nom
+        self.spécialiste_only = spécialiste_only
         self.sécable: bool = sécable
         Type_de_quête.tous[self.id] = self
 
     def __str__(self) -> str:
         return f"{self.id}:{self.nom}"
+
+    def détails(self):
+        return f"{self} (Découpable: {self.sécable}, spécialistes: {self.spécialiste_only})"
 
     def __hash__(self):
         return hash(self.id)

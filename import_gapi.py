@@ -6,6 +6,10 @@ from xlrd import xldate_as_datetime
 from datetime import date, time, datetime, timedelta
 
 
+def to_bool(s):
+    return True if s == "TRUE" else False
+
+
 def load_lieux(data):
     lieux = data["lieux"]
     for p in lieux:
@@ -20,7 +24,8 @@ def load_types(data):
         id = str(t["id"])
         nom = t["nom"]
         sécable = False
-        Type_de_quête(id, nom, sécable)
+        spécialiste_only = to_bool(t["only_spe"])
+        Type_de_quête(id, nom, sécable, spécialiste_only)
 
 
 def to_datetime(date):
