@@ -23,7 +23,7 @@ def load_types(data):
     for t in types:
         id = str(t["id"])
         nom = t["nom"]
-        sécable = False
+        sécable = to_bool(t["découpable"])
         spécialiste_only = to_bool(t["only_spe"])
         Type_de_quête(id, nom, sécable, spécialiste_only)
 
