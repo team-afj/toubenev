@@ -96,8 +96,6 @@ def print_signed_duration(minutes):
         return f"-{print_duration(abs(minutes))}"
 
 
-# id_quête_sérénité = "784fc134-cab5-4797-8be2-7a7a91e57795"
-
 # id_tdg_clean = "9f95caf2-a32b-4454-9994-6ce17a5e75e6"
 # id_tdg_suivi = "78250bf9-fb52-41ac-af5b-879d2ca7ff1c"
 
@@ -303,13 +301,6 @@ for b in bénévoles:
                         ).only_enforce_if(explain_var)
                         break
 
-""" Tout le monde ne peut pas assumer les quêtes sérénité """
-# for b in bénévoles:
-#     if not (b.sérénité):
-#         for q in quêtes:
-#             if contains(q.types, Type_de_quête.tous[id_quête_sérénité]):
-#                 model.add(assignations[(b, q)] == 0).with_name(f"pas_serein_{b}_{q}")
-
 """ Certaines quêtes sont réservées aux spécialistes """
 for q in quêtes:
     spécialités_requises = set(filter(lambda tdq: tdq.spécialiste_only, q.types))
@@ -488,6 +479,7 @@ def bornage_des_excès(bénévoles, écart_quotidien_max=30):
 """ Pondération des préférences des bénévoles """
 
 
+# TODO bonus "avec les potes"
 def appréciation_dune_quête(bénévole: Bénévole, quête: Quête):
     # On découpe la quête par blocs de 15 minutes
     acc = quête.début
