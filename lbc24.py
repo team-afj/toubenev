@@ -5,7 +5,7 @@ from operator import contains
 import os, sys, math, random
 from ortools.sat.python import cp_model
 from data_model import Bénévole, Type_de_quête, Quête, Spectacle, strengthen
-from export_json import write_json
+from export_json_web import write_json
 
 # prepare log folder and file
 date_now = datetime.now().strftime("%Y%m%d %Hh%Mm%Ss")
@@ -743,7 +743,7 @@ for q in quêtes:
             participants.append(b)
     result[q] = participants
 
-write_json(result, file=f"{log_folder}/results.json")
+write_json(result, file=f"{log_folder}/results")
 
 """
   Autres contraintes:
