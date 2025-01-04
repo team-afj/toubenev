@@ -469,6 +469,10 @@ def bornage_des_excès(bénévoles, écart_quotidien_max=30):
     for b in bénévoles:
         diff_par_jour = diff_temps(b, assignations)
         for d, diff in diff_par_jour.items():
+            explain_var = model.new_bool_var(
+                f"Écart de travail de {b} le {d} supérieur à {écart_quotidien_max} min"
+            )
+            model.add_assumption(explain_var)
             model.add(diff <= écart_quotidien_max).with_name(f"écart_{b}_{d}")
         diff = sum(diff for _, diff in diff_par_jour.items())
         model.add(diff <= borne_sup).with_name(f"sup_{b}")
@@ -502,9 +506,9 @@ def appréciation_du_planning(bénévole: Bénévole, quêtes: List[Quête]):
 
 
 # This might not always be satisfiable
-for b in bénévoles:
-    for q in quêtes:
-        model.add(appréciation_dune_quête(b, q) >= 0).with_name(f"appréciation_{b}_{q}")
+# for b in bénévoles:
+#     for q in quêtes:
+#         model.add(appréciation_dune_quête(b, q) >= 0).with_name(f"appréciation_{b}_{q}")
 
 """ Distance entre la première et la dernière quête """
 
