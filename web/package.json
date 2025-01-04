@@ -1,0 +1,20 @@
+{
+  "name": "web",
+  "packageManager": "yarn@4.4.1",
+  "dependencies": {
+    "@event-calendar/core": "^3.7.2",
+    "@event-calendar/interaction": "^3.7.2",
+    "@event-calendar/list": "^3.7.2",
+    "@event-calendar/resource-time-grid": "^3.7.2",
+    "@event-calendar/resource-timeline": "^3.7.2",
+    "@event-calendar/time-grid": "^3.7.2",
+    "jcalendar.js": "^2.12.2"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.2"
+  },
+  "scripts": {
+    "build": "esbuild ./app.ts --outfile=www/bundle.js --bundle --minify --sourcemap",
+    "watch": "esbuild ./app.ts --bundle --outdir=www --watch --servedir=www"
+  }
+}
