@@ -483,7 +483,6 @@ def bornage_des_excès(bénévoles, écart_quotidien_max=30):
 """ Pondération des préférences des bénévoles """
 
 
-# TODO bonus "avec les potes"
 def appréciation_dune_quête(bénévole: Bénévole, quête: Quête):
     # On découpe la quête par blocs de 15 minutes
     acc = quête.début
@@ -509,6 +508,35 @@ def appréciation_du_planning(bénévole: Bénévole, quêtes: List[Quête]):
 # for b in bénévoles:
 #     for q in quêtes:
 #         model.add(appréciation_dune_quête(b, q) >= 0).with_name(f"appréciation_{b}_{q}")
+
+""" Mon pote """
+
+
+max_bénévoles_par_quête = max(
+    Quête.toutes, key=(lambda q: q.nombre_bénévoles)
+).nombre_bénévoles
+
+
+def bonus_amis_par_bénévole(q: Quête, b: Bénévole, amitiés):
+    amitiés[b] = set(b.binômes_préférés)
+    amis_non_considérés = list(
+        filter(lambda ami: b not in amitiés.get(ami, set()), b.binômes_préférés)
+    )
+    var = model.new_int_var(0, max_bénévoles_par_quête, f"amis_de_{b}_font_{q}")
+    model.add_max_equality(
+        var, [0, sum(assignations[(b, q)] for b in amis_non_considérés) - 1]
+    )
+    return var
+
+
+def bonus_amis_par_quête(q: Quête, bénévoles):
+    amitiés: Dict[Bénévole, set[Bénévole]] = {}
+    return sum(bonus_amis_par_bénévole(q, b, amitiés) for b in bénévoles)
+
+
+def bonus_amis(bénévoles, quêtes):
+    return sum(bonus_amis_par_quête(q, bénévoles) for q in quêtes)
+
 
 """ Distance entre la première et la dernière quête """
 
@@ -537,6 +565,7 @@ def amplitudes(b: Bénévole):
 model.minimize(
     10 * bornage_des_excès(bénévoles)
     # + 0.5 * sum(amplitudes(b) for b in bénévoles)
+    + bonus_amis(bénévoles, quêtes)
     - sum(appréciation_du_planning(b, quêtes) for b in bénévoles)
 )
 
