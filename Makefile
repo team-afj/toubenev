@@ -23,3 +23,9 @@ watch: venv
 gapi-test: venv
 	. .venv/bin/activate; \
 	python import_gapi.py
+
+.PHONY: upgrade
+upgrade: venv
+	. .venv/bin/activate; sed -i '' 's/[~=]=/>=/' requirements.txt
+	. .venv/bin/activate; pip install -U -r requirements.txt
+	. .venv/bin/activate; pip freeze | sed 's/==/~=/' > requirements.txt
