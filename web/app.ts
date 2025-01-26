@@ -5,7 +5,7 @@ import TimeGrid from "@event-calendar/time-grid";
 import ResourceTimeline from "@event-calendar/resource-timeline";
 import ResourceTimeGrid from "@event-calendar/resource-time-grid";
 import Interaction from "@event-calendar/interaction";
-import data from "./results.json";
+import static_data from "./results.json";
 
 var calendarElement = document.getElementById("calendar");
 
@@ -16,12 +16,15 @@ var calendarElement = document.getElementById("calendar");
 //   calendarInstance.import([new File([data], "cal", { type : "ics"})])
 // }
 
-let volunteers = data["volunteers"].map((v) => ({
+let volunteers = static_data["volunteers"].map((v) => ({
   id: `v_${v.id}`,
   title: v.pseudo,
 }));
-let places = data["places"].map((v) => ({ id: `p_${v.id}`, title: v.name }));
-let types = data["quest_types"].map((v) => ({
+let places = static_data["places"].map((v) => ({
+  id: `p_${v.id}`,
+  title: v.name,
+}));
+let types = static_data["quest_types"].map((v) => ({
   id: `qt_${v.id}`,
   title: v.name,
 }));
@@ -35,7 +38,7 @@ let types_de_quêtes = {
 };
 let resources = [bénévoles, lieux, types_de_quêtes];
 
-let events = data["quests"]
+let events = static_data["quests"]
   .map((v) => ({
     id: `q_${v.id}`,
     allDay: false,
