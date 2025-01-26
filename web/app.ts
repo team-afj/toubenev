@@ -34,6 +34,16 @@ const state: state = {
   no_nested_resources: false,
 };
 
+/// Get initial config from uri (very fragile)
+const check_hash = () => {
+  const hash = window.location.hash;
+  if (hash.startsWith("#user=")) {
+    const split = hash.split("=");
+    state.active_volunteer = volunteers.get(split[split.length - 1]);
+  }
+};
+check_hash();
+
 //// CALENDAR
 
 const calendarElement = document.getElementById("calendar");
@@ -145,8 +155,13 @@ console.log(events);
 
 /// Volunteer select
 const set_active_volunteer = (id) => {
-  if (id === "none") state.active_volunteer = undefined;
-  else state.active_volunteer = volunteers.get(id);
+  if (id === "none") {
+    state.active_volunteer = undefined;
+    window.location.hash = ``;
+  } else {
+    state.active_volunteer = volunteers.get(id);
+    window.location.hash = `user=${id}`;
+  }
 
   update_calendar(state);
 };
@@ -155,7 +170,10 @@ const select_input = document.getElementById(
   "volunteer_select"
 ) as HTMLSelectElement;
 
-volunteers.forEach((v) => select_input.add(new Option(v.title, v.id)));
+volunteers.forEach((v) => {
+  const selected = v.id === state.active_volunteer?.id;
+  select_input.add(new Option(v.title, v.id, selected, selected));
+});
 
 select_input.onchange = (ev) => {
   const id = (ev.target! as HTMLSelectElement).value;
