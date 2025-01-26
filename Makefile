@@ -29,3 +29,7 @@ upgrade: venv
 	. .venv/bin/activate; sed -i '' 's/[~=]=/>=/' requirements.txt
 	. .venv/bin/activate; pip install -U -r requirements.txt
 	. .venv/bin/activate; pip freeze | sed 's/==/~=/' > requirements.txt
+
+.PHONY: web-dev
+web-dev:
+	cd web && yarn serve

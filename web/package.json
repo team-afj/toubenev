@@ -15,6 +15,6 @@
   },
   "scripts": {
     "build": "esbuild ./app.ts --outfile=www/bundle.js --bundle --minify --sourcemap",
-    "watch": "esbuild ./app.ts --bundle --outdir=www --watch --servedir=www"
+    "serve": "esbuild ./app.ts --bundle --outdir=www --watch --servedir=www"
   }
 }
