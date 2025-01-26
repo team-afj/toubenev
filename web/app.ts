@@ -27,9 +27,11 @@ const volunteers: Map<string, volunteer> = new Map(
 //// STATE
 type state = {
   active_volunteer: volunteer | undefined;
+  no_nested_resources: boolean;
 };
 const state: state = {
   active_volunteer: undefined,
+  no_nested_resources: false,
 };
 
 //// CALENDAR
@@ -87,29 +89,30 @@ let calendar = new Calendar({
   },
 });
 
-const update_calendar = ({ active_volunteer }) => {
-  console.log("Update calendar", active_volunteer);
+const update_calendar = ({ active_volunteer, no_nested_resources }) => {
   // RESOURCES
 
-  let places = static_data["places"].map((v) => ({
+  type resource = { id: string; title: string };
+
+  let places: resource[] = static_data["places"].map((v) => ({
     id: `p_${v.id}`,
     title: v.name,
   }));
-  let types = static_data["quest_types"].map((v) => ({
+  let types: resource[] = static_data["quest_types"].map((v) => ({
     id: `qt_${v.id}`,
     title: v.name,
   }));
 
-  const children = active_volunteer
+  const volunteers_: resource[] = active_volunteer
     ? Array.from(volunteers.values()).filter(
         (v) => v.id === active_volunteer!.id
       )
-    : volunteers.values();
+    : Array.from(volunteers.values());
 
   let bénévoles = {
     id: "volunteers",
     title: "Bénévoles",
-    children,
+    children: volunteers_,
   };
   let lieux = { id: "places", title: "Lieux", children: places };
   let types_de_quêtes = {
@@ -117,7 +120,9 @@ const update_calendar = ({ active_volunteer }) => {
     title: "Types de quêtes",
     children: types,
   };
-  let resources = [bénévoles, lieux, types_de_quêtes];
+  let resources = no_nested_resources
+    ? [...volunteers_, ...places, ...types]
+    : [bénévoles, lieux, types_de_quêtes];
 
   // EVENTS
 
@@ -135,10 +140,8 @@ console.log(events);
 
 /// Volunteer select
 const set_active_volunteer = (id) => {
-  console.log("Selection:", id);
   if (id === "none") state.active_volunteer = undefined;
   else state.active_volunteer = volunteers.get(id);
-  console.log("Selection:", volunteers.get(id));
 
   update_calendar(state);
 };
@@ -153,6 +156,14 @@ select_input.onchange = (ev) => {
   const id = (ev.target! as HTMLSelectElement).value;
   set_active_volunteer(id);
 };
+
+/// Keep track of calendar interactions
+calendar.setOption("eventClick", (info) => console.log("click", info));
+calendar.setOption("viewDidMount", ({ type }) => {
+  const prev_value = state.no_nested_resources;
+  state.no_nested_resources = type === "resourceTimeGridDay";
+  if (state.no_nested_resources != prev_value) update_calendar(state);
+});
 
 /// Update the calendar for the first time
 update_calendar(state);
