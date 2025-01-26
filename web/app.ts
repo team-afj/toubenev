@@ -7,7 +7,34 @@ import ResourceTimeGrid from "@event-calendar/resource-time-grid";
 import Interaction from "@event-calendar/interaction";
 import static_data from "./results.json";
 
-var calendarElement = document.getElementById("calendar");
+//// DATA
+
+type volunteer = { id: string; title: string };
+const volunteers: Map<string, volunteer> = new Map(
+  static_data["volunteers"].map(({ id, pseudo }) => [
+    `v_${id}`,
+    {
+      id: `v_${id}`,
+      title: pseudo,
+    },
+  ])
+);
+// const volunteers_list = Array.from(volunteers, ([id, title]) => ({
+//   id,
+//   title,
+// }));
+
+//// STATE
+type state = {
+  active_volunteer: volunteer | undefined;
+};
+const state: state = {
+  active_volunteer: undefined,
+};
+
+//// CALENDAR
+
+const calendarElement = document.getElementById("calendar");
 
 // async function getData() {
 //   const response = await fetch("./events.ics");
@@ -15,28 +42,6 @@ var calendarElement = document.getElementById("calendar");
 //   console.log(data)
 //   calendarInstance.import([new File([data], "cal", { type : "ics"})])
 // }
-
-let volunteers = static_data["volunteers"].map((v) => ({
-  id: `v_${v.id}`,
-  title: v.pseudo,
-}));
-let places = static_data["places"].map((v) => ({
-  id: `p_${v.id}`,
-  title: v.name,
-}));
-let types = static_data["quest_types"].map((v) => ({
-  id: `qt_${v.id}`,
-  title: v.name,
-}));
-
-let bénévoles = { id: "volunteers", title: "Bénévoles", children: volunteers };
-let lieux = { id: "places", title: "Lieux", children: places };
-let types_de_quêtes = {
-  id: "types",
-  title: "Types de quêtes",
-  children: types,
-};
-let resources = [bénévoles, lieux, types_de_quêtes];
 
 let events = static_data["quests"]
   .map((v) => ({
@@ -63,7 +68,7 @@ let duration = {
 
 console.log(duration);
 
-let ec = new Calendar({
+let calendar = new Calendar({
   target: calendarElement,
   props: {
     plugins: [Interaction, TimeGrid, List, ResourceTimeline, ResourceTimeGrid],
@@ -77,11 +82,77 @@ let ec = new Calendar({
       },
       date,
       duration,
-      resources,
-      events,
       filterEventsWithResources: true,
     },
   },
 });
 
+const update_calendar = ({ active_volunteer }) => {
+  console.log("Update calendar", active_volunteer);
+  // RESOURCES
+
+  let places = static_data["places"].map((v) => ({
+    id: `p_${v.id}`,
+    title: v.name,
+  }));
+  let types = static_data["quest_types"].map((v) => ({
+    id: `qt_${v.id}`,
+    title: v.name,
+  }));
+
+  const children = active_volunteer
+    ? Array.from(volunteers.values()).filter(
+        (v) => v.id === active_volunteer!.id
+      )
+    : volunteers.values();
+
+  let bénévoles = {
+    id: "volunteers",
+    title: "Bénévoles",
+    children,
+  };
+  let lieux = { id: "places", title: "Lieux", children: places };
+  let types_de_quêtes = {
+    id: "types",
+    title: "Types de quêtes",
+    children: types,
+  };
+  let resources = [bénévoles, lieux, types_de_quêtes];
+
+  // EVENTS
+
+  let filtered_events = active_volunteer
+    ? events.filter((ev) =>
+        ev.resourceIds.some((res) => res === active_volunteer!.id)
+      )
+    : events;
+
+  calendar.setOption("resources", resources);
+  calendar.setOption("events", filtered_events);
+};
+
 console.log(events);
+
+/// Volunteer select
+const set_active_volunteer = (id) => {
+  console.log("Selection:", id);
+  if (id === "none") state.active_volunteer = undefined;
+  else state.active_volunteer = volunteers.get(id);
+  console.log("Selection:", volunteers.get(id));
+
+  update_calendar(state);
+};
+
+const select_input = document.getElementById(
+  "volunteer_select"
+) as HTMLSelectElement;
+
+volunteers.forEach((v) => select_input.add(new Option(v.title, v.id)));
+
+select_input.onchange = (ev) => {
+  const id = (ev.target! as HTMLSelectElement).value;
+  set_active_volunteer(id);
+};
+
+/// Update the calendar for the first time
+update_calendar(state);
