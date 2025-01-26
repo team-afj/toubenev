@@ -53,6 +53,8 @@ let events = static_data["quests"]
     end: new Date(v.end),
     title: v.name,
     editable: false,
+    eventStartEditable: false,
+    eventDurationEditable: false,
     resourceIds: v.types
       .map((id) => `qt_${id}`)
       .concat(v.volunteers.map((id) => `v_${id}`))
@@ -85,6 +87,9 @@ let calendar = new Calendar({
       date,
       duration,
       filterEventsWithResources: true,
+      editable: false,
+      eventStartEditable: false,
+      eventDurationEditable: false,
     },
   },
 });
