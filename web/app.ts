@@ -87,7 +87,7 @@ const check_hash = () => {
   if (hash.startsWith("#user=")) {
     const split = hash.split("=");
     state.active_volunteer = volunteers.get(split[split.length - 1]);
-  }
+  } else state.active_volunteer = undefined;
 };
 check_hash();
 
