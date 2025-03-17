@@ -154,8 +154,7 @@ let calendar = new Calendar({
       view: "timeGridWeek",
       headerToolbar: {
         start: "title",
-        center:
-          "timeGridWeek,listYear,resourceTimelineDay,resourceTimelineMonth,resourceTimeGridDay",
+        center: "timeGridWeek,listYear,resourceTimelineDay,resourceTimeGridDay",
         end: "today prev,next",
       },
       date,
