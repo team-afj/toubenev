@@ -34,6 +34,53 @@ const state: state = {
   no_nested_resources: false,
 };
 
+const update_calendar = ({ active_volunteer, no_nested_resources }) => {
+  // RESOURCES
+
+  type resource = { id: string; title: string };
+
+  let places: resource[] = static_data["places"].map((v) => ({
+    id: `p_${v.id}`,
+    title: v.name,
+  }));
+  let types: resource[] = static_data["quest_types"].map((v) => ({
+    id: `qt_${v.id}`,
+    title: v.name,
+  }));
+
+  const volunteers_: resource[] = active_volunteer
+    ? Array.from(volunteers.values()).filter(
+        (v) => v.id === active_volunteer!.id
+      )
+    : Array.from(volunteers.values());
+
+  let bénévoles = {
+    id: "volunteers",
+    title: "Bénévoles",
+    children: volunteers_,
+  };
+  let lieux = { id: "places", title: "Lieux", children: places };
+  let types_de_quêtes = {
+    id: "types",
+    title: "Types de quêtes",
+    children: types,
+  };
+  let resources = no_nested_resources
+    ? [...volunteers_, ...places, ...types]
+    : [bénévoles, lieux, types_de_quêtes];
+
+  // EVENTS
+
+  let filtered_events = active_volunteer
+    ? events.filter((ev) =>
+        ev.resourceIds.some((res) => res === active_volunteer!.id)
+      )
+    : events;
+
+  calendar.setOption("resources", resources);
+  calendar.setOption("events", filtered_events);
+};
+
 /// Get initial config from uri (very fragile)
 const check_hash = () => {
   const hash = window.location.hash;
@@ -43,6 +90,23 @@ const check_hash = () => {
   }
 };
 check_hash();
+
+/// Volunteer select
+const set_active_volunteer = (id) => {
+  if (id === "none") {
+    // state.active_volunteer = undefined;
+    window.location.hash = ``;
+  } else {
+    // state.active_volunteer = volunteers.get(id);
+    window.location.hash = `user=${id}`;
+  }
+};
+
+window.onhashchange = function () {
+  console.log(`Hash changed: ${window.location.hash}`);
+  check_hash();
+  update_calendar(state);
+};
 
 //// CALENDAR
 
@@ -100,71 +164,21 @@ let calendar = new Calendar({
       editable: false,
       eventStartEditable: false,
       eventDurationEditable: false,
+      eventContent: ({ event: { title, resourceIds }, timeText }) => {
+        console.log(resourceIds);
+        let participants = resourceIds.reduce((acc, v) => {
+          let v2 = volunteers.get(v);
+          if (v2) acc.push(`&nbsp;<a href="#user=${v2.id}">${v2.title}</a>`);
+          return acc;
+        }, []);
+        let html = `<h2>${participants}: ${title} (${timeText})</h2>`;
+        return { html };
+      },
     },
   },
 });
 
-const update_calendar = ({ active_volunteer, no_nested_resources }) => {
-  // RESOURCES
-
-  type resource = { id: string; title: string };
-
-  let places: resource[] = static_data["places"].map((v) => ({
-    id: `p_${v.id}`,
-    title: v.name,
-  }));
-  let types: resource[] = static_data["quest_types"].map((v) => ({
-    id: `qt_${v.id}`,
-    title: v.name,
-  }));
-
-  const volunteers_: resource[] = active_volunteer
-    ? Array.from(volunteers.values()).filter(
-        (v) => v.id === active_volunteer!.id
-      )
-    : Array.from(volunteers.values());
-
-  let bénévoles = {
-    id: "volunteers",
-    title: "Bénévoles",
-    children: volunteers_,
-  };
-  let lieux = { id: "places", title: "Lieux", children: places };
-  let types_de_quêtes = {
-    id: "types",
-    title: "Types de quêtes",
-    children: types,
-  };
-  let resources = no_nested_resources
-    ? [...volunteers_, ...places, ...types]
-    : [bénévoles, lieux, types_de_quêtes];
-
-  // EVENTS
-
-  let filtered_events = active_volunteer
-    ? events.filter((ev) =>
-        ev.resourceIds.some((res) => res === active_volunteer!.id)
-      )
-    : events;
-
-  calendar.setOption("resources", resources);
-  calendar.setOption("events", filtered_events);
-};
-
 console.log(events);
-
-/// Volunteer select
-const set_active_volunteer = (id) => {
-  if (id === "none") {
-    state.active_volunteer = undefined;
-    window.location.hash = ``;
-  } else {
-    state.active_volunteer = volunteers.get(id);
-    window.location.hash = `user=${id}`;
-  }
-
-  update_calendar(state);
-};
 
 const select_input = document.getElementById(
   "volunteer_select"
