@@ -1,0 +1,24 @@
+body, html {
+    width: 100%;
+    height: 100%;
+
+    margin: 0;
+    padding: 0;
+}
+
+#main-layout {
+    display: flex;
+    flex-direction: column;
+
+    width: 100%;
+    height: 100%;
+}
+
+#calendar {
+    flex-grow: 1;
+    overflow: hidden;
+
+    & .ec {
+        height: 100%;
+    }
+}
