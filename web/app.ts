@@ -170,7 +170,7 @@ let calendar = new Calendar({
           if (v2) acc.push(`&nbsp;<a href="#user=${v2.id}">${v2.title}</a>`);
           return acc;
         }, []);
-        let html = `<h2>${participants}: ${title} (${timeText})</h2>`;
+        let html = `<p>${participants}: ${title} (${timeText})</p>`;
         return { html };
       },
     },
