@@ -1,0 +1,12 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/ingydotnet/git-subrepo#readme
+;
+[subrepo]
+	remote = git@github.com:voodoos/ppx_deriving_jsont.git
+	branch = main
+	commit = eaa270d6e4b4dfb2b0ebfd3f1a1787a596c277e4
+	parent = bb4d506ce0f55c283ef109ce34c976133dadf118
+	method = merge
+	cmdver = 0.4.5
