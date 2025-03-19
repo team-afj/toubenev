@@ -1,0 +1,25 @@
+{
+    "name": "event-planning-app",
+    "version": "dev",
+    "main": "bundle.js",
+    "license": "MIT",
+    "scripts": {
+        "build": "yarn exec -- esbuild main.bc.js --external:node:fs --external:node:constants --external:node:child_process --external:node:tty --bundle  --minify-syntax --minify-whitespace --sourcemap  --outfile=bundle.js "
+    },
+    "dependencies": {
+        "@event-calendar/core": "^3.10.0",
+        "@event-calendar/day-grid": "^3.10.0",
+        "@event-calendar/interaction": "^3.10.0",
+        "@event-calendar/list": "^3.10.0",
+        "@event-calendar/resource-time-grid": "^3.10.0",
+        "@event-calendar/resource-timeline": "^3.10.0",
+        "@event-calendar/time-grid": "^3.10.0",
+        "y-indexeddb": "^9.0.12",
+        "y-webrtc": "^10.3.0",
+        "yjs": "^13.6.20"
+    },
+    "devDependencies": {
+        "esbuild": "^0.25.1"
+    },
+    "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
+}

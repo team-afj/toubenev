@@ -1,0 +1,7 @@
+(library
+ (name static_results)
+ (js_of_ocaml
+  (javascript_files static.js))
+ (preprocess
+  (pps ppx_deriving_jsont))
+ (libraries brr jsont.brr js))

@@ -1,0 +1,5 @@
+(library
+ (name calendar)
+ (js_of_ocaml
+  (javascript_files calendar.js))
+ (libraries brr js))
