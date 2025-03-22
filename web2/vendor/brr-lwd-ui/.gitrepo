@@ -1,0 +1,12 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/ingydotnet/git-subrepo#readme
+;
+[subrepo]
+	remote = git@github.com:voodoos/brr-lwd-ui.git
+	branch = main
+	commit = 6810dc06f19255a84a3b46980658b7f27a011ab3
+	parent = 10145f8b487212b4db2ce79a7fe12dd58cc8e2e7
+	method = merge
+	cmdver = 0.4.5

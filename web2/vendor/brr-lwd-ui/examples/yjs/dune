@@ -1,0 +1,50 @@
+(executable
+ (name main)
+ (modes js)
+ (js_of_ocaml
+  (flags
+   (:standard --no-inline)))
+ (libraries
+  js_of_ocaml
+  lwd
+  brr-lwd
+  brr-lwd-ui
+  brr-lwd-ui.bindings.yjs
+  brr-lwd-ui.bindings.quill
+  brr-lwd-ui.bindings.y-quill
+  hector
+  uuidm))
+
+(rule
+ (deps package.json yarn.lock)
+ (targets node_modules)
+ (action
+  (progn
+   (run yarn))))
+
+(rule
+ (deps main.bc.js node_modules)
+ (targets bundle.css bundle.js bundle.js.map)
+ (mode
+  (promote (until-clean)))
+ (action
+  (run yarn build)))
+
+(alias
+ (name examples)
+ (deps bundle.js))
+
+(copy_files
+ (mode
+  (promote (until-clean)))
+ (alias examples)
+ (files ../../css/brr_lwd_ui.css))
+
+; (rule
+;  (mode
+;   (promote (until-clean)))
+;  (alias examples)
+;  (action
+;   (progn
+;    (copy %{lib:brr-lwd-ui:css/quill.core.css} quill.core.css)
+;    (copy %{lib:brr-lwd-ui:css/quill.bubble.css} quill.bubble.css))))

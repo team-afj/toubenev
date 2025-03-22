@@ -1,0 +1,14 @@
+(executable
+ (name main)
+ (modes js)
+ (promote (until-clean))
+ (js_of_ocaml
+  (flags
+   (:standard --no-inline)))
+ (libraries js_of_ocaml lwd brr-lwd brr-lwd-ui))
+
+(copy_files
+ (mode
+  (promote (until-clean)))
+ (alias examples)
+ (files ../../css/brr_lwd_ui.css))

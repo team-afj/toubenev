@@ -1,0 +1,13 @@
+(library
+ (name table)
+ (public_name brr-lwd-ui.table)
+ (flags :standard -open Common)
+ (libraries
+  containers
+  containers-data
+  brrer
+  lwd
+  brr-lwd
+  base64
+  common
+  controlled_scroll))
