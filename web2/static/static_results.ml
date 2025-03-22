@@ -1,4 +1,4 @@
-open Brr
+open! Brr
 
 external get_static_events : unit -> Jv.t = "get_static_events"
 
@@ -25,7 +25,7 @@ type results = {
 }
 [@@deriving jsont]
 
-let events =
+let results =
   let raw = get_static_events () in
   let json = Jsont_brr.decode_jv results_jsont raw in
-  Console.log [ raw; json ]
+  json

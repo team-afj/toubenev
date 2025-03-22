@@ -1,4 +1,14 @@
 (executable
  (name main)
  (modes js)
- (libraries js_of_ocaml lwd brr-lwd js calendar static_results))
+ (libraries
+  containers
+  js_of_ocaml
+  lwd
+  brr-lwd
+  brr-lwd-ui
+  ISO8601
+  calendar
+  js
+  event_calendar
+  static_results))
