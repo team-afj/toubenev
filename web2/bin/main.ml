@@ -38,10 +38,12 @@ let event_content (info : Event_calendar.Info.t) =
   let event = Event_calendar.Info.event info in
   let quest = Data.Map.find event.id data.quests in
   let volunteers_link acc (v : Static_results.volunteer) =
-    let el = El.a ~at:[ At.href (Jstr.v "#") ] [ El.txt' v.pseudo ] in
+    let el = El.a ~at:[ At.href (Jstr.v "") ] [ El.txt' v.pseudo ] in
     let _ =
       Ev.listen Ev.click
-        (fun _ -> Lwd.set active_volunteer v.id)
+        (fun ev ->
+          Ev.prevent_default ev;
+          Lwd.set active_volunteer v.id)
         (El.as_target el)
     in
     if List.is_empty acc then [ el ]
@@ -64,22 +66,41 @@ let update_events ~filter =
   let events = Data.to_events ?filter data in
   Event_calendar.set_option c Events events
 
+(* History management *)
+let history = Window.history G.window
+
+(* Set initial state according to uri params *)
 let () =
-  listen ~initial_trigger:true ~f:(fun v ->
-      Console.log [ "Active: "; v ];
-      let filter =
-        match v with
-        | "all" -> None
-        | id ->
-            Some
-              (fun (q : Data.quest) ->
-                List.exists
-                  ~f:(fun (v : Static_results.volunteer) ->
-                    String.equal v.id id)
-                  q.volunteers)
-      in
-      update_events ~filter)
-  @@ Lwd.get active_volunteer
+  let params = Window.location G.window |> Uri.fragment_params in
+  Option.iter (fun user -> Lwd.set active_volunteer (Jstr.to_string user))
+  @@ Uri.Params.find (Jstr.v "user") params
+
+let update_fragment v =
+  let open Window.History in
+  let uri = Window.location G.window in
+  let uri =
+    Uri.with_fragment_params uri
+    @@ Uri.Params.of_assoc [ (Jstr.v "user", Jstr.v v) ]
+  in
+  replace_state ~uri history
+
+let () =
+  let on_state_change v =
+    Console.log [ "Active: "; v ];
+    let filter =
+      match v with
+      | "all" -> None
+      | id ->
+          Some
+            (fun (q : Data.quest) ->
+              List.exists
+                ~f:(fun (v : Static_results.volunteer) -> String.equal v.id id)
+                q.volunteers)
+    in
+    update_fragment v;
+    update_events ~filter
+  in
+  listen ~initial_trigger:true ~f:on_state_change @@ Lwd.get active_volunteer
 
 let app = Elwd.div [ `R filters ]
 
