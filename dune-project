@@ -27,4 +27,7 @@
   (jsont
    (>= "0.1.1"))
   ; Vendored ppx_deriving_jsont deps:
-  ppxlib))
+  ppxlib
+  ; Vendored lwd deps:
+  js_of_ocaml-lwt
+  tyxml))
