@@ -673,7 +673,9 @@ let render_richtext_cell ~src:_ (value : Yjs.Text.t) =
     let open Quill in
     let toolbar = Array [ Bold; Italic; Underline ] in
     make ~container @@ config ~theme:Snow ~cursors:true ~toolbar ()
-    |> (* TODO is there some cleanup to do ? *) Y_quill.make ~awareness value
+    |>
+    (* TODO is there some cleanup to do ? *)
+    Y_quill.make ~awareness value
   in
   elt
 

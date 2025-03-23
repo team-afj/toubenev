@@ -52,11 +52,15 @@ let make ?(persist = true) ?(at = []) ?(ev = [])
           Elwd.option ~at [ `P (El.txt' name) ])
         options
     in
-    Elwd.select ~at ~ev ~on_create:(fun e -> element := Some e) [ `S (Lwd_seq.lift options) ]
+    Elwd.select ~at ~ev
+      ~on_create:(fun e -> element := Some e)
+      [ `S (Lwd_seq.lift options) ]
   in
-  let () = Utils.listen ~f:(fun v ->
-    Option.iter (fun select ->
-    Jv.set (El.to_jv select) "value" (Jv.of_string v)) !element )
-     @@ Lwd.get value
+  let () =
+    Utils.listen ~f:(fun v ->
+        Option.iter
+          (fun select -> Jv.set (El.to_jv select) "value" (Jv.of_string v))
+          !element)
+    @@ Lwd.get value
   in
   { field; label; value }
