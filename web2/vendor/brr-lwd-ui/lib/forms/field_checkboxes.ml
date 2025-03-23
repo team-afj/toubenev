@@ -29,7 +29,10 @@ let make_single ?persist ?(ev = []) ?(on_change = fun _ -> ()) name value label
     |> add At.Name.type' (`P "checkbox")
   in
   let checked =
-    Lwd.map (Lwd.get var) ~f:(function Some _ -> At.checked | None -> At.void)
+    (* todo: this is not controllable: unchecking does not uncheck without calling the JV function*)
+    Lwd.map (Lwd.get var) ~f:(function
+      | Some _ -> At.checked
+      | None -> At.void)
   in
   let at = `R checked :: at in
   let on_change =
@@ -60,9 +63,12 @@ let make ?at ?(persist = true) t =
   let elts = Lwd_seq.map (fun (elt, _) -> elt) all in
   let value =
     Lwd_seq.fold_monoid
-      (fun (_, v) -> Lwd_seq.element (Lwd.get v))
+      (fun (_, v) ->
+        Lwd_seq.element
+          (Lwd.map (Lwd.get v) ~f:(fun v' -> (v', fun () -> Lwd.set v None))))
       Lwd_seq.monoid all
-    |> Lwd_seq.lift |> Lwd_seq.filter_map Fun.id
+    |> Lwd_seq.lift
+    |> Lwd_seq.filter_map (fun (v, cb) -> Option.map (fun v -> (v, cb)) v)
   in
   { field = Elwd.div ?at [ `S (Lwd_seq.lift elts) ]; value }
 

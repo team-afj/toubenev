@@ -40,7 +40,7 @@ let filters =
       desc =
         Lwd.pure
           (Lwd_seq.of_list
-             [ Check ([ `P (El.txt' "0") ], [ `P (El.txt' "0") ], false) ]);
+             [ Check ([ `P (El.txt' "00") ], [ `P (El.txt' "00") ], false) ]);
     }
   in
   Elwd.div

@@ -65,24 +65,37 @@ let make ?(persist = true) ?(at = []) ?(ev = [])
   in
   { field; label; value }
 
-let make_multiple ?(at = []) (options : Elwd.t Elwd.col Field_checkboxes.group)
-    =
+let make_multiple ?(persist = false) ?(at = [])
+    (options : Elwd.t Elwd.col Field_checkboxes.group) =
   let focused = Lwd.var false in
-  let checkboxes = Field_checkboxes.make options in
+  let checkboxes = Field_checkboxes.make ~persist options in
   let current_selection =
     let on_focus_in = Elwd.handler Ev.focusin (fun _ -> Lwd.set focused true) in
     let on_focus_out =
       Elwd.handler Ev.focusout (fun _ -> Lwd.set focused false)
     in
     let pills =
-      let at = [ `P (At.class' (Jstr.v "lwdui-sm-pill")) ] in
-      Lwd_seq.map (fun a -> Elwd.div ~at a) checkboxes.value
+      let at =
+        [
+          `P (At.class' (Jstr.v "lwdui-sm-pill"));
+          `P (At.v At.Name.contenteditable (Jstr.v "false"));
+        ]
+      in
+      Lwd_seq.map
+        (fun (a, cb) ->
+          Elwd.span ~at a
+          |> Lwd.map ~f:(fun el ->
+                 Jv.set (El.to_jv el) "uncheck" (Jv.repr cb);
+                 ignore
+                 @@ Ev.listen Ev.emptied (fun _ -> Console.log [ "PLOP" ]);
+                 el))
+        checkboxes.value
     in
     Elwd.div
       ~at:
         [
           `P (At.class' (Jstr.v "lwdui-sm-selected"));
-          `P (At.contenteditable true);
+          `P (At.v At.Name.contenteditable (Jstr.v "plaintext-only"));
         ]
       ~ev:[ `P on_focus_in; `P on_focus_out ]
       [
