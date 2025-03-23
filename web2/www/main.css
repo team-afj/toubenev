@@ -1,4 +1,5 @@
-body, html {
+body,
+html {
     width: 100%;
     height: 100%;
 
@@ -25,4 +26,10 @@ a {
     & .ec {
         height: 100%;
     }
+}
+
+
+.categories_select {
+    width: 10rem;
+    height: 2rem;
 }

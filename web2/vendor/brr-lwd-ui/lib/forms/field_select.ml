@@ -45,7 +45,7 @@ let make ?(persist = true) ?(at = []) ?(ev = [])
           let at = v (`P (A (At.value @@ Jstr.v value'))) in
           let selected =
             Lwd.map (Lwd.get value) ~f:(fun selected ->
-              let selected = String.equal selected value' in
+                let selected = String.equal selected value' in
                 A (At.if' selected At.selected))
           in
           let at = `R selected @:: at in
@@ -64,3 +64,35 @@ let make ?(persist = true) ?(at = []) ?(ev = [])
     @@ Lwd.get value
   in
   { field; label; value }
+
+let make_multiple ?(at = []) (options : Elwd.t Elwd.col Field_checkboxes.group)
+    =
+  let focused = Lwd.var false in
+  let checkboxes = Field_checkboxes.make options in
+  let current_selection =
+    let on_focus_in = Elwd.handler Ev.focusin (fun _ -> Lwd.set focused true) in
+    let on_focus_out =
+      Elwd.handler Ev.focusout (fun _ -> Lwd.set focused false)
+    in
+    let pills =
+      let at = [ `P (At.class' (Jstr.v "lwdui-sm-pill")) ] in
+      Lwd_seq.map (fun a -> Elwd.div ~at a) checkboxes.value
+    in
+    Elwd.div
+      ~at:
+        [
+          `P (At.class' (Jstr.v "lwdui-sm-selected"));
+          `P (At.contenteditable true);
+        ]
+      ~ev:[ `P on_focus_in; `P on_focus_out ]
+      [
+        `S (Lwd_seq.lift pills);
+        `R
+          (Lwd.map (Lwd.get focused) (function
+            | true -> El.txt' "true"
+            | false -> El.txt' "false"));
+      ]
+  in
+  Elwd.div
+    ~at:(`P (At.class' (Jstr.v "lwdui-select-multiple")) :: at)
+    [ `R current_selection; `R checkboxes.field ]

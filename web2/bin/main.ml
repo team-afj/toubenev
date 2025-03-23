@@ -31,7 +31,27 @@ let active_volunteer_select =
          :: (Data.Map.to_list data.volunteers
             |> List.map ~f:(fun (id, v) -> (id, v.Static_results.pseudo)))))
 
-let filters = active_volunteer_select.field
+let filters =
+  let open Brr_lwd_ui.Forms in
+  let options =
+    let open Field_checkboxes in
+    {
+      name = "grp1";
+      desc =
+        Lwd.pure
+          (Lwd_seq.of_list
+             [ Check ([ `P (El.txt' "0") ], [ `P (El.txt' "0") ], false) ]);
+    }
+  in
+  Elwd.div
+    [
+      `R active_volunteer_select.field;
+      `R
+        (Field_select.make_multiple
+           ~at:[ `P (At.class' (Jstr.v "categories_select")) ]
+           options);
+    ]
+
 let active_volunteer = active_volunteer_select.value
 
 let event_content (info : Event_calendar.Info.t) =
