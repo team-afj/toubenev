@@ -8,3 +8,4 @@ credentials.json
 data
 
 node_modules
+_build

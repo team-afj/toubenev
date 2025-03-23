@@ -28,6 +28,10 @@
    (>= "0.1.1"))
   ; Vendored ppx_deriving_jsont deps:
   ppxlib
+  bytesrw
   ; Vendored lwd deps:
   js_of_ocaml-lwt
-  tyxml))
+  tyxml
+  ; Vendored brr-lwd-ui deps:
+  containers-data
+  base64))

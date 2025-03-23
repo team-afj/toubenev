@@ -18,8 +18,11 @@ depends: [
   "calendar"
   "jsont" {>= "0.1.1"}
   "ppxlib"
+  "bytesrw"
   "js_of_ocaml-lwt"
   "tyxml"
+  "containers-data"
+  "base64"
   "odoc" {with-doc}
 ]
 build: [
