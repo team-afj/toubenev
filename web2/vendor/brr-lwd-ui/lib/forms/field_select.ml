@@ -127,10 +127,11 @@ let make_multiple ?(persist = false) ?(at = [])
       let at = [ `P (At.class' (Jstr.v "lwdui-select-multiple-pill")) ] in
       Lwd_seq.map
         (fun (_, Field_checkboxes.Check (_, s, l, _), cb) ->
-          Elwd.span ~at (l s) (* prout*)
-          |> Lwd.map ~f:(fun el ->
-                 Jv.set (El.to_jv el) "uncheck" (Jv.repr cb);
-                 el))
+          let unselect_button =
+            let on_click = Elwd.handler Ev.click (fun _ -> Lwd.set cb None) in
+            Elwd.button ~ev:[ `P on_click ] [ `P (El.txt' "X") ]
+          in
+          List.concat [ l s; [ `R unselect_button ] ] |> Elwd.span ~at)
         checkboxes.value
     in
     Elwd.div

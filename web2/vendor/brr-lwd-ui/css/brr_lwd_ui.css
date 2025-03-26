@@ -157,6 +157,15 @@ html {
 
         & span {
             flex-shrink: 0;
+
+            & button {
+                border: solid 1px black;
+                border-radius: 13px;
+                font-size: 10px;
+                line-height: 13px;
+                vertical-align: top;
+                margin-left: 0.25em;
+            }
         }
     }
 
