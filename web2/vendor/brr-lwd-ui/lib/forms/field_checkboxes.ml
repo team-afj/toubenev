@@ -3,23 +3,38 @@ open! Brr
 open! Brr_lwd
 
 type checked = bool
-type label = Elwd.t Elwd.col
-type 'value desc = Check of 'value * label * checked
+type label = string -> Elwd.t Elwd.col
+type 'value desc = Check of 'value * string * label * checked
 (* TODO | Group of label * 'value desc list *)
 
 type 'value group = { name : string; desc : 'value desc Lwd_seq.t Lwd.t }
-type 'a reactive_field = { field : Elwd.t Lwd.t; value : 'a Lwd.t }
+
+type 'a checkbox = {
+  element : Elwd.t Lwd.t;
+  desc : 'a desc;
+  var : 'a option Lwd.var;
+}
+
+type 'a reactive_field = {
+  field : Elwd.t Lwd.t;
+  all : 'a checkbox Lwd_seq.t Lwd.t;
+  filtered : 'a checkbox Lwd_seq.t Lwd.t;
+  value : ('a * 'a desc * 'a option Lwd.var) Lwd_seq.t Lwd.t;
+}
 
 let name ~g ~n base_name = Printf.sprintf "%s-%i-%i" base_name g n
 
-let make_single ?persist ?(ev = []) ?(on_change = fun _ -> ()) name value label
-    checked =
+let make_single ?persist ?(ev = []) ?(on_change = fun _ -> ()) ?var name value
+    label checked =
   let id = Format.sprintf "%s-id" name in
   let result checked = if checked then Some value else None in
   let var =
-    match persist with
-    | Some true -> Persistent.var ~key:id (result checked)
-    | Some false | None -> Lwd.var (result checked)
+    match var with
+    | Some var -> var
+    | None -> (
+        match persist with
+        | Some true -> Persistent.var ~key:id (result checked)
+        | Some false | None -> Lwd.var (result checked))
   in
   let lbl = Elwd.label ~at:[ `P (At.for' (Jstr.v id)) ] label in
   let at =
@@ -44,33 +59,57 @@ let make_single ?persist ?(ev = []) ?(on_change = fun _ -> ()) name value label
         Lwd.set var result)
   in
   let ev = `P on_change :: ev in
-  (Elwd.(div [ `R (input ~at ~ev ()); `R lbl ]), var)
+  let element = ref None in
+  let field =
+    Elwd.(
+      div
+        [
+          `R (input ~at ~ev ~on_create:(fun e -> element := Some e) ()); `R lbl;
+        ])
+  in
+  let () =
+    Utils.listen ~f:(fun v ->
+        Option.iter
+          (fun checkbox ->
+            let v = Option.is_some v in
+            Jv.set (El.to_jv checkbox) "checked" (Jv.of_bool v))
+          !element)
+    @@ Lwd.get var
+  in
+  (field, var)
 
-let make ?at ?(persist = true) t =
+let make ?at ?(persist = true) ?(filter = Lwd.pure (fun _ -> true)) t =
   (* <fieldset><legend> *)
   (* <fieldset><legend> *)
   let make_all ~g desc =
     Lwd_seq.map
       (function
-        | Check (v, l, c) ->
+        | Check (v, n', l, c) as desc ->
             let n = Hashtbl.hash v in
             let name = name ~g ~n t.name in
-            let elt, value = make_single ~persist name v l c in
-            (elt, value))
+            let element, var = make_single ~persist name v (l n') c in
+            { element; desc; var })
       desc
   in
   let all = make_all ~g:0 t.desc in
-  let elts = Lwd_seq.map (fun (elt, _) -> elt) all in
+  let filtered =
+    Lwd_seq.map
+      (fun ({ desc = checkbox; _ } as ck) ->
+        Lwd.map filter ~f:(fun f -> if f checkbox then Some ck else None))
+      all
+    |> Lwd_seq.lift |> Lwd_seq.filter_map Fun.id
+  in
+  let elts = Lwd_seq.map (fun { element; _ } -> element) filtered in
   let value =
     Lwd_seq.fold_monoid
-      (fun (_, v) ->
-        Lwd_seq.element
-          (Lwd.map (Lwd.get v) ~f:(fun v' -> (v', fun () -> Lwd.set v None))))
+      (fun { desc; var; _ } ->
+        Lwd_seq.element (Lwd.map (Lwd.get var) ~f:(fun v' -> (v', desc, var))))
       Lwd_seq.monoid all
     |> Lwd_seq.lift
-    |> Lwd_seq.filter_map (fun (v, cb) -> Option.map (fun v -> (v, cb)) v)
+    |> Lwd_seq.filter_map (fun (v, ck, var) ->
+           Option.map (fun v -> (v, ck, var)) v)
   in
-  { field = Elwd.div ?at [ `S (Lwd_seq.lift elts) ]; value }
+  { field = Elwd.div ?at [ `S (Lwd_seq.lift elts) ]; all; filtered; value }
 
 (* let rec make_all ~g ~n (acc_elt, acc_value) desc =
      match desc with

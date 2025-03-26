@@ -12,7 +12,7 @@ html {
 
 /* Utility classes */
 .display-none {
-    display: none;
+    display: none !important;
 }
 
 /* Style */
@@ -134,5 +134,62 @@ html {
     &.locked .lwdui-controlled-scroll-controls {
         visibility: hidden;
         opacity: 0;
+    }
+}
+
+.lwdui-select-multiple {
+    position: relative;
+
+    height: 2em;
+
+    padding: 0.25em;
+
+    border: solid black 1px;
+    border-radius: 3px;
+
+    & .lwdui-select-multiple-selected {
+        width: 100%;
+        height: 100%;
+
+        display: flex;
+        overflow-x: auto;
+        scrollbar-width: none;
+
+        & span {
+            flex-shrink: 0;
+        }
+    }
+
+    & .lwdui-select-multiple-choices {
+        display: flex;
+        flex-direction: column;
+
+        position: absolute;
+        top: 100%;
+        z-index: 10;
+
+        padding: 0.25em;
+
+        border: solid black 1px;
+        border-radius: 3px;
+
+        background-color: white;
+
+        text-align: left;
+
+        & .lwdui-select-multiple-search-bar {
+            display: flex;
+            flex-direction: row;
+        }
+    }
+
+    & .lwdui-select-multiple-pill {
+        display: inline-block;
+        margin-right: 0.25em;
+        padding: 0.25em;
+        border: solid black 1px;
+        border-radius: 3px;
+
+        background-color: darkgrey;
     }
 }

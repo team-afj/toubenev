@@ -6,7 +6,7 @@ open! Brr_lwd
 type 'a reactive_field = {
   field : Elwd.t Lwd.t;
   label : Elwd.t Lwd.t;
-  value : 'a Lwd.var;
+  value : 'a;
 }
 
 let name ~id base_name =
@@ -65,47 +65,104 @@ let make ?(persist = true) ?(at = []) ?(ev = [])
   in
   { field; label; value }
 
+let rec fuzzy_substring remaining s =
+  match (s (), remaining) with
+  | _, [] -> true
+  | Seq.Nil, _ -> false
+  | Cons (c, rest), c' :: tl ->
+      if Char.equal (Char.lowercase_ascii c) (Char.lowercase_ascii c') then
+        fuzzy_substring tl rest
+      else fuzzy_substring remaining rest
+
 let make_multiple ?(persist = false) ?(at = [])
-    (options : Elwd.t Elwd.col Field_checkboxes.group) =
+    (options : 'a Field_checkboxes.group) =
+  let open Field_checkboxes in
   let focused = Lwd.var false in
-  let checkboxes = Field_checkboxes.make ~persist options in
-  let current_selection =
-    let on_focus_in = Elwd.handler Ev.focusin (fun _ -> Lwd.set focused true) in
-    let on_focus_out =
-      Elwd.handler Ev.focusout (fun _ -> Lwd.set focused false)
+  let search_input = Field.text_input None in
+  let filter =
+    Lwd.map (Lwd.get search_input.value) ~f:(fun s ->
+        let chars = String.to_list s in
+        fun (Field_checkboxes.Check (_, s', _, _)) ->
+          fuzzy_substring chars (String.to_seq s'))
+  in
+  let checkboxes = Field_checkboxes.make ~persist ~filter options in
+  let select_all =
+    let on_change =
+      Lwd.map checkboxes.filtered ~f:(fun checkboxes ->
+          Elwd.handler Ev.change @@ fun ev ->
+          let t = Ev.target ev |> Ev.target_to_jv in
+          let checked = Jv.get t "checked" in
+          let f =
+            if Jv.to_bool checked then fun var v -> Lwd.set var (Some v)
+            else fun var _ -> Lwd.set var None
+          in
+          List.iter
+            (Lwd_seq.to_list checkboxes) (* TODO DOES NOT UNCHECK BOXES NEED *)
+            ~f:(fun { desc = Check (v, _, _, _); var } -> f var v))
     in
+    let all_filtered_values =
+      Lwd_seq.fold
+        ~map:(fun { var; _ } ->
+          Lwd.map (Lwd.get var) ~f:(fun v -> Option.is_some v))
+        checkboxes.filtered ~reduce:(Lwd.map2 ~f:( && ))
+      |> Lwd.map ~f:(function None -> Lwd.pure false | Some b -> b)
+      |> Lwd.join
+    in
+    let element, select_all_var =
+      let ev = [ `R on_change ] in
+      Field_checkboxes.make_single ~ev ~persist:false
+        "allselect-notuniquenamechangeme" () [] false
+    in
+    let () =
+      Utils.listen
+        ~f:(function
+          | true -> Lwd.set select_all_var (Some ())
+          | false -> Lwd.set select_all_var None)
+        ~initial_trigger:true all_filtered_values
+    in
+    element
+  in
+  let current_selection =
     let pills =
-      let at =
-        [
-          `P (At.class' (Jstr.v "lwdui-sm-pill"));
-          `P (At.v At.Name.contenteditable (Jstr.v "false"));
-        ]
-      in
+      let at = [ `P (At.class' (Jstr.v "lwdui-select-multiple-pill")) ] in
       Lwd_seq.map
-        (fun (a, cb) ->
-          Elwd.span ~at a
+        (fun (_, Field_checkboxes.Check (_, s, l, _), cb) ->
+          Elwd.span ~at (l s) (* prout*)
           |> Lwd.map ~f:(fun el ->
                  Jv.set (El.to_jv el) "uncheck" (Jv.repr cb);
-                 ignore
-                 @@ Ev.listen Ev.emptied (fun _ -> Console.log [ "PLOP" ]);
                  el))
         checkboxes.value
     in
     Elwd.div
-      ~at:
-        [
-          `P (At.class' (Jstr.v "lwdui-sm-selected"));
-          `P (At.v At.Name.contenteditable (Jstr.v "plaintext-only"));
-        ]
-      ~ev:[ `P on_focus_in; `P on_focus_out ]
-      [
-        `S (Lwd_seq.lift pills);
-        `R
-          (Lwd.map (Lwd.get focused) (function
-            | true -> El.txt' "true"
-            | false -> El.txt' "false"));
-      ]
+      ~at:[ `P (At.class' (Jstr.v "lwdui-select-multiple-selected")) ]
+      [ `S (Lwd_seq.lift pills) ]
   in
-  Elwd.div
-    ~at:(`P (At.class' (Jstr.v "lwdui-select-multiple")) :: at)
-    [ `R current_selection; `R checkboxes.field ]
+  let choices_panel =
+    let search_bar =
+      let at = [ `P (At.class' (Jstr.v "lwdui-select-multiple-search-bar")) ] in
+      Elwd.div ~at [ `R search_input.elt; `R select_all ]
+    in
+    let at =
+      [
+        `P (At.class' (Jstr.v "lwdui-select-multiple-choices"));
+        `R
+          (Lwd.map (Lwd.get focused) (fun b ->
+               At.if' (not b) (At.class' (Jstr.v "display-none"))));
+      ]
+    in
+    Elwd.div ~at [ `R search_bar; `R checkboxes.field ]
+  in
+  let on_focus_in = Elwd.handler Ev.focusin (fun _ -> Lwd.set focused true) in
+  let on_focus_out =
+    Elwd.handler Ev.focusout (fun _ -> Lwd.set focused false)
+  in
+  {
+    Field_checkboxes.field =
+      Elwd.button
+        ~at:(`P (At.class' (Jstr.v "lwdui-select-multiple")) :: at)
+        ~ev:[ `P on_focus_in; `P on_focus_out ]
+        [ `R current_selection; `R choices_panel ];
+    all = checkboxes.all;
+    filtered = checkboxes.filtered;
+    value = checkboxes.value;
+  }

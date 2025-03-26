@@ -1,5 +1,5 @@
 open Import
-open Static_results
+include Static_results
 
 type quest = {
   id : string;

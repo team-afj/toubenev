@@ -31,26 +31,34 @@ let active_volunteer_select =
          :: (Data.Map.to_list data.volunteers
             |> List.map ~f:(fun (id, v) -> (id, v.Static_results.pseudo)))))
 
-let filters =
+let select_categories =
   let open Brr_lwd_ui.Forms in
   let options =
     let open Field_checkboxes in
-    {
-      name = "grp1";
-      desc =
-        Lwd.pure
-          (Lwd_seq.of_list
-             [ Check ([ `P (El.txt' "00") ], [ `P (El.txt' "00") ], false) ]);
-    }
+    let types =
+      Data.Map.to_list data.quest_types
+      |> List.map ~f:(fun (id, ({ name; _ } : Data.quest_type)) ->
+             Check (`Quest_type id, name, (fun n -> [ `P (El.txt' n) ]), true))
+    in
+    let places =
+      Data.Map.to_list data.places
+      |> List.map ~f:(fun (id, ({ name; _ } : Data.place)) ->
+             Check (`Place id, name, (fun n -> [ `P (El.txt' n) ]), true))
+    in
+    let volunteers =
+      Data.Map.to_list data.volunteers
+      |> List.map ~f:(fun (id, ({ pseudo; _ } : Data.volunteer)) ->
+             Check (`Volunteer id, pseudo, (fun n -> [ `P (El.txt' n) ]), false))
+    in
+    let flat = List.concat [ types; places; volunteers ] in
+    { name = "grp1"; desc = Lwd.pure (Lwd_seq.of_list flat) }
   in
-  Elwd.div
-    [
-      `R active_volunteer_select.field;
-      `R
-        (Field_select.make_multiple
-           ~at:[ `P (At.class' (Jstr.v "categories_select")) ]
-           options);
-    ]
+  Field_select.make_multiple
+    ~at:[ `P (At.class' (Jstr.v "categories_select")) ]
+    options
+
+let filters =
+  Elwd.div [ `R active_volunteer_select.field; `R select_categories.field ]
 
 let active_volunteer = active_volunteer_select.value
 
@@ -85,6 +93,10 @@ let () = Event_calendar.set_option c Resources (Data.to_resources data)
 let update_events ~filter =
   let events = Data.to_events ?filter data in
   Event_calendar.set_option c Events events
+
+let update_resources data =
+  let events = Data.to_resources data in
+  Event_calendar.set_option c Resources events
 
 (* History management *)
 let history = Window.history G.window
@@ -121,6 +133,32 @@ let () =
     update_events ~filter
   in
   listen ~initial_trigger:true ~f:on_state_change @@ Lwd.get active_volunteer
+
+let () =
+  let f v =
+    let ids = Lwd_seq.to_list v |> List.map ~f:(fun (v, _, _) -> v) in
+    let quest_types, places, volunteers =
+      List.fold_left
+        ~f:(fun (qt_acc, p_acc, v_acc) -> function
+          | `Quest_type qtid ->
+              let open Data in
+              ( Map.add qtid (Map.find qtid data.quest_types) qt_acc,
+                p_acc,
+                v_acc )
+          | `Place id ->
+              let open Data in
+              (qt_acc, Map.add id (Map.find id data.places) p_acc, v_acc)
+          | `Volunteer id ->
+              let open Data in
+              (qt_acc, p_acc, Map.add id (Map.find id data.volunteers) v_acc))
+        ~init:(Data.Map.empty, Data.Map.empty, Data.Map.empty)
+        ids
+    in
+    (*
+    update_fragment v; *)
+    update_resources { data with quest_types; places; volunteers }
+  in
+  listen ~initial_trigger:true ~f select_categories.value
 
 let app = Elwd.div [ `R filters ]
 
