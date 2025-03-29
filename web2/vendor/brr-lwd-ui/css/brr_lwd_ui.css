@@ -155,6 +155,8 @@ html {
         overflow-x: auto;
         scrollbar-width: none;
 
+        mask-image: linear-gradient(to right, rgb(0, 0, 0) 96%, rgba(0,0,0,0) 100%);
+
         & span {
             flex-shrink: 0;
 
