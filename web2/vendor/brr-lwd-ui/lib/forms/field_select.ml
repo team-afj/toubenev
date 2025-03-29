@@ -98,7 +98,7 @@ let make_multiple ?(persist = false) ?(at = [])
           in
           List.iter
             (Lwd_seq.to_list checkboxes) (* TODO DOES NOT UNCHECK BOXES NEED *)
-            ~f:(fun { desc = Check (v, _, _, _); var } -> f var v))
+            ~f:(fun { desc = Check (v, _, _, _); var; _ } -> f var v))
     in
     let all_filtered_values =
       Lwd_seq.fold
@@ -147,7 +147,7 @@ let make_multiple ?(persist = false) ?(at = [])
       [
         `P (At.class' (Jstr.v "lwdui-select-multiple-choices"));
         `R
-          (Lwd.map (Lwd.get focused) (fun b ->
+          (Lwd.map (Lwd.get focused) ~f:(fun b ->
                At.if' (not b) (At.class' (Jstr.v "display-none"))));
       ]
     in
