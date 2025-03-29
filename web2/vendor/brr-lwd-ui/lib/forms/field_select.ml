@@ -75,15 +75,15 @@ let rec fuzzy_substring remaining s =
       else fuzzy_substring remaining rest
 
 let make_multiple ?(persist = false) ?(at = [])
-    (options : 'a Field_checkboxes.group) =
+    (options : ('a, bool) Field_checkboxes.group) =
   let open Field_checkboxes in
   let focused = Lwd.var false in
   let search_input = Field.text_input None in
   let filter =
     Lwd.map (Lwd.get search_input.value) ~f:(fun s ->
         let chars = String.to_list s in
-        fun (Field_checkboxes.Check (_, s', _, _)) ->
-          fuzzy_substring chars (String.to_seq s'))
+        fun (Field_checkboxes.Check { name; _ }) ->
+          fuzzy_substring chars (String.to_seq name))
   in
   let checkboxes = Field_checkboxes.make ~persist ~filter options in
   let select_all =
@@ -96,14 +96,13 @@ let make_multiple ?(persist = false) ?(at = [])
             if Jv.to_bool checked then fun var v -> Lwd.set var (Some v)
             else fun var _ -> Lwd.set var None
           in
-          List.iter
-            (Lwd_seq.to_list checkboxes) (* TODO DOES NOT UNCHECK BOXES NEED *)
-            ~f:(fun { desc = Check (v, _, _, _); var; _ } -> f var v))
+          List.iter (Lwd_seq.to_list checkboxes)
+            ~f:(fun { desc = Check { value; state; _ }; _ } -> f state value))
     in
     let all_filtered_values =
       Lwd_seq.fold
-        ~map:(fun { var; _ } ->
-          Lwd.map (Lwd.get var) ~f:(fun v -> Option.is_some v))
+        ~map:(fun { desc = Check { state; _ }; _ } ->
+          Lwd.map (Lwd.get state) ~f:(fun v -> Option.is_some v))
         checkboxes.filtered ~reduce:(Lwd.map2 ~f:( && ))
       |> Lwd.map ~f:(function None -> Lwd.pure false | Some b -> b)
       |> Lwd.join
@@ -126,12 +125,14 @@ let make_multiple ?(persist = false) ?(at = [])
     let pills =
       let at = [ `P (At.class' (Jstr.v "lwdui-select-multiple-pill")) ] in
       Lwd_seq.map
-        (fun (_, Field_checkboxes.Check (_, s, l, _), cb) ->
+        (fun (_, Field_checkboxes.Check { name; label; state; _ }) ->
           let unselect_button =
-            let on_click = Elwd.handler Ev.click (fun _ -> Lwd.set cb None) in
+            let on_click =
+              Elwd.handler Ev.click (fun _ -> Lwd.set state None)
+            in
             Elwd.button ~ev:[ `P on_click ] [ `P (El.txt' "X") ]
           in
-          List.concat [ l s; [ `R unselect_button ] ] |> Elwd.span ~at)
+          List.concat [ label name; [ `R unselect_button ] ] |> Elwd.span ~at)
         checkboxes.value
     in
     Elwd.div

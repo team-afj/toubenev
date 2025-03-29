@@ -4,25 +4,36 @@ open! Brr_lwd
 
 type checked = bool
 type label = string -> Elwd.t Elwd.col
-type 'value desc = Check of 'value * string * label * checked
+
+type ('a, 'state) checkbox = {
+  value : 'a;
+  id : string;
+  name : string;
+  label : label;
+  state : 'state;
+}
+
+type ('a, 'state) desc = Check of ('a, 'state) checkbox
 (* TODO | Group of label * 'value desc list *)
 
-type 'value group = { name : string; desc : 'value desc Lwd_seq.t Lwd.t }
+type ('a, 'state) group = {
+  name : string;
+  desc : ('a, 'state) desc Lwd_seq.t Lwd.t;
+}
 
-type 'a checkbox = {
+type ('a, 'state) checkbox2 = {
   element : Elwd.t Lwd.t;
-  desc : 'a desc;
-  var : 'a option Lwd.var;
+  desc : ('a, 'state) desc;
 }
 
 type 'a reactive_field = {
   field : Elwd.t Lwd.t;
-  all : 'a checkbox Lwd_seq.t Lwd.t;
-  filtered : 'a checkbox Lwd_seq.t Lwd.t;
-  value : ('a * 'a desc * 'a option Lwd.var) Lwd_seq.t Lwd.t;
+  all : ('a, 'a option Lwd.var) checkbox2 Lwd_seq.t Lwd.t;
+  filtered : ('a, 'a option Lwd.var) checkbox2 Lwd_seq.t Lwd.t;
+  value : ('a * ('a, 'a option Lwd.var) desc) Lwd_seq.t Lwd.t;
 }
 
-let name ~g ~n base_name = Printf.sprintf "%s-%i-%i" base_name g n
+let make_name ~g ~n base_name = Printf.sprintf "%s-%i-%i" base_name g n
 
 let make_single ?persist ?(ev = []) ?(on_change = fun _ -> ()) ?var name value
     label checked =
@@ -84,11 +95,13 @@ let make ?at ?(persist = true) ?(filter = Lwd.pure (fun _ -> true)) t =
   let make_all ~g desc =
     Lwd_seq.map
       (function
-        | Check (v, n', l, c) as desc ->
-            let n = Hashtbl.hash v in
-            let name = name ~g ~n t.name in
-            let element, var = make_single ~persist name v (l n') c in
-            { element; desc; var })
+        | Check ({ value; id = _; name; label; state } as desc) ->
+            let n = Hashtbl.hash value in
+            let id = make_name ~g ~n t.name in
+            let element, var =
+              make_single ~persist id value (label name) state
+            in
+            { element; desc = Check { desc with state = var } })
       desc
   in
   let all = make_all ~g:0 t.desc in
@@ -102,12 +115,11 @@ let make ?at ?(persist = true) ?(filter = Lwd.pure (fun _ -> true)) t =
   let elts = Lwd_seq.map (fun { element; _ } -> element) filtered in
   let value =
     Lwd_seq.fold_monoid
-      (fun { desc; var; _ } ->
-        Lwd_seq.element (Lwd.map (Lwd.get var) ~f:(fun v' -> (v', desc, var))))
+      (fun { desc = Check { state; _ } as desc; _ } ->
+        Lwd_seq.element (Lwd.map (Lwd.get state) ~f:(fun v' -> (v', desc))))
       Lwd_seq.monoid all
     |> Lwd_seq.lift
-    |> Lwd_seq.filter_map (fun (v, ck, var) ->
-           Option.map (fun v -> (v, ck, var)) v)
+    |> Lwd_seq.filter_map (fun (v, ck) -> Option.map (fun v -> (v, ck)) v)
   in
   { field = Elwd.div ?at [ `S (Lwd_seq.lift elts) ]; all; filtered; value }
 

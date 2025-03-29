@@ -38,17 +38,38 @@ let select_categories =
     let types =
       Data.Map.to_list data.quest_types
       |> List.map ~f:(fun (id, ({ name; _ } : Data.quest_type)) ->
-             Check (`Quest_type id, name, (fun n -> [ `P (El.txt' n) ]), true))
+             Check
+               {
+                 value = `Quest_type id;
+                 id = name;
+                 name;
+                 label = (fun name -> [ `P (El.txt' name) ]);
+                 state = true;
+               })
     in
     let places =
       Data.Map.to_list data.places
       |> List.map ~f:(fun (id, ({ name; _ } : Data.place)) ->
-             Check (`Place id, name, (fun n -> [ `P (El.txt' n) ]), true))
+             Check
+               {
+                 value = `Place id;
+                 id = name;
+                 name;
+                 label = (fun name -> [ `P (El.txt' name) ]);
+                 state = true;
+               })
     in
     let volunteers =
       Data.Map.to_list data.volunteers
       |> List.map ~f:(fun (id, ({ pseudo; _ } : Data.volunteer)) ->
-             Check (`Volunteer id, pseudo, (fun n -> [ `P (El.txt' n) ]), false))
+             Check
+               {
+                 value = `Volunteer id;
+                 id = pseudo;
+                 name = pseudo;
+                 label = (fun name -> [ `P (El.txt' name) ]);
+                 state = false;
+               })
     in
     let flat = List.concat [ types; places; volunteers ] in
     { name = "grp1"; desc = Lwd.pure (Lwd_seq.of_list flat) }
@@ -136,7 +157,7 @@ let () =
 
 let () =
   let f v =
-    let ids = Lwd_seq.to_list v |> List.map ~f:(fun (v, _, _) -> v) in
+    let ids = Lwd_seq.to_list v |> List.map ~f:(fun (v, _) -> v) in
     let quest_types, places, volunteers =
       List.fold_left
         ~f:(fun (qt_acc, p_acc, v_acc) -> function
