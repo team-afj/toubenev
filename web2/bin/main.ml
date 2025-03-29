@@ -43,7 +43,7 @@ let select_categories =
                  value = `Quest_type id;
                  id = name;
                  name;
-                 label = (fun name -> [ `P (El.txt' name) ]);
+                 label = (fun () -> [ `P (El.txt' name) ]);
                  state = true;
                })
     in
@@ -55,7 +55,7 @@ let select_categories =
                  value = `Place id;
                  id = name;
                  name;
-                 label = (fun name -> [ `P (El.txt' name) ]);
+                 label = (fun () -> [ `P (El.txt' name) ]);
                  state = true;
                })
     in
@@ -67,7 +67,7 @@ let select_categories =
                  value = `Volunteer id;
                  id = pseudo;
                  name = pseudo;
-                 label = (fun name -> [ `P (El.txt' name) ]);
+                 label = (fun () -> [ `P (El.txt' pseudo) ]);
                  state = false;
                })
     in

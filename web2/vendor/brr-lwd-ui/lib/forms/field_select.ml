@@ -107,10 +107,16 @@ let make_multiple ?(persist = false) ?(at = [])
       |> Lwd.map ~f:(function None -> Lwd.pure false | Some b -> b)
       |> Lwd.join
     in
-    let element, select_all_var =
+    let { element; desc = Check { state = select_all_var; _ } } =
       let ev = [ `R on_change ] in
       Field_checkboxes.make_single ~ev ~persist:false
-        "allselect-notuniquenamechangeme" () [] false
+        {
+          value = ();
+          id = "allselect-notuniquenamechangeme";
+          name = "";
+          label = (fun () -> []);
+          state = false;
+        }
     in
     let () =
       Utils.listen
@@ -125,14 +131,14 @@ let make_multiple ?(persist = false) ?(at = [])
     let pills =
       let at = [ `P (At.class' (Jstr.v "lwdui-select-multiple-pill")) ] in
       Lwd_seq.map
-        (fun (_, Field_checkboxes.Check { name; label; state; _ }) ->
+        (fun (_, Field_checkboxes.Check { label; state; _ }) ->
           let unselect_button =
             let on_click =
               Elwd.handler Ev.click (fun _ -> Lwd.set state None)
             in
             Elwd.button ~ev:[ `P on_click ] [ `P (El.txt' "X") ]
           in
-          List.concat [ label name; [ `R unselect_button ] ] |> Elwd.span ~at)
+          List.concat [ label (); [ `R unselect_button ] ] |> Elwd.span ~at)
         checkboxes.value
     in
     Elwd.div
