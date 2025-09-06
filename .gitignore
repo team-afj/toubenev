@@ -9,3 +9,6 @@ data
 
 node_modules
 _build
+_opam
+
+settings.json

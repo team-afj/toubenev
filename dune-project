@@ -17,11 +17,14 @@
  (synopsis "A live planning and exchange tool for events")
  (description "A live planning and exchange tool for events")
  (depends
+  (ocaml
+   (>= 5.3))
   containers
   js_of_ocaml
   brr
   lwd
   brr-lwd
+  vif
   ISO8601
   calendar
   (jsont
