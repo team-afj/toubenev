@@ -1,0 +1,7 @@
+(executable
+ (name toubenev)
+ (public_name toubenev)
+ (promote
+  (until-clean)
+  (into ..))
+ (libraries vif views))

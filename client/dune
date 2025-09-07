@@ -1,0 +1,13 @@
+(executable
+ (name client)
+ (modes js)
+ (libraries
+  containers
+  js_of_ocaml
+  lwd
+  brr-lwd
+  brr-lwd-ui
+  ISO8601
+  calendar
+  js
+  event_calendar))
