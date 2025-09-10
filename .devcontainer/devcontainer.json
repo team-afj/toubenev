@@ -1,0 +1,12 @@
+{
+  "name": "OCaml",
+  "dockerFile": "../Dockerfile",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ocamllabs.ocaml-platform"
+      ]
+    }
+  },
+  "containerUser": "opam",
+}
