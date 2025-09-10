@@ -14,17 +14,13 @@ module FRef = Utils.Forward_ref
 let logger = Logger.for_section "virtual table"
 
 type 'a row_renderer = int -> 'a -> Elwd.t Elwd.col
-
-type 'a row_data = {
-  index : int;
-  content : 'a option;
-  render : 'a row_renderer Lwd.t;
-}
+type 'a row_data = { index : int; content : 'a option }
 
 type ('data, 'error) data_source =
   | Lazy of {
       total_items : int Lwd.t;
       fetch : (int array -> ('data option array, 'error) Fut.result) Lwd.t;
+          (* TODO: the whole source should be reactive *)
     }
 
 (* The virtual table is a complex reactive component. Primarily, it reacts to
@@ -144,13 +140,13 @@ let make (type data) ~(layout : Layout.fixed_row_height)
       | Some row ->
           if !i <= total - 1 then
             let () = Hashtbl.replace row_index !i row in
-            Lwd_table.set row { index = !i; content = None; render }
+            Lwd_table.set row { index = !i; content = None }
           else Lwd_table.unset row;
           incr i;
           current_row := Lwd_table.next row
       | None ->
           if !i <= total - 1 then (
-            let set = { index = !i; content = None; render } in
+            let set = { index = !i; content = None } in
             let row = Lwd_table.append ~set table in
             Hashtbl.add row_index !i row;
             incr i;
