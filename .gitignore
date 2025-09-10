@@ -14,3 +14,5 @@ _opam
 settings.json
 
 toubenev.exe
+
+.DS_Store
