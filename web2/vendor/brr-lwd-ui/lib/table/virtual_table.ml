@@ -237,6 +237,7 @@ let make (type data) ~(layout : Layout.fixed_row_height)
         else result)
   in
   let table_header = Layout.header layout in
+  let table_status = Layout.status layout in
   let observer =
     (* We observe the size of the table to re-populate if necessary *)
     Resize_observer.create ~callback:(fun entries _ ->
@@ -294,7 +295,7 @@ let make (type data) ~(layout : Layout.fixed_row_height)
     let grid_style = Layout.style layout in
     let s = Lwd.map grid_style ~f:(fun s -> At.style (Jstr.v s)) in
     let at = `R s :: at in
-    Elwd.div ~at [ `R table_header; `R wrapper ]
+    Elwd.div ~at [ `R table_header; `R wrapper; `R table_status ]
   in
   table
 

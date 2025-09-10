@@ -25,7 +25,11 @@ module Columns = struct
     Printf.sprintf "%s: %s;" "grid-template-columns" template
 end
 
-type fixed_row_height = { columns : Columns.t; row_height : Utils.Unit.t }
+type fixed_row_height = {
+  columns : Columns.t;
+  status : Elwd.t Elwd.col;
+  row_height : Utils.Unit.t;
+}
 
 let style t = Columns.style t.columns
 
@@ -39,5 +43,9 @@ let header t =
     ]
   in
   Elwd.div ~at [ `S (Columns.to_header t.columns |> Lwd_seq.lift) ]
+
+let status t =
+  let at = [ `P (At.class' (Jstr.v "lwdui-virtual-table-status")) ] in
+  Elwd.div ~at t.status
 
 let _ = Utils.Unit.to_px (Rem 4.)

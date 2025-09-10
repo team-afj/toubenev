@@ -111,7 +111,7 @@ module Lwd_map = struct
     let map = Hashtbl.create size in
     { table; map }
 
-  let set t key value =
+  let front_image_preloader t key value =
     let row =
       match Hashtbl.find_opt t.map key with
       | Some row_var -> row_var
@@ -257,7 +257,7 @@ let lwd_of_yjs_map (type value) ~(f : key:string -> Yjs.Map.value -> value) map
   let lwd_map : value Lwd_map.t = Lwd_map.make () in
   ignore
     (Map.fold_entries map
-       ~f:(fun key v () -> Lwd_map.set lwd_map key (f ~key v))
+       ~f:(fun key v () -> Lwd_map.front_image_preloader lwd_map key (f ~key v))
        ~init:());
 
   (* Observe changes *)
@@ -272,7 +272,7 @@ let lwd_of_yjs_map (type value) ~(f : key:string -> Yjs.Map.value -> value) map
             old_value = _;
           } ->
             let new_value = f ~key new_value in
-            Lwd_map.set lwd_map key new_value
+            Lwd_map.front_image_preloader lwd_map key new_value
         | { Map.Event.action = Delete; old_value; _ } ->
             Console.debug
               [ "Key:"; key; "Action: delete"; "Old value:"; old_value ]
@@ -859,46 +859,44 @@ let new_table_row_form (columns : column_info Indexed_table.t) rows =
       in
       Yjs.Array.push rows [| `Map cells |])
 
-let ui_table ~columns_src ~rows_src names =
+let layout ~columns_src ~rows_src names =
   {
-    table =
-      {
-        columns =
-          Lwd_seq.map
-            (fun ({ name; id; _ } : column_info) ->
-              let label = Lwd.map name ~f:El.txt' in
-              let delete =
-                let on_click _ =
-                  let findi id =
-                    let exception Found of int in
-                    try
-                      (* TODO this should be done elsewhere (in Schema ?) *)
-                      Yjs.Array.iter columns_src ~f:(fun ~index v _ ->
-                          match v with
-                          | `Map m -> (
-                              match
-                                Yjs.Map.get m ~key:S.Data.Table.Column_info.id
-                              with
-                              | Some (`Jv s)
-                                when String.equal id (Jv.to_string s) ->
-                                  raise (Found index)
-                              | _ -> ())
-                          | _ -> ());
-                      raise Not_found
-                    with Found i -> i
-                  in
-                  Yjs.Doc.transact yjs_doc (fun () ->
-                      Yjs.Array.delete columns_src (findi id) 1;
-                      Yjs.Array.iter rows_src ~f:(fun ~index:_ v _ ->
-                          match v with `Map m -> Yjs.Map.delete m id | _ -> ()))
-                in
-                Elwd.button
-                  ~ev:[ `P (Elwd.handler Ev.click on_click) ]
-                  [ `P (El.txt' "❌") ]
+    columns =
+      Lwd_seq.map
+        (fun ({ name; id; _ } : column_info) ->
+          let label = Lwd.map name ~f:El.txt' in
+          let delete =
+            let on_click _ =
+              let findi id =
+                let exception Found of int in
+                try
+                  (* TODO this should be done elsewhere (in Schema ?) *)
+                  Yjs.Array.iter columns_src ~f:(fun ~index v _ ->
+                      match v with
+                      | `Map m -> (
+                          match
+                            Yjs.Map.get m ~key:S.Data.Table.Column_info.id
+                          with
+                          | Some (`Jv s) when String.equal id (Jv.to_string s)
+                            ->
+                              raise (Found index)
+                          | _ -> ())
+                      | _ -> ());
+                  raise Not_found
+                with Found i -> i
               in
-              Columns.v "a" "1fr" [ `R label; `R delete ])
-            names;
-      };
+              Yjs.Doc.transact yjs_doc (fun () ->
+                  Yjs.Array.delete columns_src (findi id) 1;
+                  Yjs.Array.iter rows_src ~f:(fun ~index:_ v _ ->
+                      match v with `Map m -> Yjs.Map.delete m id | _ -> ()))
+            in
+            Elwd.button
+              ~ev:[ `P (Elwd.handler Ev.click on_click) ]
+              [ `P (El.txt' "❌") ]
+          in
+          Columns.v "a" "1fr" [ `R label; `R delete ])
+        names;
+    status = [];
     row_height = Em 5.;
   }
 
@@ -914,8 +912,8 @@ let render_page_item ({ data; _ } : page_item) =
             (fun _ column_info -> Lwd_seq.element column_info)
             Lwd_seq.monoid columns.table
         in
-        let ui_table = ui_table ~columns_src ~rows_src columns in
-        Virtual_bis.make ~ui_table data_source
+        let layout = layout ~columns_src ~rows_src columns in
+        Virtual_bis.make ~layout data_source
       in
       Elwd.div
         ~at:Attrs.O.(v (`P (C "flex")))
