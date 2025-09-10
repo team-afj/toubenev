@@ -145,12 +145,11 @@ let make (type data) ~(layout : Layout.fixed_row_height)
           incr i;
           current_row := Lwd_table.next row
       | None ->
-          if !i <= total - 1 then (
-            let set = { index = !i; content = None } in
-            let row = Lwd_table.append ~set table in
-            Hashtbl.add row_index !i row;
-            incr i;
-            current_row := Lwd_table.next row)
+          let set = { index = !i; content = None } in
+          let row = Lwd_table.append ~set table in
+          Hashtbl.add row_index !i row;
+          incr i;
+          current_row := Lwd_table.next row
     done
   in
   let populate_on_scroll =
