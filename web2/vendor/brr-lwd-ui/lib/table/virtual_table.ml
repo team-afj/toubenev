@@ -13,17 +13,19 @@ module FRef = Utils.Forward_ref
 
 let logger = Logger.for_section "virtual table"
 
+type 'a row_renderer = int -> 'a -> Elwd.t Elwd.col
+
 type 'a row_data = {
   index : int;
   content : 'a option;
-  render : (int -> 'a -> Elwd.t Elwd.col) Lwd.t;
+  render : 'a row_renderer Lwd.t;
 }
 
-type ('data, 'error) data_source = {
-  total_items : int Lwd.t;
-  fetch : (int array -> ('data option array, 'error) Fut.result) Lwd.t;
-  render : (int -> 'data -> Elwd.t Elwd.col) Lwd.t;
-}
+type ('data, 'error) data_source =
+  | Lazy of {
+      total_items : int Lwd.t;
+      fetch : (int array -> ('data option array, 'error) Fut.result) Lwd.t;
+    }
 
 (* The virtual table is a complex reactive component. Primarily, it reacts to
    changes of the [data_source] so that content in the table is properly
@@ -34,9 +36,9 @@ module Cache = FFCache.Make (Int)
 
 let make (type data) ~(layout : Layout.fixed_row_height)
     ?(placeholder : int -> Elwd.t Elwd.col = fun _ -> [])
-    ?(scroll_target : int Lwd.t option)
-    ({ total_items; fetch; render } : (data, _) data_source) =
-  ignore placeholder;
+    ?(scroll_target : int Lwd.t option) (render : data row_renderer Lwd.t)
+    (data_source : (data, _) data_source) =
+  ignore placeholder (* TODO *);
 
   let module State = struct
     (* The wrapper_div ref should be initialized with the correct element as
@@ -157,6 +159,10 @@ let make (type data) ~(layout : Layout.fixed_row_height)
   in
   let populate_on_scroll =
     let last_scroll_y = ref 0. in
+    let total_items, fetch =
+      match data_source with
+      | Lazy { total_items; fetch } -> (total_items, fetch)
+    in
     let update =
       Lwd.map fetch ~f:(fun fetch () ->
           let visible_rows = compute_visible_rows ~last_scroll_y in
@@ -182,7 +188,7 @@ let make (type data) ~(layout : Layout.fixed_row_height)
     let style = At.style (Jstr.v @@ height_n n) in
     El.div ~at:(style :: at) []
   in
-  let render _row { content; index; render } =
+  let render _row { content; index } =
     let at = Attrs.add At.Name.class' (`P "lwdui-virtual-table-row") [] in
     let style = `P (At.style (Jstr.v height)) in
     match content with
