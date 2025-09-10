@@ -23,6 +23,8 @@ depends: [
   "bytesrw"
   "js_of_ocaml-lwt"
   "tyxml"
+  "uuidm"
+  "hector"
   "containers-data"
   "base64"
   "odoc" {with-doc}

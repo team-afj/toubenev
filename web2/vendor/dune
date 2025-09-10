@@ -1,1 +1,1 @@
-(vendored_dirs * \ brr-lwd-ui)
+(vendored_dirs lwd ppx_deriving_jsont)

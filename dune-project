@@ -36,5 +36,7 @@
   js_of_ocaml-lwt
   tyxml
   ; Vendored brr-lwd-ui deps:
+  uuidm
+  hector
   containers-data
   base64))
