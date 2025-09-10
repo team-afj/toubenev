@@ -330,7 +330,6 @@ let lwd_of_yjs_array ~f arr =
 
   page ::= section[]
 *)
-
 module S (*Schema*) = struct
   open Yjs
 
@@ -816,7 +815,7 @@ let new_table_row_form (columns : column_info Indexed_table.t) rows =
                             value = "";
                             id = "";
                             name = "";
-                            label = [];
+                            label = (fun () -> []);
                             state = false;
                           }
                       in

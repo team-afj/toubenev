@@ -96,4 +96,9 @@ let var_of_fut ~init fut =
   Fut.await fut (Lwd.set v);
   v
 
+let var_of_fut_opt fut =
+  let v = Lwd.var None in
+  Fut.await fut (fun r -> Lwd.set v @@ Option.some r);
+  v
+
 let wait_and_set v fut = Fut.await fut (Lwd.set v)
