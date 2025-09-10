@@ -1,8 +1,9 @@
 (executable
  (name client)
  (modes js)
+ (flags :standard -open Shared_libs.Std)
  (libraries
-  containers
+  shared_libs
   js_of_ocaml
   lwd
   brr-lwd

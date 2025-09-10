@@ -1,0 +1,3 @@
+(library
+ (name shared_libs)
+ (libraries containers))

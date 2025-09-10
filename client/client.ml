@@ -1,9 +1,38 @@
 open Brr
+open Brr_lwd
+open Brr_lwd_ui
 
-let source = Jv.new' (Jv.get Jv.global "EventSource") [| Jv.of_string "/sse" |]
+let () = Console.log [ "to  to" ]
+let columns = Lwd.return (Lwd_seq.element (Table.Columns.v "n1" "" []))
+let layout = { Table.columns; row_height = Utils.Unit.Rem 2. }
+let source_rows = Lwd_table.make ()
+let () = Lwd_table.append' source_rows "toto"
 
-let () =
-  Ev.listen Brr_io.Message.Ev.message
-    (fun ev -> Console.log [ "Received"; ev ])
-    (Ev.target_of_jv source)
-  |> ignore
+let data_source =
+  {
+    Table.Virtual_bis.total_items = Lwd.return 4;
+    source_rows;
+    render =
+      (fun row _ ->
+        let v = Lwd_table.get row |> Option.get_or ~default:"def" in
+
+        Lwd.return (Lwd_seq.element (Lwd.return (El.txt' v))));
+  }
+
+let tbl = Table.Virtual_bis.make ~layout data_source
+let app = Elwd.div [ `R tbl ]
+
+let app_container =
+  El.find_first_by_selector (Jstr.v "#app") |> Option.get_exn_or ""
+
+let _filters_ui =
+  let on_load _ =
+    let app = Lwd.observe @@ app in
+    let on_invalidate _ =
+      ignore @@ G.request_animation_frame
+      @@ fun _ -> ignore @@ Lwd.quick_sample app
+    in
+    El.append_children app_container [ Lwd.quick_sample app ];
+    Lwd.set_on_invalidate app on_invalidate
+  in
+  Ev.listen Ev.dom_content_loaded on_load (Window.as_target G.window)
