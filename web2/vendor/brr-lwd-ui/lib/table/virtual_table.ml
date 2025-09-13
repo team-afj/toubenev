@@ -14,7 +14,11 @@ module FRef = Utils.Forward_ref
 let logger = Logger.for_section "virtual table"
 
 type 'a row_renderer = int -> 'a -> Elwd.t Elwd.col
-type 'a row_data = { index : int; content : 'a Fut.t option }
+
+type ('a, 'error) row_data = {
+  index : int;
+  content : ('a, 'error) Fut.result option;
+}
 
 type ('data, 'error) data_source =
   | Lazy of {
@@ -30,10 +34,10 @@ type ('data, 'error) data_source =
    that the visible part of the talbe is always populated with rows. *)
 module Cache = FFCache.Make (Int)
 
-let make (type data) ~(layout : Layout.fixed_row_height)
+let make (type data error) ~(layout : Layout.fixed_row_height)
     ?(placeholder : int -> Elwd.t Elwd.col = fun _ -> [])
     ?(scroll_target : int Lwd.t option) (render : data row_renderer Lwd.t)
-    (data_source : (data, _) data_source) =
+    (data_source : (data, error) data_source) =
   let module State = struct
     (* The wrapper_div ref should be initialized with the correct element as
        soon as it is created. It is not reactive per se. *)
@@ -50,47 +54,40 @@ let make (type data) ~(layout : Layout.fixed_row_height)
   let row_size = layout.row_height |> Utils.Unit.to_string in
   let height_n n = Printf.sprintf "height: calc(%s * %i);" row_size n in
   let height = Printf.sprintf "height: %s !important;" row_size in
-  let table : data row_data Lwd_table.t = Lwd_table.make () in
+  let table : (data, error) row_data Lwd_table.t = Lwd_table.make () in
   (* The [row_index] table is used to provide fast random access to the table's
      rows in the observer's callback *)
-  let row_index : (int, data row_data Lwd_table.row) Hashtbl.t =
+  let row_index : (int, (data, error) row_data Lwd_table.row) Hashtbl.t =
     Hashtbl.create 2048
-  in
-  let unload i =
-    let open Option.Infix in
-    (let* row = Hashtbl.get row_index i in
-     let+ row_data = Lwd_table.get row in
-     Lwd_table.set row { row_data with content = None })
-    |> ignore
   in
   let new_cache () = Cache.create ~size:50 in
   (* The cache is some sort of LRU to keep live the content of recently seen
      rows *)
   let cache_ref = ref (new_cache ()) in
-  let add ~fetch ?(max_items = 200) indexes =
-    let cache = !cache_ref in
-    let load indexes =
-      (let data : (data, _) Fut.result array = fetch indexes in
-       Array.iter2 indexes data ~f:(fun i (data : (data, _) Fut.result) ->
+  let load_or_bump_in_cache ~fetch ?(max_items = 200) rows =
+    let load rows =
+      (let data : (data, _) Fut.result array = fetch (Array.map ~f:fst rows) in
+       Array.iter2 rows data ~f:(fun (_, row) (data : (data, _) Fut.result) ->
            (let open Option.Infix in
-            let* row = Hashtbl.get row_index i in
             let+ row_data = Lwd_table.get row in
-            let data =
-              data
-              |> Fut.map (function Ok data -> data | _ -> raise Not_found)
-            in
-            (* todo: let users provide comparison *)
-            if not (Equal.poly row_data.content @@ Some data) then
-              Lwd_table.set row { row_data with content = Some data })
+            Lwd_table.set row { row_data with content = Some data })
            |> ignore))
       |> ignore
     in
-    let cache, to_load =
-      List.fold_left ~init:(cache, []) indexes ~f:(fun (cache, acc) i ->
-          ignore max_items (* cache is not configurable right now *);
-          let cache, inserted = Cache.insert ~on_evict:unload cache i i in
-          if inserted then (cache, i :: acc) else (cache, acc))
+    let unload row =
+      Lwd_table.get row
+      |> Option.iter (fun row_data ->
+             Lwd_table.set row { row_data with content = None })
     in
+    let cache, to_load =
+      List.fold_left ~init:(!cache_ref, []) rows
+        ~f:(fun (cache, acc) (i, row) ->
+          ignore max_items (* cache is not configurable right now *);
+
+          let cache, inserted = Cache.insert ~on_evict:unload cache i row in
+          if inserted then (cache, (i, row) :: acc) else (cache, acc))
+    in
+    (* So much for the purely functionnal cache^^ *)
     cache_ref := cache;
     match Array.of_list to_load with [||] -> () | to_load -> load to_load
   in
@@ -107,7 +104,6 @@ let make (type data) ~(layout : Layout.fixed_row_height)
     let visible_height = height div in
     let parent = Utils.Forward_ref.get_exn State.content_div in
     let row_height = Utils.Unit.to_px ~parent layout.row_height in
-    logger.debug [ "Visible height:"; visible_height; "Row height"; row_height ];
     let number_of_visible_rows =
       Int.of_float (ceil (visible_height /. row_height))
     in
@@ -158,10 +154,18 @@ let make (type data) ~(layout : Layout.fixed_row_height)
     in
     let update =
       Lwd.map fetch ~f:(fun fetch () ->
-          let visible_rows = compute_visible_rows ~last_scroll_y in
+          let visible_rows_indexes = compute_visible_rows ~last_scroll_y in
           (* todo: We do way too much work and rebuild the queue each
              time... it's very ineficient *)
-          add ~fetch ~max_items:(4 * List.length visible_rows) visible_rows)
+          let visible_rows =
+            List.filter_map
+              ~f:(fun idx ->
+                Hashtbl.get row_index idx |> Option.map (Pair.make idx))
+              visible_rows_indexes
+          in
+          load_or_bump_in_cache ~fetch
+            ~max_items:(4 * List.length visible_rows)
+            visible_rows)
     in
     Lwd.map2 total_items update ~f:(fun total_items update ->
         prepare ~total_items;
@@ -189,9 +193,13 @@ let make (type data) ~(layout : Layout.fixed_row_height)
         let rendered_row =
           let data = Utils.var_of_fut_opt data in
           Lwd.map2 render (Lwd.get data) ~f:(fun render -> function
-            | Some data ->
+            | Some (Ok data) ->
                 Lwd_seq.of_list
                   (List.map (render index data) ~f:(fun elt -> Elwd.div [ elt ]))
+            | Some (Error err) ->
+                Console.error [ err ];
+                Lwd_seq.of_list
+                  (List.map (placeholder index) ~f:(fun elt -> Elwd.div [ elt ]))
             | None ->
                 Lwd_seq.of_list
                   (List.map (placeholder index) ~f:(fun elt -> Elwd.div [ elt ])))
