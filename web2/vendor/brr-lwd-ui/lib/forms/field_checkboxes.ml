@@ -78,7 +78,7 @@ let make_single ?persist ?(ev = []) ?(on_change = fun _ -> ()) ?var
         ])
   in
   let () =
-    Utils.listen ~f:(fun v ->
+    Utils.consume ~f:(fun v ->
         Option.iter
           (fun checkbox ->
             let v = Option.is_some v in
