@@ -13,18 +13,33 @@ module FRef = Utils.Forward_ref
 
 let logger = Logger.for_section "virtual table"
 
-type 'a row_renderer = int -> 'a -> Elwd.t Elwd.col
+type ('data, 'error) row_renderer =
+  int -> ('data, 'error) Fut.result -> El.t Lwd.t Lwd_seq.t Lwd.t
 
-type ('a, 'error) row_data = {
+let default_placeholder =
+ fun _ -> Lwd.return (Lwd_seq.element (Lwd.return (El.txt' "Loading")))
+
+let default_error =
+ fun _ -> Lwd.return (Lwd_seq.element (Lwd.return (El.txt' "Error")))
+
+let with_placeholder_or_error ?(placeholder = default_placeholder)
+    ?(error = default_error) render i data =
+  let data = Utils.var_of_fut_opt data in
+  Lwd.bind (Lwd.get data) ~f:(function
+    | Some (Ok data) -> render i data
+    | Some (Error err) -> error err
+    | None -> placeholder i)
+
+type ('data, 'error) row_data = {
   index : int;
-  content : ('a, 'error) Fut.result option;
+  content : ('data, 'error) Fut.result option;
 }
 
 type ('data, 'error) data_source =
   | Lazy of {
       total_items : int Lwd.t;
       fetch : (int array -> ('data, 'error) Fut.result array) Lwd.t;
-          (* TODO: the whole source should be reactive *)
+          (** Fetched indices are always contiguous. *)
     }
 
 (* The virtual table is a complex reactive component. Primarily, it reacts to
@@ -35,8 +50,7 @@ type ('data, 'error) data_source =
 module Cache = FFCache.Make (Int)
 
 let make (type data error) ~(layout : Layout.fixed_row_height)
-    ?(placeholder : int -> Elwd.t Elwd.col = fun _ -> [])
-    ?(scroll_target : int Lwd.t option) (render : data row_renderer Lwd.t)
+    ?(scroll_target : int Lwd.t option) (render : (data, error) row_renderer)
     (data_source : (data, error) data_source) =
   let module State = struct
     (* The wrapper_div ref should be initialized with the correct element as
@@ -190,20 +204,7 @@ let make (type data error) ~(layout : Layout.fixed_row_height)
     let style = `P (At.style (Jstr.v height)) in
     match content with
     | Some data ->
-        let rendered_row =
-          let data = Utils.var_of_fut_opt data in
-          Lwd.map2 render (Lwd.get data) ~f:(fun render -> function
-            | Some (Ok data) ->
-                Lwd_seq.of_list
-                  (List.map (render index data) ~f:(fun elt -> Elwd.div [ elt ]))
-            | Some (Error err) ->
-                Console.error [ err ];
-                Lwd_seq.of_list
-                  (List.map (placeholder index) ~f:(fun elt -> Elwd.div [ elt ]))
-            | None ->
-                Lwd_seq.of_list
-                  (List.map (placeholder index) ~f:(fun elt -> Elwd.div [ elt ])))
-        in
+        let rendered_row = render index data in
         ( 0,
           Lwd_seq.element
           @@ Elwd.div ~at:(style :: at) [ `S (Lwd_seq.lift rendered_row) ],
