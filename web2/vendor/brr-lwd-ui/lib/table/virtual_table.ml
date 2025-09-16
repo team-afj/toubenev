@@ -302,12 +302,12 @@ let make (type data error) ~(layout : Layout.fixed_row_height)
     let ev = [ `R scroll_handler ] in
     let on_create el =
       Utils.Forward_ref.set_exn state.wrapper_div el;
-      Utils.consume ~initial_trigger:true (Lwd.pair total_items fetch)
-        ~f:(function total_items, fetch ->
+      Utils.tap ~initial_trigger:true (Lwd.pair total_items fetch) ~f:(function
+          | total_items, fetch ->
           Console.log [ "Full refresh" ];
           prepare state ~total_items;
           update_visible_rows state fetch);
-      Utils.consume ~initial_trigger:true
+      Utils.tap ~initial_trigger:false
         (Lwd.pair fetch (Lwd.get state.table_height))
         ~f:(function
           | fetch, _ ->
