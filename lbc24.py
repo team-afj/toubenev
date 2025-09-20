@@ -401,8 +401,8 @@ def c_est_la_pause(b: Bénévole):
         )  # "only_enforce_if" doesn't work with that constraint
 
 
-for b in bénévoles:
-    c_est_la_pause(b)
+# for b in bénévoles:
+#     c_est_la_pause(b)
 
 
 """ Calcul de la qualité d'une réponse """
