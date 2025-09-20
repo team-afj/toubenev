@@ -434,6 +434,8 @@ def temps_travail_théorique(date, b: Bénévole):
     if (not (b.date_arrivée) or date >= b.date_arrivée.date()) and (
         not (b.date_départ) or date < b.date_départ.date()
     ):
+        # On pourrait vouloir être plus fin ici et faire un pro rata ou autre
+        # pour les journées incomplètes
         return b.heures_théoriques * 60
     else:
         return 0
@@ -562,7 +564,7 @@ def amplitudes(b: Bénévole):
 
 model.minimize(
     10 * bornage_des_excès(bénévoles)
-    # + 0.5 * sum(amplitudes(b) for b in bénévoles)
+    + 1 * sum(amplitudes(b) for b in bénévoles)
     + bonus_amis(bénévoles, quêtes)
     - sum(appréciation_du_planning(b, quêtes) for b in bénévoles)
 )
