@@ -99,6 +99,7 @@ def load_bénévoles(data):
                 nom,
                 heures_théoriques,
                 indisponibilités,
+                [],
                 pref_horaires,
                 binômes_préférés,
                 binômes_interdits,

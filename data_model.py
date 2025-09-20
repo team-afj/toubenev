@@ -204,6 +204,12 @@ class Quête:
         return filter(self.chevauche, Quête.toutes)
 
 
+class Interval:
+    def __init__(self, début, fin):
+        self.début: datetime = début
+        self.fin: datetime = fin
+
+
 class Bénévole:
     """Classe permettant de gérer les bénévoles et maintenant à jour une liste
     de tous les bénévoles dans `Bénévole.tous`."""
@@ -225,6 +231,7 @@ class Bénévole:
         nom,
         heures_théoriques,
         indisponibilités,
+        indispos_ponctuelles,
         pref_horaires,
         binômes_préférés=[],
         binômes_interdits=[],
@@ -247,6 +254,7 @@ class Bénévole:
         )
         self.spécialités: List[str | Type_de_quête] = spécialités
         self.indisponibilités: List[time] = indisponibilités
+        self.indispos_ponctuelles: List[Interval] = indispos_ponctuelles
         self.pref_horaires: Dict[time, int] = pref_horaires
         self.date_arrivée: Optional[datetime] = date_arrivée
         self.date_départ: Optional[datetime] = date_départ
