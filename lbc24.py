@@ -292,9 +292,7 @@ for b in bénévoles:
                     fin_indispo = début_indispo + timedelta(hours=1)
 
                     if not (fin_indispo <= q.début or début_indispo >= q.fin):
-                        explain_var = model.new_bool_var(
-                            f"{b} indisponible pour {q}\n({q.début} -> {q.fin}) \n({début_indispo} -> {fin_indispo})"
-                        )
+                        explain_var = model.new_bool_var(f"{b} indisponible pour {q})")
                         model.add_assumption(explain_var)
                         model.add(assignations[(b, q)] == 0).with_name(
                             f"indispo_{b}_{q}"
