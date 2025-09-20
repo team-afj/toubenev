@@ -12,8 +12,7 @@ from itertools import zip_longest
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
 
 # The ID and range of a sample spreadsheet.
-spreadsheetId = "1CzC46w2jpikSu-8xEWo4lAVDXmDRj8JtbHenTa0C_2s"
-SAMPLE_RANGE_NAME = "sbénévoles"
+spreadsheetId = "1aCffWf1nRSQfPcIThGdxyyYvUwL5Bx19IegZLVe0O2k"
 
 
 def dict_of_list(l: list):

@@ -42,47 +42,30 @@ def load_bénévoles(data):
     bénévoles = data["bénévoles"]
     for b in bénévoles:
 
-        def pref_of_hour(hour):
-            def score_of(s):
-                if s == "Contraint":
-                    return -1
-                if s == "Préféré":
-                    return 1
-                return 0
+        def times_of_hours_list(horaires: str):
+            # 08h - 09h, 09h - 10h, 00h - 01h
+            # => [8, 9, 0]
+            if not horaires.strip():
+                return []
+            else:
+                return list(
+                    map(
+                        lambda s: time(hour=int(s.strip()[:2])),
+                        horaires.split(sep=", "),
+                    )
+                )
 
-            if 0 <= hour and hour <= 5:
-                return score_of(b["nuit"])
-
-            if 6 <= hour and hour <= 11:
-                return score_of(b["matin"])
-
-            if 12 <= hour and hour <= 17:
-                return score_of(b["aprem"])
-
-            if 18 <= hour and hour <= 23:
-                return score_of(b["soir"])
+        def make_indisponibilités():
+            indisponibilités = times_of_hours_list(b["h_indispos"])
+            return indisponibilités
 
         def make_pref_horaires():
             acc = {}
-            for h in range(0, 23 + 1):
-                acc[time(hour=h)] = pref_of_hour(h)
+            for t in times_of_hours_list(b["h_contraints"]):
+                acc[t] = -1
+            for t in times_of_hours_list(b["h_prefs"]):
+                acc[t] = 1
             return acc
-
-        def make_indisponibilités():
-            indisponibilités = []
-            if b["nuit"] == "Indisponible":
-                for h in range(0, 6):
-                    indisponibilités.append(time(hour=h))
-            if b["matin"] == "Indisponible":
-                for h in range(6, 12):
-                    indisponibilités.append(time(hour=h))
-            if b["aprem"] == "Indisponible":
-                for h in range(12, 18):
-                    indisponibilités.append(time(hour=h))
-            if b["soir"] == "Indisponible":
-                for h in range(18, 24):
-                    indisponibilités.append(time(hour=h))
-            return indisponibilités
 
         id = str(b["id"])
         surnom = b["pseudo"]
@@ -116,6 +99,13 @@ def load_bénévoles(data):
         )
 
 
+def with_default(s, f, default):
+    try:
+        return f(s)
+    except:
+        return default
+
+
 def load_quêtes(data):
     quêtes = data["quêtes"]
     # TODO GROUPES
@@ -125,11 +115,16 @@ def load_quêtes(data):
         types = list(map(Type_de_quête.tous.get, split(q["types"])))
         lieu = Lieu.tous[str(q["lieu"])]
         spectacle = None
-        nombre_bénévoles = int(q["nombre_bénévoles"])
+        nombre_bénévoles = with_default(q["nombre_bénévoles"], int, 2)
         début = to_datetime(q["début"])
         fin = to_datetime(q["fin"])
         bénévoles = list(map(Bénévole.tous.get, split(q["fixés"])))
-        Quête(id, nom, types, lieu, spectacle, nombre_bénévoles, début, fin, bénévoles)
+        try:
+            Quête(
+                id, nom, types, lieu, spectacle, nombre_bénévoles, début, fin, bénévoles
+            )
+        except:
+            return
 
 
 def main():
