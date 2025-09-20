@@ -226,7 +226,6 @@ class Bénévole:
         heures_théoriques,
         indisponibilités,
         pref_horaires,
-        sérénité,
         binômes_préférés=[],
         binômes_interdits=[],
         types_de_quête_interdits=[],
@@ -238,7 +237,6 @@ class Bénévole:
         self.surnom: str = surnom if surnom else prénom
         self.prénom: str = prénom
         self.nom: str = nom
-        self.sérénité: bool = sérénité
         self.heures_théoriques: float = heures_théoriques
         self.score_types_de_quêtes: Dict[Type_de_quête, int] = {}
         self.binômes_préférés: List[str | Bénévole] = binômes_préférés

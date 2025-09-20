@@ -7,7 +7,10 @@ from datetime import date, time, datetime, timedelta
 
 
 def to_bool(s):
-    return True if s == "TRUE" else False
+    if type(s) is bool:
+        return s
+    else:
+        return True if s.lower() == "true" else False
 
 
 def load_lieux(data):
@@ -41,62 +44,69 @@ def split(s):
 def load_bénévoles(data):
     bénévoles = data["bénévoles"]
     for b in bénévoles:
-
-        def times_of_hours_list(horaires: str):
-            # 08h - 09h, 09h - 10h, 00h - 01h
-            # => [8, 9, 0]
-            if not horaires.strip():
-                return []
-            else:
-                return list(
-                    map(
-                        lambda s: time(hour=int(s.strip()[:2])),
-                        horaires.split(sep=", "),
-                    )
-                )
-
-        def make_indisponibilités():
-            indisponibilités = times_of_hours_list(b["h_indispos"])
-            return indisponibilités
-
-        def make_pref_horaires():
-            acc = {}
-            for t in times_of_hours_list(b["h_contraints"]):
-                acc[t] = -1
-            for t in times_of_hours_list(b["h_prefs"]):
-                acc[t] = 1
-            return acc
-
         id = str(b["id"])
-        surnom = b["pseudo"]
-        prénom = ""
-        nom = ""
-        heures_théoriques = b["heures_théoriques"]
-        indisponibilités = make_indisponibilités()
-        pref_horaires = make_pref_horaires()
-        sérénité = True  # TODO avec les "quêtes interdites"
-        binômes_préférés = split(b["amis"])
-        binômes_interdits = split(b["ennemis"])
-        types_de_quête_interdits = split(b["quêtes_interdites"])
-        spécialités = split(b["spécialités"])
-        date_arrivée = to_datetime(b["arrivée"])
-        date_départ = to_datetime(b["départ"])
-        Bénévole(
-            id,
-            surnom,
-            prénom,
-            nom,
-            heures_théoriques,
-            indisponibilités,
-            pref_horaires,
-            sérénité,
-            binômes_préférés,
-            binômes_interdits,
-            types_de_quête_interdits,
-            spécialités,
-            date_arrivée,
-            date_départ,
-        )
+        if id:
+
+            def times_of_hours_list(horaires: str):
+                # 08h - 09h, 09h - 10h, 00h - 01h
+                # => [8, 9, 0]
+                if not horaires.strip():
+                    return []
+                else:
+                    return list(
+                        map(
+                            lambda s: time(hour=int(s.strip()[:2])),
+                            horaires.split(sep=", "),
+                        )
+                    )
+
+            def make_indisponibilités():
+                indispos = b["h_indispos"]
+                if indispos:
+                    indisponibilités = times_of_hours_list(indispos)
+                    return indisponibilités
+                else:
+                    return []
+
+            def make_pref_horaires():
+                acc = {}
+                h_contraints = b["h_contraints"]
+                if h_contraints:
+                    for t in times_of_hours_list(b["h_contraints"]):
+                        acc[t] = -1
+                h_prefs = b["h_prefs"]
+                if h_prefs:
+                    for t in times_of_hours_list(b["h_prefs"]):
+                        acc[t] = 1
+                return acc
+
+            surnom = b["pseudo"]
+            prénom = ""
+            nom = ""
+            heures_théoriques = b["heures_théoriques"]
+            indisponibilités = make_indisponibilités()
+            pref_horaires = make_pref_horaires()
+            binômes_préférés = split(b["amis"])
+            binômes_interdits = split(b["ennemis"])
+            types_de_quête_interdits = split(b["quêtes_interdites"])
+            spécialités = split(b["spécialités"])
+            date_arrivée = to_datetime(b["arrivée"])
+            date_départ = to_datetime(b["départ"])
+            Bénévole(
+                id,
+                surnom,
+                prénom,
+                nom,
+                heures_théoriques,
+                indisponibilités,
+                pref_horaires,
+                binômes_préférés,
+                binômes_interdits,
+                types_de_quête_interdits,
+                spécialités,
+                date_arrivée,
+                date_départ,
+            )
 
 
 def with_default(s, f, default):
@@ -111,20 +121,46 @@ def load_quêtes(data):
     # TODO GROUPES
     for q in quêtes:
         id = str(q["id"])
-        nom = str(q["nom"])
-        types = list(map(Type_de_quête.tous.get, split(q["types"])))
-        lieu = Lieu.tous[str(q["lieu"])]
-        spectacle = None
-        nombre_bénévoles = with_default(q["nombre_bénévoles"], int, 2)
-        début = to_datetime(q["début"])
-        fin = to_datetime(q["fin"])
-        bénévoles = list(map(Bénévole.tous.get, split(q["fixés"])))
-        try:
-            Quête(
-                id, nom, types, lieu, spectacle, nombre_bénévoles, début, fin, bénévoles
-            )
-        except:
-            return
+        if id:
+            nom = str(q["nom"])
+            types = list(map(Type_de_quête.tous.get, split(q["types"])))
+            lieu = Lieu.tous[str(q["lieu"])]
+            spectacle = None
+            nombre_bénévoles = with_default(q["nombre_bénévoles"], int, 2)
+            début = to_datetime(q["début"])
+            fin = to_datetime(q["fin"])
+            sécable = to_bool(q["découpable"])
+            bénévoles_fixés = list(map(Bénévole.tous.get, split(q["fixés"])))
+
+            def new_quête(id, nom, début: date, fin):
+                if début and fin:
+                    Quête(
+                        id,
+                        nom,
+                        types,
+                        lieu,
+                        spectacle,
+                        nombre_bénévoles,
+                        début,
+                        fin,
+                        bénévoles_fixés,
+                    )
+
+            if sécable or all(t.sécable for t in types):
+                fin_acc = début
+                i = 0
+                while fin_acc < fin:
+                    début_acc = fin_acc
+                    fin_acc = min(fin_acc + timedelta(minutes=120), fin)
+                    i = i + 1
+                    new_quête(
+                        f"{id} #{i}",
+                        f"{nom} #{i}",
+                        début_acc,
+                        fin_acc,
+                    )
+            else:
+                new_quête(id, nom, début, fin)
 
 
 def main():
