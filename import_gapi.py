@@ -147,25 +147,21 @@ def load_quêtes(data):
                         bénévoles_fixés,
                     )
 
-            if (
-                début.date() == date.fromisoformat("2025-09-27")
-                and début.time().hour > 5
-            ):
-                if sécable or all(t.sécable for t in types):
-                    fin_acc = début
-                    i = 0
-                    while fin_acc < fin:
-                        début_acc = fin_acc
-                        fin_acc = min(fin_acc + timedelta(minutes=120), fin)
-                        i = i + 1
-                        new_quête(
-                            f"{id} #{i}",
-                            f"{nom} #{i}",
-                            début_acc,
-                            fin_acc,
-                        )
-                else:
-                    new_quête(id, nom, début, fin)
+            if sécable or all(t.sécable for t in types):
+                fin_acc = début
+                i = 0
+                while fin_acc < fin:
+                    début_acc = fin_acc
+                    fin_acc = min(fin_acc + timedelta(minutes=120), fin)
+                    i = i + 1
+                    new_quête(
+                        f"{id} #{i}",
+                        f"{nom} #{i}",
+                        début_acc,
+                        fin_acc,
+                    )
+            else:
+                new_quête(id, nom, début, fin)
 
 
 def main():
