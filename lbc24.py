@@ -622,15 +622,16 @@ def dumb_dump(file, assignations):
 
             jours_tdt = ""
             for d, tdt_ in temps_quotidien_bénévole(b, assignations).items():
+                diff_ = tdt_ - temps_travail_théorique(d, b)
                 if jours_tdt == "":
-                    jours_tdt = f"{jours_tdt} {print_duration(tdt_)}"
+                    jours_tdt = f"{jours_tdt} {print_duration(tdt_)}({print_signed_duration(diff_)})"
                 else:
-                    jours_tdt = f"{jours_tdt};{print_duration(tdt_)}"
+                    jours_tdt = f"{jours_tdt};{print_duration(tdt_)}({print_signed_duration(diff_)})"
 
             all.append(
                 {
                     "d": diff,
-                    "s": f"{b.surnom}:\tPar jour: {jours_tdt}\tT: {print_duration(tdt)}\tP: {print_duration(tdt_ajusté)}\t({print_signed_duration(diff)})\n",
+                    "s": f"{b.surnom}:\tJours: {jours_tdt}\tSemaine: {print_duration(tdt)} ({print_signed_duration(diff)})\n",
                 }
             )
         text_file.write(f"\nMax diff: {print_duration(max_diff)}\n")
