@@ -78,6 +78,10 @@ end
 type plugin = List | ResourceTimeline
 type view = Time_grid_week | Resource_timeline_day
 type t
+type header_toolbar
+
+val header_toolbar :
+  ?start:string -> ?center:string -> ?end_:string -> unit -> header_toolbar
 
 val make :
   target:Brr.El.t ->
@@ -91,6 +95,7 @@ val make :
   ?event_start_editable:bool ->
   ?event_duration_editable:bool ->
   ?event_content:(Info.t -> Content.t) ->
+  ?header_toolbar:header_toolbar ->
   unit ->
   t
 

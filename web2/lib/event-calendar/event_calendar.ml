@@ -124,10 +124,18 @@ let jv_of_view = function
   | Resource_timeline_day -> Jv.of_string "resourceTimelineDay"
 
 type t = Jv.t
+type header_toolbar = Jv.t
+
+let header_toolbar ?(start = "") ?(center = "") ?(end_ = "") () =
+  let start = ("start", Jv.of_string start) in
+  let center = ("center", Jv.of_string center) in
+  let end_ = ("end", Jv.of_string end_) in
+  Jv.obj [| start; center; end_ |]
 
 let make ~target ?(plugins = []) ?view ?date ?duration
     ?filter_events_with_resources ?filter_resources_with_events ?editable
-    ?event_start_editable ?event_duration_editable ?event_content () : t =
+    ?event_start_editable ?event_duration_editable ?event_content
+    ?header_toolbar () : t =
   let target = El.to_jv target in
   let options =
     let view = opt_field "view" jv_of_view view in
@@ -155,6 +163,7 @@ let make ~target ?(plugins = []) ?view ?date ?duration
           ("eventContent", Jv.callback ~arity:1 f))
         event_content
     in
+    let header_toolbar = opt_field "headerToolbar" Fun.id header_toolbar in
     [
       view;
       date;
@@ -165,6 +174,7 @@ let make ~target ?(plugins = []) ?view ?date ?duration
       event_start_editable;
       event_duration_editable;
       event_content;
+      header_toolbar;
     ]
     |> obj_of_opt_list
   in
