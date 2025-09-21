@@ -471,24 +471,29 @@ def diff_temps(b, assignations):
 
 """ Équilibrage du temps de travail """
 
+max_tdt = 60 * max([b.heures_théoriques for b in Bénévole.tous.values()])
 
-def bornage_des_excès(bénévoles, écart_quotidien_max=180):
-    """The goal is to minimize work excess differences on the whole event by allowing some day-to-day differences below the threshold."""
-    max_tdt = 60 * max([b.heures_théoriques for b in Bénévole.tous.values()])
-    borne_inf = model.new_int_var(-2 * max_tdt, 0, "borne_inf_des_diffs")
-    borne_sup = model.new_int_var(0, 2 * max_tdt, "borne_sup_des_diffs")
+
+def borne_un_jour(bénévoles, jour):
+    borne_inf_jour = model.new_int_var(
+        -2 * max_tdt, 2 * max_tdt, f"borne_inf_des_diffs_jour_{jour}"
+    )
+    borne_sup_jour = model.new_int_var(
+        -2 * max_tdt, 2 * max_tdt, f"borne_sup_des_diffs_jour_{jour}"
+    )
+
+    # Somme des différences pour chaque bénévole ce jour
     for b in bénévoles:
-        diff_par_jour = diff_temps(b, assignations)
-        for d, diff in diff_par_jour.items():
-            explain_var = model.new_bool_var(
-                f"Écart de travail de {b} le {d} supérieur à {écart_quotidien_max} min"
-            )
-            model.add_assumption(explain_var)
-            model.add(diff <= écart_quotidien_max).with_name(f"écart_{b}_{d}")
-        diff = sum(diff for _, diff in diff_par_jour.items())
-        model.add(diff <= borne_sup).with_name(f"sup_{b}")
-        model.add(diff >= borne_inf).with_name(f"inf_{b}")
-    return borne_sup - borne_inf
+        diff_du_jour = diff_temps(b, assignations).get(jour)
+        model.add(diff_du_jour <= borne_sup_jour).with_name(f"sup_{b}_{jour}")
+        model.add(diff_du_jour >= borne_inf_jour).with_name(f"inf_{b}_{jour}")
+
+    return borne_sup_jour - borne_inf_jour
+
+
+# \text{minimise}\left( \sum_{j \in \mathcal{J}}^{}\left(\sup_{b\in\mathcal{B}} \text{ecart(b, j)}-\inf_{b\in\mathcal{B}} \text{ecart(b, j)}\right)\right)
+def bornage_des_excès(bénévoles):
+    return sum(borne_un_jour(bénévoles, jour) for jour in Quête.par_jour.keys())
 
 
 """ Pondération des préférences des bénévoles """
