@@ -603,10 +603,18 @@ def dumb_dump(file, assignations):
             if abs(diff) > max_diff_abs:
                 max_diff = diff
                 max_diff_abs = abs(diff)
+
+            jours_tdt = ""
+            for d, tdt_ in temps_quotidien_bénévole(b, assignations).items():
+                if jours_tdt == "":
+                    jours_tdt = f"{jours_tdt} {print_duration(tdt_)}"
+                else:
+                    jours_tdt = f"{jours_tdt};{print_duration(tdt_)}"
+
             all.append(
                 {
                     "d": diff,
-                    "s": f"{b.surnom}:\t{print_duration(tdt)} / {print_duration(tdt_ajusté)} / {print_duration (tdt_théorique)}\t({print_signed_duration(diff)})\n",
+                    "s": f"{b.surnom}:\tPar jour: {jours_tdt}\tT: {print_duration(tdt)}\tP: {print_duration(tdt_ajusté)}\t({print_signed_duration(diff)})\n",
                 }
             )
         text_file.write(f"\nMax diff: {print_duration(max_diff)}\n")
