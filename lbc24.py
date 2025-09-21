@@ -104,6 +104,15 @@ def print_signed_duration(minutes):
 """Préparation du modèle et des contraintes"""
 
 model = cp_model.CpModel()
+enable_assumptions = False
+
+
+# Enable or disable assumptions.
+# This prevents the solver from running in parallel
+def add_assumption(var):
+    if enable_assumptions:
+        model.add_assumption(var)
+
 
 """ On créé une variable par bénévole pour chaque "slot" de chaque quête."""
 assignations: Dict[(Bénévole, Quête), cp_model.BoolVarT] = {}
@@ -262,7 +271,8 @@ for b in bénévoles:
             if not (contains(q.bénévoles, b)):
                 if q.début < b.date_arrivée:
                     explain_var = model.new_bool_var(f"{b} pas encore arrivé pour {q}")
-                    model.add_assumption(explain_var)
+                    if a:
+                        model.add_assumption(explain_var)
                     model.add(assignations[(b, q)] == 0).with_name(
                         f"before_arrival_{b}_{q}"
                     ).only_enforce_if(explain_var)
@@ -271,7 +281,8 @@ for b in bénévoles:
             if not (contains(q.bénévoles, b)):
                 if q.fin > b.date_départ:
                     explain_var = model.new_bool_var(f"{b} déjà parti pour {q}")
-                    model.add_assumption(explain_var)
+                    if a:
+                        model.add_assumption(explain_var)
                     model.add(assignations[(b, q)] == 0).with_name(
                         f"after_leave_{b}_{q}"
                     ).only_enforce_if(explain_var)
@@ -293,7 +304,7 @@ for b in bénévoles:
 
                     if not (fin_indispo <= q.début or début_indispo >= q.fin):
                         explain_var = model.new_bool_var(f"{b} indisponible pour {q})")
-                        model.add_assumption(explain_var)
+                        add_assumption(explain_var)
                         model.add(assignations[(b, q)] == 0).with_name(
                             f"indispo_{b}_{q}"
                         ).only_enforce_if(explain_var)
@@ -307,7 +318,7 @@ for q in quêtes:
             explain_var = model.new_bool_var(
                 f"{b} ne peut pas assumer {q} (un(e) spécialiste est requis)"
             )
-            model.add_assumption(explain_var)
+            add_assumption(explain_var)
             model.add(assignations[(b, q)] == 0).with_name(
                 f"pas_spécialiste_{b}_{q}"
             ).only_enforce_if(explain_var)
@@ -320,7 +331,7 @@ for b in bénévoles:
             explain_var = model.new_bool_var(
                 f"{b} ne peut pas assumer {q} (lieu interdit: {lieu})"
             )
-            model.add_assumption(explain_var)
+            add_assumption(explain_var)
             model.add(assignations[(b, q)] == 0).with_name(
                 f"lieu_interdit_{b}_{q}"
             ).only_enforce_if(explain_var)
@@ -332,7 +343,7 @@ for b in bénévoles:
             explain_var = model.new_bool_var(
                 f"{b} ne peut pas assumer {q} (type de quête interdit: {t})"
             )
-            model.add_assumption(explain_var)
+            add_assumption(explain_var)
             model.add(assignations[(b, q)] == 0).with_name(
                 f"tdq_interdit_{b}_{q}"
             ).only_enforce_if(explain_var)
@@ -348,7 +359,7 @@ for b in bénévoles:
                 explain_var = model.new_bool_var(
                     f"{b} ne peut pas travailler avec {e} lors de {q}"
                 )
-                model.add_assumption(explain_var)
+                add_assumption(explain_var)
                 model.add(assignations[(b, q)] + assignations[(e, q)] <= 1).with_name(
                     f"blaire_pas_{b}_{e}_{q}"
                 ).only_enforce_if(explain_var)
@@ -385,7 +396,7 @@ def c_est_la_pause(b: Bénévole):
         explain_var = model.new_bool_var(
             f"{b} doit avoir une pause de {durée_pause_min / 60}h le {date}"
         )
-        model.add_assumption(explain_var)
+        add_assumption(explain_var)
 
         # La pause est suffisamment longue:
         model.add(size >= durée_pause_min).with_name(
