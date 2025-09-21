@@ -443,7 +443,7 @@ def temps_quotidien_bénévole(b, assignations):
 
 def temps_travail_théorique(date, b: Bénévole):
     if (not (b.date_arrivée) or date >= b.date_arrivée.date()) and (
-        not (b.date_départ) or date < b.date_départ.date()
+        not (b.date_départ) or date <= b.date_départ.date()  # TODO ça dépend de l'heure
     ):
         # On pourrait vouloir être plus fin ici et faire un pro rata ou autre
         # pour les journées incomplètes
