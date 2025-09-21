@@ -105,9 +105,14 @@ let event_content (info : Event_calendar.Info.t) =
   Event_calendar.Content.of_elts [ El.p text ]
 
 let c =
+  let header_toolbar =
+    Event_calendar.header_toolbar ~start:"title"
+      ~center:"resourceTimelineDay,timeGridWeek,listDay" ~end_:"today prev,next"
+      ()
+  in
   Event_calendar.make ~target:calendar_el ~plugins:[ List; ResourceTimeline ]
     ~date ~event_content ~filter_events_with_resources:true
-    ~filter_resources_with_events:true ()
+    ~filter_resources_with_events:true ~header_toolbar ()
 
 let () = Event_calendar.set_option c Resources (Data.to_resources data)
 

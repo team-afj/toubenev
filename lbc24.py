@@ -461,7 +461,7 @@ def diff_temps(b, assignations):
 """ Équilibrage du temps de travail """
 
 
-def bornage_des_excès(bénévoles, écart_quotidien_max=30):
+def bornage_des_excès(bénévoles, écart_quotidien_max=180):
     """The goal is to minimize work excess differences on the whole event by allowing some day-to-day differences below the threshold."""
     max_tdt = 60 * max([b.heures_théoriques for b in Bénévole.tous.values()])
     borne_inf = model.new_int_var(-2 * max_tdt, 0, "borne_inf_des_diffs")
