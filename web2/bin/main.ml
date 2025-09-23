@@ -16,10 +16,14 @@ let filters_el =
 let calendar_el =
   El.find_first_by_selector (Jstr.v "#calendar") |> Option.get_exn_or ""
 
-let date =
+let date, scroll_time =
   let _, first_quest = Data.Map.min_binding data.quests in
-  Js.Date.of_string (print_date first_quest.start)
+  let minutes = (first_quest.start |> Calendar.hour) * 60 in
+  let scroll_time = Event_calendar.Duration.make ~minutes () in
+  (Js.Date.of_string (print_date first_quest.start), scroll_time)
 
+let duration = Event_calendar.Duration.make ~days:3 ()
+let () = Console.log [ "Date"; date; "Duration"; duration ]
 (* let active_volunteer = Lwd.var None *)
 
 let active_volunteer_select =
@@ -56,7 +60,7 @@ let select_categories =
                  id = name;
                  name;
                  label = (fun () -> [ `P (El.txt' name) ]);
-                 state = true;
+                 state = false;
                })
     in
     let volunteers =
@@ -101,18 +105,33 @@ let event_content (info : Event_calendar.Info.t) =
   let volunteers =
     List.fold_left ~f:volunteers_link ~init:[] quest.volunteers
   in
-  let text = volunteers @ [ El.txt' ": "; El.txt' quest.name ] in
-  Event_calendar.Content.of_elts [ El.p text ]
+  let date = Event_calendar.Info.time_text info in
+  let text = volunteers in
+  let icon =
+    (List.hd quest.types).name |> String.split_on_char ~by:' ' |> List.hd
+  in
+  Event_calendar.Content.of_elts
+    [
+      El.h4
+        [
+          El.txt' (date ^ " " ^ icon ^ " " ^ String.capitalize_ascii quest.name);
+        ];
+      (* El.p [ El.txt' () ]; *)
+      El.p text;
+    ]
 
 let c =
   let header_toolbar =
     Event_calendar.header_toolbar ~start:"title"
-      ~center:"resourceTimelineDay,timeGridWeek,listDay" ~end_:"today prev,next"
-      ()
+      ~center:
+        "resourceTimelineMonth,resourceTimelineWeek,resourceTimeGridWeek,listDay"
+      ~end_:"today prev,next" ()
   in
-  Event_calendar.make ~target:calendar_el ~plugins:[ List; ResourceTimeline ]
-    ~date ~event_content ~filter_events_with_resources:true
-    ~filter_resources_with_events:true ~header_toolbar ()
+  Event_calendar.make ~target:calendar_el
+    ~plugins:[ List; ResourceTimeGrid; ResourceTimeline ]
+    ~date ~duration ~scroll_time ~event_content
+    ~filter_events_with_resources:true ~filter_resources_with_events:true
+    ~header_toolbar ()
 
 let () = Event_calendar.set_option c Resources (Data.to_resources data)
 

@@ -20,3 +20,10 @@ function get_resource_timeline() {
         window.r_calendar_resource_timeline = require("@event-calendar/resource-timeline")
     return window.r_calendar_resource_timeline.default
 }
+
+//Provides: get_resource_timegrid const
+function get_resource_timegrid() {
+    if (!window.r_calendar_resource_timegrid)
+        window.r_calendar_resource_timegrid = require("@event-calendar/resource-time-grid")
+    return window.r_calendar_resource_timegrid.default
+}

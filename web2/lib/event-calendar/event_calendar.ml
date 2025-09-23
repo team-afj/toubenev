@@ -110,18 +110,21 @@ end
 external get_calendar : unit -> Jv.t = "get_calendar"
 external get_list : unit -> p = "get_list"
 external get_resource_timeline : unit -> p = "get_resource_timeline"
+external get_resource_timegrid : unit -> p = "get_resource_timegrid"
 
-type plugin = List | ResourceTimeline
+type plugin = List | ResourceTimeline | ResourceTimeGrid
 
 let load_plugin : plugin -> p = function
   | List -> get_list ()
   | ResourceTimeline -> get_resource_timeline ()
+  | ResourceTimeGrid -> get_resource_timegrid ()
 
-type view = Time_grid_week | Resource_timeline_day
+type view = Time_grid_week | Resource_timeline_day | Resource_timegrid_week
 
 let jv_of_view = function
   | Time_grid_week -> Jv.of_string "timeGridWeek"
   | Resource_timeline_day -> Jv.of_string "resourceTimelineDay"
+  | Resource_timegrid_week -> Jv.of_string "resourceTimeGridWeek"
 
 type t = Jv.t
 type header_toolbar = Jv.t
@@ -132,7 +135,7 @@ let header_toolbar ?(start = "") ?(center = "") ?(end_ = "") () =
   let end_ = ("end", Jv.of_string end_) in
   Jv.obj [| start; center; end_ |]
 
-let make ~target ?(plugins = []) ?view ?date ?duration
+let make ~target ?(plugins = []) ?view ?date ?duration ?scroll_time
     ?filter_events_with_resources ?filter_resources_with_events ?editable
     ?event_start_editable ?event_duration_editable ?event_content
     ?header_toolbar () : t =
@@ -141,6 +144,7 @@ let make ~target ?(plugins = []) ?view ?date ?duration
     let view = opt_field "view" jv_of_view view in
     let date = opt_field "date" Js.Date.to_jv date in
     let duration = opt_field "duration" Duration.to_jv duration in
+    let scroll_time = opt_field "scrollTime" Duration.to_jv scroll_time in
     let filter_events_with_resources =
       opt_field "filterEventsWithResources" Jv.of_bool
         filter_events_with_resources
@@ -168,6 +172,7 @@ let make ~target ?(plugins = []) ?view ?date ?duration
       view;
       date;
       duration;
+      scroll_time;
       filter_events_with_resources;
       filter_resources_with_events;
       editable;
