@@ -202,7 +202,8 @@ def un_max_de_monde_fait(t: Type_de_quête):
             ).with_name(f"au_plus_un_{b}_{t}")
 
 
-# un_max_de_monde_fait(Type_de_quête.tous[id_tdg_clean])
+un_max_de_monde_fait(Type_de_quête.tous["4"])
+# TODO make it configurable
 
 """ Un même bénévole ne fait pas plusieurs fois le suivi du même spectacle """
 
