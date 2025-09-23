@@ -6,6 +6,7 @@ import os, sys, math, random
 from ortools.sat.python import cp_model
 from data_model import Bénévole, Type_de_quête, Quête, Spectacle, strengthen
 from export_json_web import write_json
+import csv
 
 # prepare log folder and file
 date_now = datetime.now().strftime("%Y%m%d %Hh%Mm%Ss")
@@ -797,14 +798,11 @@ else:
 
 
 def total_temps_dispo_par_jour(date, bénévoles):
-    return sum(temps_quotidien_théorique_bénévole(b)[date] for b in bénévoles)
+    return temps_travail_théorique_total(bénévoles, date)
 
 
 def total_temps_dispo(bénévoles):
-    return sum(
-        sum(v for v in temps_quotidien_théorique_bénévole(b).values())
-        for b in bénévoles
-    )
+    return sum(total_temps_dispo_par_jour(d, bénévoles) for d in Quête.par_jour.keys())
 
 
 temps_total = temps_total_quêtes(quêtes)
@@ -839,22 +837,36 @@ for q in quêtes:
             participants.append(b)
     result[q] = participants
 
+""" JSON export """
+
 write_json(result, file=f"{log_folder}/results")
 
-"""
-  Autres contraintes:
-  - [x] Respect temps horaire quotidien
-  - [x] Une pause de 4-5 heures consécutive chaque jour
-  - [ ] Des activités différentes chaque jour ?
-  - [ ] Des horaires différents chaque jour ?
-  - [x] La sérénité
-  - [x] Les horaires indispo
-  - [x] Les horaires de prédilection
-  - [ ] Équilibrer les déficits ou les excès, notamment de la "satisfaction"
-  - [x] Pause de 15 minutes entre deux missions qui ne sont pas dans le même lieu
-  - [x] Sur les scènes, on veut que les tâches consécutives soit si possible faites par les mêmes personnes
-  - [ ] A la fin de la semaine, c'est cool si tout le monde a fait chaque type de quêtes
-"""
+""" CSV export """
+
+
+def write_csv(file, result: Dict[Quête, List[Bénévole]]):
+    with open(file, "w", newline="") as csvfile:
+        fieldnames = ["Id", "Nom", "Début", "Fin", "Bénévoles"]
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+        rows = []
+        for q, bs in result.items():
+            rows.append(
+                {
+                    "Id": q.id,
+                    "Nom": q.nom,
+                    "Début": q.début,
+                    "Fin": q.fin,
+                    "Bénévoles": list(map(lambda b: b.surnom, bs)),
+                }
+            )
+
+        writer.writeheader()
+        for row in rows:
+            writer.writerow(row)
+
+
+write_csv(f"{log_folder}/results.csv", result)
 
 """ ICAL export """
 from icalendar import Calendar, Event
@@ -892,3 +904,18 @@ f.write(cal.to_ical())
 f.close()
 
 log_file.close()
+
+"""
+  Autres contraintes:
+  - [x] Respect temps horaire quotidien
+  - [x] Une pause de 4-5 heures consécutive chaque jour
+  - [ ] Des activités différentes chaque jour ?
+  - [ ] Des horaires différents chaque jour ?
+  - [x] La sérénité
+  - [x] Les horaires indispo
+  - [x] Les horaires de prédilection
+  - [ ] Équilibrer les déficits ou les excès, notamment de la "satisfaction"
+  - [x] Pause de 15 minutes entre deux missions qui ne sont pas dans le même lieu
+  - [x] Sur les scènes, on veut que les tâches consécutives soit si possible faites par les mêmes personnes
+  - [ ] A la fin de la semaine, c'est cool si tout le monde a fait chaque type de quêtes
+"""
