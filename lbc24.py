@@ -452,19 +452,44 @@ def temps_travail_théorique(date, b: Bénévole):
         return 0
 
 
-def temps_quotidien_théorique_bénévole(b):
+def temps_travail_théorique_total(bénévoles, date):
+    return sum(temps_travail_théorique(date, b) for b in bénévoles)
+
+
+def fraction_temps_travail_théorique(bénévoles, date, b):
+    return temps_travail_théorique(date, b) / temps_travail_théorique_total(
+        bénévoles, date
+    )
+
+
+def temps_de_travail_requis(date):
+    return sum(q.durée_minutes() * q.nombre_bénévoles for q in Quête.par_jour.get(date))
+
+
+def temps_travail_ajusté(bénévoles, date, b):
+    return fraction_temps_travail_théorique(
+        bénévoles, date, b
+    ) * temps_de_travail_requis(date)
+
+
+def temps_ajusté_quotidien_bénévole(bénévoles, b):
     # On renvoie un dictionnaire date -> temps de travail
     return {
-        date: temps_travail_théorique(date, b)
+        date: (int)(round(temps_travail_ajusté(bénévoles, date, b)))
         for date, _quêtes in Quête.par_jour.items()
     }
+
+
+temps_quotidiens_ajustés: Dict[Bénévole, Dict[date, int]] = {
+    b: temps_ajusté_quotidien_bénévole(bénévoles, b) for b in bénévoles
+}
 
 
 # Écart de l'écart du temps de travail d'un bénévole par rapport à la moyenne
 # Renvoie un dictionnaire indexé par les jours
 def diff_temps(b, assignations):
     return {
-        date: (tdt - (temps_travail_théorique(date, b)))
+        date: (tdt - (temps_quotidiens_ajustés.get(b).get(date)))
         for date, tdt in temps_quotidien_bénévole(b, assignations).items()
     }
 
@@ -494,6 +519,19 @@ def borne_un_jour(bénévoles, jour):
 # \text{minimise}\left( \sum_{j \in \mathcal{J}}^{}\left(\sup_{b\in\mathcal{B}} \text{ecart(b, j)}-\inf_{b\in\mathcal{B}} \text{ecart(b, j)}\right)\right)
 def bornage_des_excès(bénévoles):
     return sum(borne_un_jour(bénévoles, jour) for jour in Quête.par_jour.keys())
+
+
+def bornage_des_excès_sur_la_semaine(bénévoles):
+    """The goal is to minimize work excess differences on the whole event by allowing some day-to-day differences below the threshold."""
+    max_tdt = 60 * max([b.heures_théoriques for b in Bénévole.tous.values()])
+    borne_inf = model.new_int_var(-2 * max_tdt, 2 * max_tdt, "borne_inf_des_diffs")
+    borne_sup = model.new_int_var(-2 * max_tdt, 2 * max_tdt, "borne_sup_des_diffs")
+    for b in bénévoles:
+        diff_par_jour = diff_temps(b, assignations)
+        diff = sum(diff for _, diff in diff_par_jour.items())
+        model.add(diff <= borne_sup).with_name(f"sup_{b}")
+        model.add(diff >= borne_inf).with_name(f"inf_{b}")
+    return borne_sup - borne_inf
 
 
 """ Pondération des préférences des bénévoles """
@@ -579,8 +617,9 @@ def amplitudes(b: Bénévole):
 """ Formule finale """
 
 model.minimize(
-    10 * bornage_des_excès(bénévoles)
-    + 1 * sum(amplitudes(b) for b in bénévoles)
+    10
+    * (2 * bornage_des_excès(bénévoles) + bornage_des_excès_sur_la_semaine(bénévoles))
+    + sum(amplitudes(b) for b in bénévoles)
     + bonus_amis(bénévoles, quêtes)
     - sum(appréciation_du_planning(b, quêtes) for b in bénévoles)
 )
@@ -608,13 +647,12 @@ def dumb_dump(file, assignations):
         all = []
         for b in bénévoles:
             tdt = sum(temps_quotidien_bénévole(b, assignations).values())
+            tdt_ajusté = sum(temps_quotidiens_ajustés.get(b).values())
             tdt_théorique = sum(
                 temps_travail_théorique(d, b) for d in Quête.par_jour.keys()
             )
-            tdt_ajusté = sum(
-                temps_travail_théorique(d, b) for d in Quête.par_jour.keys()
-            )
             diff = tdt - tdt_ajusté
+            diff_théorie = tdt - tdt_théorique
             total_diff += diff
             if abs(diff) > max_diff_abs:
                 max_diff = diff
@@ -622,7 +660,7 @@ def dumb_dump(file, assignations):
 
             jours_tdt = ""
             for d, tdt_ in temps_quotidien_bénévole(b, assignations).items():
-                diff_ = tdt_ - temps_travail_théorique(d, b)
+                diff_ = tdt_ - temps_quotidiens_ajustés.get(b).get(d)
                 if jours_tdt == "":
                     jours_tdt = f"{jours_tdt} {print_duration(tdt_)}({print_signed_duration(diff_)})"
                 else:
@@ -630,8 +668,8 @@ def dumb_dump(file, assignations):
 
             all.append(
                 {
-                    "d": diff,
-                    "s": f"{b.surnom}:\tJours: {jours_tdt}\tSemaine: {print_duration(tdt)} ({print_signed_duration(diff)})\n",
+                    "d": diff_théorie,
+                    "s": f"{b.surnom}:\t{jours_tdt}\tSemaine: {print_duration(tdt)} ({print_signed_duration(diff)}) (Théorie: {print_signed_duration(diff_théorie)})\n",
                 }
             )
         text_file.write(f"\nMax diff: {print_duration(max_diff)}\n")
