@@ -341,13 +341,15 @@ for b in bénévoles:
 for b in bénévoles:
     for t in b.types_de_quête_interdits:
         for q in quêtes_dun_type(t):
-            explain_var = model.new_bool_var(
-                f"{b} ne peut pas assumer {q} (type de quête interdit: {t})"
-            )
-            add_assumption(explain_var)
-            model.add(assignations[(b, q)] == 0).with_name(
-                f"tdq_interdit_{b}_{q}"
-            ).only_enforce_if(explain_var)
+            # On vérifie que ce n'est pas une quête forcée:
+            if not (contains(q.bénévoles, b)):
+                explain_var = model.new_bool_var(
+                    f"{b} ne peut pas assumer {q} (type de quête interdit: {t})"
+                )
+                add_assumption(explain_var)
+                model.add(assignations[(b, q)] == 0).with_name(
+                    f"tdq_interdit_{b}_{q}"
+                ).only_enforce_if(explain_var)
 
 
 """ Ils se détestent, séparez-les ! """
