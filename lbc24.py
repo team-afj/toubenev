@@ -112,6 +112,8 @@ enable_assumptions = False
 def add_assumption(var):
     if enable_assumptions:
         model.add_assumption(var)
+    else:
+        model.add(var == 1)
 
 
 """ On créé une variable par bénévole pour chaque "slot" de chaque quête."""
@@ -271,8 +273,7 @@ for b in bénévoles:
             if not (contains(q.bénévoles, b)):
                 if q.début < b.date_arrivée:
                     explain_var = model.new_bool_var(f"{b} pas encore arrivé pour {q}")
-                    if a:
-                        model.add_assumption(explain_var)
+                    add_assumption(explain_var)
                     model.add(assignations[(b, q)] == 0).with_name(
                         f"before_arrival_{b}_{q}"
                     ).only_enforce_if(explain_var)
@@ -281,8 +282,7 @@ for b in bénévoles:
             if not (contains(q.bénévoles, b)):
                 if q.fin > b.date_départ:
                     explain_var = model.new_bool_var(f"{b} déjà parti pour {q}")
-                    if a:
-                        model.add_assumption(explain_var)
+                    add_assumption(explain_var)
                     model.add(assignations[(b, q)] == 0).with_name(
                         f"after_leave_{b}_{q}"
                     ).only_enforce_if(explain_var)
