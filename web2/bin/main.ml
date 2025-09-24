@@ -124,7 +124,7 @@ let c =
   let header_toolbar =
     Event_calendar.header_toolbar ~start:"title"
       ~center:
-        "resourceTimelineMonth,resourceTimelineWeek,resourceTimeGridWeek,listDay,timeGridWeek,dayGridMonth"
+        "resourceTimelineMonth,resourceTimelineWeek,resourceTimeGridWeek,listDay,timeGridWeek"
       ~end_:"today prev,next" ()
   in
   Event_calendar.make ~target:calendar_el
