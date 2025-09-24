@@ -61,6 +61,19 @@ a {
     }
 }
 
+
+/*
+.ec-resource-week-view {
+    & .ec-body,
+    & .ec-header,
+    & .ec-all-day {
+        overflow-x: auto;
+    }
+    & .ec-resource {
+        min-width: 20rem;
+    }
+} */
+
 .categories_select {
     width: 10rem;
     height: 2rem;
