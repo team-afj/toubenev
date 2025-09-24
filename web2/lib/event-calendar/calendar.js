@@ -7,6 +7,13 @@ function get_calendar() {
     return window.r_calendar.default
 }
 
+//Provides: get_day_grid const
+function get_day_grid() {
+    if (!window.r_calendar_day_grid)
+        window.r_calendar_day_grid = require("@event-calendar/day-grid")
+    return window.r_calendar_day_grid.default
+}
+
 //Provides: get_list const
 function get_list() {
     if (!window.r_calendar_list)
@@ -26,4 +33,12 @@ function get_resource_timegrid() {
     if (!window.r_calendar_resource_timegrid)
         window.r_calendar_resource_timegrid = require("@event-calendar/resource-time-grid")
     return window.r_calendar_resource_timegrid.default
+}
+
+
+//Provides: get_time_grid const
+function get_time_grid() {
+    if (!window.r_calendar_time_grid)
+        window.r_calendar_time_grid = require("@event-calendar/time-grid")
+    return window.r_calendar_time_grid.default
 }

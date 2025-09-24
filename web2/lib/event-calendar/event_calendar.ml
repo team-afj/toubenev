@@ -108,16 +108,20 @@ module Info = struct
 end
 
 external get_calendar : unit -> Jv.t = "get_calendar"
+external get_day_grid : unit -> p = "get_day_grid"
+external get_time_grid : unit -> p = "get_time_grid"
 external get_list : unit -> p = "get_list"
 external get_resource_timeline : unit -> p = "get_resource_timeline"
 external get_resource_timegrid : unit -> p = "get_resource_timegrid"
 
-type plugin = List | ResourceTimeline | ResourceTimeGrid
+type plugin = DayGrid | List | ResourceTimeline | ResourceTimeGrid | TimeGrid
 
 let load_plugin : plugin -> p = function
+  | DayGrid -> get_day_grid ()
   | List -> get_list ()
   | ResourceTimeline -> get_resource_timeline ()
   | ResourceTimeGrid -> get_resource_timegrid ()
+  | TimeGrid -> get_time_grid ()
 
 type view = Time_grid_week | Resource_timeline_day | Resource_timegrid_week
 
@@ -136,8 +140,8 @@ let header_toolbar ?(start = "") ?(center = "") ?(end_ = "") () =
   Jv.obj [| start; center; end_ |]
 
 let make ~target ?(plugins = []) ?view ?date ?duration ?scroll_time
-    ?filter_events_with_resources ?filter_resources_with_events ?editable
-    ?event_start_editable ?event_duration_editable ?event_content
+    ?filter_events_with_resources ?filter_resources_with_events ?now_indicator
+    ?editable ?event_start_editable ?event_duration_editable ?event_content
     ?header_toolbar () : t =
   let target = El.to_jv target in
   let options =
@@ -153,6 +157,7 @@ let make ~target ?(plugins = []) ?view ?date ?duration ?scroll_time
       opt_field "filterResourcesWithEvents" Jv.of_bool
         filter_resources_with_events
     in
+    let now_indicator = opt_field "nowIndicator" Jv.of_bool now_indicator in
     let editable = opt_field "editable" Jv.of_bool editable in
     let event_start_editable =
       opt_field "eventStartEditable" Jv.of_bool event_start_editable
@@ -175,6 +180,7 @@ let make ~target ?(plugins = []) ?view ?date ?duration ?scroll_time
       scroll_time;
       filter_events_with_resources;
       filter_resources_with_events;
+      now_indicator;
       editable;
       event_start_editable;
       event_duration_editable;

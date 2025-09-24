@@ -124,14 +124,14 @@ let c =
   let header_toolbar =
     Event_calendar.header_toolbar ~start:"title"
       ~center:
-        "resourceTimelineMonth,resourceTimelineWeek,resourceTimeGridWeek,listDay"
+        "resourceTimelineMonth,resourceTimelineWeek,resourceTimeGridWeek,listDay,timeGridWeek,dayGridMonth"
       ~end_:"today prev,next" ()
   in
   Event_calendar.make ~target:calendar_el
-    ~plugins:[ List; ResourceTimeGrid; ResourceTimeline ]
+    ~plugins:[ DayGrid; List; ResourceTimeGrid; ResourceTimeline; TimeGrid ]
     ~date ~duration ~scroll_time ~event_content
     ~filter_events_with_resources:true ~filter_resources_with_events:true
-    ~header_toolbar ()
+    ~now_indicator:true ~header_toolbar ()
 
 let () = Event_calendar.set_option c Resources (Data.to_resources data)
 

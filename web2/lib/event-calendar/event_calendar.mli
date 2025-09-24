@@ -75,7 +75,7 @@ module Info : sig
   val view : t -> Jv.t
 end
 
-type plugin = List | ResourceTimeline | ResourceTimeGrid
+type plugin = DayGrid | List | ResourceTimeline | ResourceTimeGrid | TimeGrid
 type view = Time_grid_week | Resource_timeline_day | Resource_timegrid_week
 type t
 type header_toolbar
@@ -92,6 +92,7 @@ val make :
   ?scroll_time:Duration.t ->
   ?filter_events_with_resources:bool ->
   ?filter_resources_with_events:bool ->
+  ?now_indicator:bool ->
   ?editable:bool ->
   ?event_start_editable:bool ->
   ?event_duration_editable:bool ->
