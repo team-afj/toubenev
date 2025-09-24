@@ -32,7 +32,10 @@ a {
 
 .ec-event-body {
     flex-direction: column !important;
-    background-color: var(--ec-event-bg-color);
+    overflow: auto;
+    /* background-color: var(--ec-event-bg-color); */
+    background-color: white;
+    color: black;
     border: solid black 1px;
     border-radius: 3px;
     padding: 0.1rem;
@@ -45,12 +48,31 @@ a {
     }
 }
 
+.ec-timeline .ec-time,
+.ec-timeline .ec-line {
+    width: 72px;
+    /* override this value */
+}
+
 .ec-resource-month-view {
     & .ec-line,
     & .ec-main {
         flex-grow: 1;
     }
 }
+
+
+/*
+.ec-resource-week-view {
+    & .ec-body,
+    & .ec-header,
+    & .ec-all-day {
+        overflow-x: auto;
+    }
+    & .ec-resource {
+        min-width: 20rem;
+    }
+} */
 
 .categories_select {
     width: 10rem;
