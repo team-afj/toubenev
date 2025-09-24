@@ -8,7 +8,7 @@ let layout = { Table.columns; status = []; row_height = Utils.Unit.Rem 2. }
 let source_rows = Lwd_table.make ()
 let () = Lwd_table.append' source_rows "toto"
 
-let data_source =
+(* let data_source =
   {
     Table.Virtual_bis.total_items = Lwd.return 4;
     source_rows;
@@ -18,8 +18,8 @@ let data_source =
 
         Lwd.return (Lwd_seq.element (Lwd.return (El.txt' v))));
   }
-
-let tbl = Table.Virtual_bis.make ~layout data_source
+ *)
+let tbl = assert false
 let app = Elwd.div [ `R tbl ]
 
 let app_container =
