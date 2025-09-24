@@ -4,7 +4,7 @@ open Brr_lwd_ui
 
 let () = Console.log [ "to  to" ]
 let columns = Lwd.return (Lwd_seq.element (Table.Columns.v "n1" "" []))
-let layout = { Table.columns; status = []; row_height = Utils.Unit.Rem 2. }
+let _layout = { Table.columns; status = []; row_height = Utils.Unit.Rem 2. }
 let source_rows = Lwd_table.make ()
 let () = Lwd_table.append' source_rows "toto"
 
