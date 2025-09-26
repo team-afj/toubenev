@@ -30,6 +30,8 @@ a {
     box-shadow: none !important;
     &:hover {
         z-index: 1000 !important;
+        height: fit-content !important;
+        width: fit-content !important;
     }
 }
 
