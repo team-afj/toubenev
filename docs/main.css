@@ -28,6 +28,9 @@ a {
 .ec-event {
     background-color: transparent !important;
     box-shadow: none !important;
+    &:hover {
+        z-index: 1000 !important;
+    }
 }
 
 .ec-event-body {
