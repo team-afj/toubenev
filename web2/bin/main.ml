@@ -123,15 +123,18 @@ let event_content (info : Event_calendar.Info.t) =
 let c =
   let header_toolbar =
     Event_calendar.header_toolbar ~start:"title"
-      ~center:
-        "resourceTimelineMonth,resourceTimelineWeek,resourceTimeGridWeek,listDay,timeGridWeek"
+      ~center:"resourceTimelineWeek,resourceTimeGridWeek,listDay,timeGridWeek"
       ~end_:"today prev,next" ()
+  in
+  let slot_min_time = Event_calendar.Duration.make ~minutes:(5 * 60) () in
+  let slot_max_time =
+    Event_calendar.Duration.make ~minutes:((24 + 5) * 60) ()
   in
   Event_calendar.make ~target:calendar_el
     ~plugins:[ DayGrid; List; ResourceTimeGrid; ResourceTimeline; TimeGrid ]
     ~date ~duration ~scroll_time ~event_content
     ~filter_events_with_resources:true ~filter_resources_with_events:true
-    ~now_indicator:true ~header_toolbar ()
+    ~now_indicator:true ~header_toolbar ~slot_max_time ~slot_min_time ()
 
 let () = Event_calendar.set_option c Resources (Data.to_resources data)
 

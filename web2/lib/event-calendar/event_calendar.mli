@@ -98,6 +98,8 @@ val make :
   ?event_duration_editable:bool ->
   ?event_content:(Info.t -> Content.t) ->
   ?header_toolbar:header_toolbar ->
+  ?slot_max_time:Duration.t ->
+  ?slot_min_time:Duration.t ->
   unit ->
   t
 

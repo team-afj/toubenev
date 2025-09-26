@@ -142,7 +142,7 @@ let header_toolbar ?(start = "") ?(center = "") ?(end_ = "") () =
 let make ~target ?(plugins = []) ?view ?date ?duration ?scroll_time
     ?filter_events_with_resources ?filter_resources_with_events ?now_indicator
     ?editable ?event_start_editable ?event_duration_editable ?event_content
-    ?header_toolbar () : t =
+    ?header_toolbar ?slot_max_time ?slot_min_time () : t =
   let target = El.to_jv target in
   let options =
     let view = opt_field "view" jv_of_view view in
@@ -173,6 +173,8 @@ let make ~target ?(plugins = []) ?view ?date ?duration ?scroll_time
         event_content
     in
     let header_toolbar = opt_field "headerToolbar" Fun.id header_toolbar in
+    let slot_max_time = opt_field "slotMaxTime" Duration.to_jv slot_max_time in
+    let slot_min_time = opt_field "slotMinTime" Duration.to_jv slot_min_time in
     [
       view;
       date;
@@ -186,6 +188,8 @@ let make ~target ?(plugins = []) ?view ?date ?duration ?scroll_time
       event_duration_editable;
       event_content;
       header_toolbar;
+      slot_max_time;
+      slot_min_time;
     ]
     |> obj_of_opt_list
   in
