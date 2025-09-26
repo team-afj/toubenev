@@ -105,7 +105,20 @@ let event_content (info : Event_calendar.Info.t) =
   let volunteers =
     List.fold_left ~f:volunteers_link ~init:[] quest.volunteers
   in
-  let date = Event_calendar.Info.time_text info in
+  let time =
+    let begin_ =
+      let hour = quest.start |> Calendar.hour in
+      let minute = quest.start |> Calendar.minute in
+      Printf.sprintf "%02i:%02i" hour minute
+    in
+    let end_ =
+      let hour = quest.end_ |> Calendar.hour in
+      let minute = quest.end_ |> Calendar.minute in
+      Printf.sprintf "%02i:%02i" hour minute
+    in
+    Printf.sprintf "%s-%s" begin_ end_
+  in
+  let _date = Event_calendar.Info.time_text info in
   let text = volunteers in
   let icon =
     (List.hd quest.types).name |> String.split_on_char ~by:' ' |> List.hd
@@ -114,7 +127,7 @@ let event_content (info : Event_calendar.Info.t) =
     [
       El.h4
         [
-          El.txt' (date ^ " " ^ icon ^ " " ^ String.capitalize_ascii quest.name);
+          El.txt' (time ^ " " ^ icon ^ " " ^ String.capitalize_ascii quest.name);
         ];
       (* El.p [ El.txt' () ]; *)
       El.p text;
