@@ -647,13 +647,18 @@ def amplitudes(b: Bénévole):
 
 """ Formule finale """
 
-model.minimize(
-    10
-    * (2 * bornage_des_excès(bénévoles) + bornage_des_excès_sur_la_semaine(bénévoles))
-    + sum(amplitudes(b) for b in bénévoles)
-    + bonus_amis(bénévoles, quêtes)
-    - sum(appréciation_du_planning(b, quêtes) for b in bénévoles)
-)
+if not enable_assumptions:
+    # Minimizing is not compatible with assumptions
+    model.minimize(
+        10
+        * (
+            2 * bornage_des_excès(bénévoles)
+            + bornage_des_excès_sur_la_semaine(bénévoles)
+        )
+        + sum(amplitudes(b) for b in bénévoles)
+        + bonus_amis(bénévoles, quêtes)
+        - sum(appréciation_du_planning(b, quêtes) for b in bénévoles)
+    )
 
 
 """ Solution printer """
