@@ -125,12 +125,12 @@ intervalles: Dict[(Bénévole, Quête), cp_model.IntervalVar] = {}
 for b in bénévoles:
     for q in quêtes:
         assignations[(b, q)] = model.new_bool_var(f"shift_b{b}_q{q}")
-        # TODO: this is gnééé. Quests that end after midnight are not
-        # handled correctly
         d: int = time_to_minutes(q.début.time())
         f: int = time_to_minutes(q.fin.time())
         if f < d:
-            f = 23 * 60 + 59
+            # Fin après minuit
+            # Several days long tasks are not handled
+            f = 24 * 60 + f
         intervalles[(b, q)] = model.new_optional_interval_var(
             d, f - d, f, assignations[(b, q)], f"interval_quête_{b}_{q}"
         )
@@ -368,56 +368,81 @@ for b in bénévoles:
                     f"blaire_pas_{b}_{e}_{q}"
                 ).only_enforce_if(explain_var)
 
-""" Chacun a un trou dans son emploi du temps """
+
+""" [pause] s'assure que le bénévole [b], chaque jour, a une pause de durée [durée]
+    entre l'heure [début] et l'heure [fin].
+    Début et fin ne doivent pas être séparés de plus de 24h """
 
 
-début_période_pause = 9 * 60  # minutes
-fin_période_pause = 23 * 60  # minutes
-durée_pause_min = 5 * 60  # minutes
+def pause(nom, début, fin, durée: timedelta, b: Bénévole):
+    début_m = time_to_minutes(début)
+    fin_m = time_to_minutes(fin)
+    durée_m = round(durée.total_seconds() / 60)
 
+    if fin_m < début_m:
+        # Fin après minuit
+        fin_m = 24 * 60 + fin_m
 
-# TODO: la pause devrait durer plus longtemps et pouvoir commencer à n'importe
-# quel moment
-def c_est_la_pause(b: Bénévole):
     for date, quêtes in Quête.par_jour.items():
+        id = f"{nom}_{b}_{date}"
         début_pause = model.new_int_var(
-            début_période_pause,
-            fin_période_pause - durée_pause_min,
-            f"début_pause_{b}_{date}",
+            début_m,
+            fin_m - durée_m,
+            f"début_pause_{id}",
         )
         fin_pause = model.new_int_var(
-            début_période_pause + durée_pause_min,
-            fin_période_pause,
-            f"fin_pause_{b}_{date}",
+            début_m + durée_m,
+            fin_m,
+            f"fin_pause_{id}",
         )
-        size = model.new_int_var(durée_pause_min, 24 * 60, f"size_pause_{b}_{date}")
+        size = model.new_int_var(durée_m, 24 * 60, f"size_pause_{id}")
         interval_pause = model.new_interval_var(
             début_pause,
             size,
             fin_pause,
-            f"interval_pause_{b}_{date}",
+            f"interval_pause_{id}",
         )
         explain_var = model.new_bool_var(
-            f"{b} doit avoir une pause de {durée_pause_min / 60}h le {date}"
+            f"{b} doit avoir une pause {nom} de {durée_m / 60}h le {date}"
         )
         add_assumption(explain_var)
 
         # La pause est suffisamment longue:
-        model.add(size >= durée_pause_min).with_name(
-            f"pause_{size}_>=_{durée_pause_min}"
+        model.add(size >= durée_m).with_name(
+            f"pause_{nom}_{size}_>=_{durée_m}"
         ).only_enforce_if(explain_var)
 
         # Le bénévole n'a aucune quête pendant sa pause:
         overlaps = [interval_pause]
         for q in quêtes:
             overlaps.append(intervalles[(b, q)])
+
         model.add_no_overlap(overlaps).with_name(
-            f"noverlap_{b}_{date}"
+            f"noverlap_pause_{id}"
         )  # "only_enforce_if" doesn't work with that constraint
 
 
+""" Les bénévoles ont du temps libre pendant les repas de midi et du soir. """
+début_service_midi = time(hour=11, minute=30)
+fin_service_midi = time(hour=14, minute=30)
+
+début_service_soir = time(hour=17, minute=30)
+fin_service_soir = time(hour=20)
+
+durée_repas = timedelta(minutes=30)
+
+for b in bénévoles:
+    pause("midi", début_service_midi, fin_service_midi, durée_repas, b)
+    pause("soir", début_service_soir, fin_service_soir, durée_repas, b)
+
+
+""" Chacun a un trou dans son emploi du temps """
+début_période_pause = time(hour=9)
+fin_période_pause = time(hour=23)
+durée_pause_min = timedelta(hours=5)
+
 # for b in bénévoles:
-#     c_est_la_pause(b)
+#    pause("pause", début_période_pause, fin_période_pause, durée_pause_min, b)
 
 
 """ Calcul de la qualité d'une réponse """
@@ -600,8 +625,10 @@ def bonus_amis(bénévoles, quêtes):
 
 
 def amplitude_horaire(b: Bénévole, quêtes: List[Quête]):
+    # The end upper bound is more than 24h because that's how we handle quests
+    # that end after midnight.
     début = model.new_int_var(0, 60 * 24, f"début_journée_{b}")
-    fin = model.new_int_var(0, 60 * 24, f"fin_journée_{b}")
+    fin = model.new_int_var(0, 2 * 60 * 24, f"fin_journée_{b}")
     model.add_min_equality(
         début, map(lambda q: intervalles[(b, q)].start_expr(), quêtes)
     ).with_name(f"amp_min_{b}")
