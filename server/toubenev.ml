@@ -51,4 +51,38 @@ let routes =
   ]
 
 let () = Logs.set_level ~all:true (Some Debug)
-let () = Miou_unix.run @@ fun () -> Vif.run routes ()
+
+let _cfg =
+  (* TODO This was an attempt to force h2 usage but there seems to be an issue
+     with TLS right-now. See https://github.com/robur-coop/vif/issues/11 *)
+  let tls =
+    let open Result in
+    let* cert =
+      Unix.openfile "cert/certificate.pem" [ O_RDONLY ] 0
+      |> Unix.in_channel_of_descr |> In_channel.input_all
+      |> X509.Certificate.decode_pem
+    in
+    let* key =
+      Unix.openfile "cert/privatekey.pem" [ O_RDONLY ] 0
+      |> Unix.in_channel_of_descr |> In_channel.input_all
+      |> X509.Private_key.decode_pem
+    in
+    let certificates = `Single ([ cert ], key) in
+    Tls.Config.server ~certificates ()
+  in
+  match tls with
+  | Error (`Msg err) ->
+      Logs.err (fun l -> l "TLS config error: %S" err);
+      exit 1
+  | Ok tls ->
+      let sockaddr = Unix.(ADDR_INET (Unix.inet_addr_loopback, 7531)) in
+      Vif.config ~http:(`H2 H2.Config.default) ~tls sockaddr
+
+let cfg =
+  let sockaddr = Unix.(ADDR_INET (Unix.inet_addr_loopback, 7531)) in
+  Vif.config sockaddr
+
+let () =
+  Fmt_tty.setup_std_outputs ~utf_8:true ();
+  Logs.set_reporter (Log_config.reporter Fmt.stderr);
+  Miou_unix.run @@ fun () -> Vif.run ~cfg routes ()
