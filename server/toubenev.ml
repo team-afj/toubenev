@@ -10,30 +10,36 @@ let default req _server () =
 let js req _server () =
   Vif.Response.with_file ~compression:`DEFLATE req (Fpath.v "./www/bundle.js")
 
-let sse req _server () =
-  Printf.eprintf "New SSE connection\n%!";
-  let open Response.Syntax in
-  let queue = Stream.Bqueue.create 10 in
-  let fill =
-    let rec aux () =
-      Miou.yield ();
-      Printf.eprintf "ASYNC\n%!";
-      Stream.Bqueue.put queue "data: ping\n\n";
-      Unix.sleep 2;
-      aux ()
+let sse =
+  let counter = ref 0 in
+  fun req _server () ->
+    let sse_connection_number = !counter in
+    Logs.debug (fun l -> l "New SSE connection #%i" sse_connection_number);
+    incr counter;
+    let open Response.Syntax in
+    let queue = Stream.Bqueue.create 10 in
+    let fill =
+      let counter = ref 0 in
+      let rec aux () =
+        Miou.yield ();
+        Stream.Bqueue.put queue @@ Printf.sprintf "data: ping %i\n\n" !counter;
+        incr counter;
+        Miou_unix.sleep 2.;
+        aux ()
+      in
+      Miou.async aux
     in
-    Miou.async aux
-  in
-  let src = Stream.Source.of_bqueue queue in
-  let* () =
-    let field = "content-type" in
-    Response.add ~field "text/event-stream"
-  in
-  let* () = Response.with_source req src in
-  let* () = Response.respond `OK in
-  Printf.eprintf "Closed\n%!";
-  Miou.cancel fill;
-  Response.return ()
+    let src = Stream.Source.of_bqueue queue in
+    let* () =
+      let field = "content-type" in
+      Response.add ~field "text/event-stream"
+    in
+    let* () = Response.with_source req src in
+    let* () = Response.respond `OK in
+    Logs.debug (fun fmt ->
+        fmt "SSE connection closed #%i" sse_connection_number);
+    Miou.cancel fill;
+    Response.return ()
 
 let routes =
   let open Vif.Uri in

@@ -4,4 +4,9 @@
  (promote
   (until-clean)
   (into ..))
- (libraries vif views))
+ (libraries std vif logs.fmt fmt.tty views)
+ (flags :standard -open Std))
+
+(alias
+ (name app)
+ (deps toubenev.exe))

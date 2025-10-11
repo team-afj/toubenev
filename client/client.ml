@@ -1,8 +1,16 @@
+open Brrer
 open Brr
 open Brr_lwd
 open Brr_lwd_ui
+module Event_source = Brr_io.Event_source
 
-let () = Console.log [ "to  to" ]
+let event_source = Event_source.create ~url:(Jstr.v "/sse") ()
+
+let _ =
+  Ev.listen Brr_io.Message.Ev.message
+    (fun ev -> Console.log [ ev ])
+    (Event_source.as_target event_source)
+
 let columns = Lwd.return (Lwd_seq.element (Table.Columns.v "n1" "" []))
 let _layout = { Table.columns; status = []; row_height = Utils.Unit.Rem 2. }
 let source_rows = Lwd_table.make ()

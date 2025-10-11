@@ -15,3 +15,7 @@
   (promote (until-clean)))
  (action
   (run yarn build)))
+
+(alias
+ (name app)
+ (deps bundle.js))
