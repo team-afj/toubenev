@@ -16,3 +16,7 @@ gapi-test:
 .PHONY: web-dev
 web-dev:
 	cd web && yarn serve
+
+.PHONY: dev
+dev:
+	sh scripts/build_and_serve.sh
