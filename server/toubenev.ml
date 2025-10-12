@@ -58,12 +58,12 @@ let _cfg =
   let tls =
     let open Result in
     let* cert =
-      Unix.openfile "cert/certificate.pem" [ O_RDONLY ] 0
+      Unix.openfile "certs/certificate.pem" [ O_RDONLY ] 0
       |> Unix.in_channel_of_descr |> In_channel.input_all
       |> X509.Certificate.decode_pem
     in
     let* key =
-      Unix.openfile "cert/privatekey.pem" [ O_RDONLY ] 0
+      Unix.openfile "certs/privatekey.pem" [ O_RDONLY ] 0
       |> Unix.in_channel_of_descr |> In_channel.input_all
       |> X509.Private_key.decode_pem
     in
