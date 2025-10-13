@@ -6,7 +6,7 @@
 [subrepo]
 	remote = git@github.com:voodoos/ppx_deriving_jsont.git
 	branch = main
-	commit = eaa270d6e4b4dfb2b0ebfd3f1a1787a596c277e4
-	parent = bb4d506ce0f55c283ef109ce34c976133dadf118
+	commit = 912712e189ec11e4b4388dbda2ea9ee579f27ce7
+	parent = 240b9f4629d8cc05d737f591f0baf57eab5f8c49
 	method = merge
 	cmdver = 0.4.5
