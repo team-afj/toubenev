@@ -145,7 +145,7 @@ let compute_visible_rows (state : ('data, 'error) state) =
     in
     last_visible_row + bleeding
   in
-  List.init (last - first) ~f:(fun i -> first + i)
+  List.init ~len:(last - first) ~f:(fun i -> first + i)
 
 let load_or_bump_in_cache (state : ('data, 'error) state) ~fetch
     ?(max_items = 200) rows =
