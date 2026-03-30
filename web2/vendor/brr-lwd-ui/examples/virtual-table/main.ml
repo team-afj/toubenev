@@ -4,12 +4,12 @@ open Brr_lwd_ui
 open Brr_lwd_ui.Table
 
 let renderer =
- fun i _data ->
+  Table.Virtual.with_placeholder_or_error @@ fun i data ->
   Lwd.return
     (Lwd_seq.of_list
        [
-         Lwd.return (El.txt' (string_of_int i))
-         (* `P (El.txt' (string_of_int data))*);
+         Lwd.return (El.txt' (string_of_int i));
+         Lwd.return (El.txt' (string_of_int data));
        ])
 
 let data =

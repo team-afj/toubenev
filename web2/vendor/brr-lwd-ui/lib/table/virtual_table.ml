@@ -59,10 +59,10 @@ let data_source_of_random_access_table (t : 'a Random_access_table.t) =
   Lazy { total_items = t.length; fetch }
 
 (* The virtual table is a complex reactive component. Primarily, it reacts to
-   changes of the [data_source] so that content in the table is properly
-   refreshed when it does. Additionnaly it needs to react to multiple dom
-   events, notably vertical resize of the container and scroll events, to ensure
-   that the visible part of the talbe is always populated with rows. *)
+       changes of the [data_source] so that content in the table is properly
+       refreshed when it does. Additionnaly it needs to react to multiple dom
+       events, notably vertical resize of the container and scroll events, to ensure
+       that the visible part of the talbe is always populated with rows. *)
 module Cache = FFCache.Make (Int)
 
 type ('data, 'error) state = {
@@ -235,7 +235,7 @@ let make (type data error) ~(layout : Layout.fixed_row_height)
             match (Lwd_seq.view s, Lwd_seq.view s') with
             | Empty, Empty ->
                 (* Since s is empty it does not matter on which
-                   "side" of it the spaces are accumulated. *)
+                       "side" of it the spaces are accumulated. *)
                 (n + m + p + q, s, 0)
             | Empty, _ -> (n + m + p, s', q)
             | _, Empty -> (n, s, m + p + q)
