@@ -21,15 +21,17 @@
    (>= 5.3))
   containers
   js_of_ocaml
+  pyml
   brr
   lwd
   brr-lwd
   vif
+  flux
   ISO8601
   calendar
   (jsont
    (>= "0.1.1"))
-  ; Vendored ppx_deriving_jsont deps:
+  ppx_deriving_jsont
   ppxlib
   bytesrw
   ; Vendored lwd deps:
