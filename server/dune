@@ -4,7 +4,7 @@
  (promote
   (until-clean)
   (into ..))
- (libraries std vif logs.fmt fmt.tty views)
+ (libraries std vif flux logs.fmt fmt.tty views)
  (flags :standard -open Std))
 
 (alias
