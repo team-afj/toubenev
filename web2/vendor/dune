@@ -1,1 +1,1 @@
-(vendored_dirs lwd ppx_deriving_jsont)
+(vendored_dirs lwd)
