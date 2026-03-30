@@ -29,9 +29,9 @@ def print(str="\n"):
 # from import_json import from_file
 
 # from_file("data/db.json")
-from import_gapi import main
+# from import_gapi import main
 
-main()
+# main()
 
 # Once all the data is loaded, resolve references:
 strengthen()
