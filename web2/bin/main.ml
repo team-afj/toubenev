@@ -121,7 +121,7 @@ let event_content (info : Event_calendar.Info.t) =
   let _date = Event_calendar.Info.time_text info in
   let text = volunteers in
   let icon =
-    (List.hd quest.types).name |> String.split_on_char ~by:' ' |> List.hd
+    (List.hd quest.types).name |> String.split_on_char ~sep:' ' |> List.hd
   in
   Event_calendar.Content.of_elts
     [

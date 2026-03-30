@@ -33,7 +33,7 @@ let id_of_resource (res : resource) =
 
 let find_resource_by_id data id =
   let open Option in
-  let* prefix = String.split_on_char ~by:'_' id |> List.head_opt in
+  let* prefix = String.split_on_char ~sep:'_' id |> List.head_opt in
   match prefix with
   | "qt" -> Map.find_opt id data.quest_types >|= fun r -> Quest_type r
   | "p" -> Map.find_opt id data.places >|= fun r -> Place r

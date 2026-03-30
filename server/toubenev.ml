@@ -17,19 +17,19 @@ let sse =
     Logs.debug (fun l -> l "New SSE connection #%i" sse_connection_number);
     incr counter;
     let open Response.Syntax in
-    let queue = Stream.Bqueue.create 10 in
+    let queue = Flux.Bqueue.(create with_close 10) in
     let fill =
       let counter = ref 0 in
       let rec aux () =
         Miou.yield ();
-        Stream.Bqueue.put queue @@ Printf.sprintf "data: ping %i\n\n" !counter;
+        Flux.Bqueue.put queue @@ Printf.sprintf "data: ping %i\n\n" !counter;
         incr counter;
         Miou_unix.sleep 2.;
         aux ()
       in
       Miou.async aux
     in
-    let src = Stream.Source.of_bqueue queue in
+    let src = Flux.Source.bqueue queue in
     let* () =
       let field = "content-type" in
       Response.add ~field "text/event-stream"
