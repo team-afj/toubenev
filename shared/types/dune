@@ -1,6 +1,6 @@
 (library
  (name types)
- (libraries std jsont)
+ (libraries std jsont containers-data)
  (flags :standard -open Std)
  (preprocess
   (pps ppx_deriving_jsont)))
