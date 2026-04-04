@@ -42,38 +42,38 @@ let select_categories =
     let types =
       Data.Map.to_list data.quest_types
       |> List.map ~f:(fun (id, ({ name; _ } : Data.quest_type)) ->
-             Check
-               {
-                 value = `Quest_type id;
-                 id = name;
-                 name;
-                 label = (fun () -> [ `P (El.txt' name) ]);
-                 state = true;
-               })
+          Check
+            {
+              value = `Quest_type id;
+              id = name;
+              name;
+              label = (fun () -> [ `P (El.txt' name) ]);
+              state = true;
+            })
     in
     let places =
       Data.Map.to_list data.places
       |> List.map ~f:(fun (id, ({ name; _ } : Data.place)) ->
-             Check
-               {
-                 value = `Place id;
-                 id = name;
-                 name;
-                 label = (fun () -> [ `P (El.txt' name) ]);
-                 state = false;
-               })
+          Check
+            {
+              value = `Place id;
+              id = name;
+              name;
+              label = (fun () -> [ `P (El.txt' name) ]);
+              state = false;
+            })
     in
     let volunteers =
       Data.Map.to_list data.volunteers
       |> List.map ~f:(fun (id, ({ pseudo; _ } : Data.volunteer)) ->
-             Check
-               {
-                 value = `Volunteer id;
-                 id = pseudo;
-                 name = pseudo;
-                 label = (fun () -> [ `P (El.txt' pseudo) ]);
-                 state = false;
-               })
+          Check
+            {
+              value = `Volunteer id;
+              id = pseudo;
+              name = pseudo;
+              label = (fun () -> [ `P (El.txt' pseudo) ]);
+              state = false;
+            })
     in
     let flat = List.concat [ types; places; volunteers ] in
     { name = "grp1"; desc = Lwd.pure (Lwd_seq.of_list flat) }
