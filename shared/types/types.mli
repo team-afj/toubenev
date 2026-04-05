@@ -163,7 +163,6 @@ module Quest : sig
 
   type t = private {
     id : id;
-    slug : string;
     name : string;
     description : string option;
     task_type : Task_type.t;
@@ -176,7 +175,6 @@ module Quest : sig
   include Indexed with type t := t and type id := id
 
   val make :
-    slug:string ->
     name:string ->
     ?description:string ->
     task_type:Task_type.t ->

@@ -1,5 +1,3 @@
-include Lunar
-
 module Weekday = struct
   include Lunar.Weekday
 

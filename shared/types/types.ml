@@ -273,7 +273,6 @@ module Quest = struct
 
   type t = {
     id : id;
-    slug : string;
     name : string;
     description : string option;
     task_type : Task_type.t;
@@ -285,7 +284,6 @@ module Quest = struct
   [@@deriving jsont]
 
   type edit =
-    | New_slug of string
     | New_name of string
     | New_description of string option
     | New_task_type of Task_type.t
@@ -297,7 +295,6 @@ module Quest = struct
 
   let apply_edit edit t =
     match edit with
-    | New_slug slug -> { t with slug }
     | New_name name -> { t with name }
     | New_description description -> { t with description }
     | New_task_type task_type -> { t with task_type }
@@ -310,20 +307,10 @@ module Quest = struct
   let store : t Dynarray.t = Dynarray.create ()
   let get i = Dynarray.get store i
 
-  let make ~slug ~name ?description ~task_type ~place ~slot ~required_volunteers
-      () =
+  let make ~name ?description ~task_type ~place ~slot ~required_volunteers () =
     let id = Dynarray.length store in
     let v : t =
-      {
-        id;
-        slug;
-        name;
-        description;
-        task_type;
-        place;
-        slot;
-        required_volunteers;
-      }
+      { id; name; description; task_type; place; slot; required_volunteers }
     in
     Dynarray.add_last store v;
     v
