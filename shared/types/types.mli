@@ -1,3 +1,5 @@
+open Lunar_jsont
+
 module type Editable = sig
   type t
   type edit
@@ -62,13 +64,51 @@ module Task_types : sig
   include module type of Random_access_list (Task_type)
 end
 
+module Time_slot : sig
+  type recurrence = Daily | Weekly of Weekday.t list | On of Date.t list
+  [@@deriving jsont]
+
+  type t = { recurrence : recurrence; start : Time.t; duration : Duration.t }
+  [@@deriving jsont]
+
+  include S with type t := t
+end
+
+module Time_slots : sig
+  include module type of Random_access_list (Time_slot)
+end
+
+module Availability : sig
+  type status = Unavailable | Available of int [@@deriving jsont]
+  type t = private { status : status; slot : Time_slot.t }
+
+  include S with type t := t
+end
+
+module Availabilities : sig
+  include module type of Random_access_list (Availability)
+end
+
 module Volunteer : sig
-  type t = private { id : int; name : string; friends : t list }
-  type shallow = private { id : int; name : string; friends : int list }
+  type t = private {
+    id : int;
+    name : string;
+    friends : t list;
+    availabilities : Availabilities.t;
+  }
+
+  type shallow = private {
+    id : int;
+    name : string;
+    friends : int list;
+    availabilities : Availabilities.t;
+  }
 
   include S with type t := t
 
-  val make : ?friends:t list -> name:string -> unit -> t
+  val make :
+    ?friends:t list -> ?availabilities:Time_slots.t -> name:string -> unit -> t
+
   val to_shallow : t -> shallow
   val of_shallow : shallow -> t
 end
@@ -77,14 +117,51 @@ module Volunteers : sig
   include module type of Random_access_list (Volunteer)
 end
 
+module Quest : sig
+  type t = private {
+    id : int;
+    slug : string;
+    name : string;
+    description : string option;
+    task_type : Task_type.t;
+    place : Place.t;
+    start_minute : int;
+    end_minute : int;
+    required_volunteers : int;
+  }
+
+  include S with type t := t
+
+  val make :
+    slug:string ->
+    name:string ->
+    ?description:string ->
+    task_type:Task_type.t ->
+    place:Place.t ->
+    start_minute:int ->
+    end_minute:int ->
+    required_volunteers:int ->
+    unit ->
+    t
+end
+
+module Quests : sig
+  include module type of Random_access_list (Quest)
+end
+
 module Planning : sig
   type t = {
     places : Places.t;
     task_types : Task_types.t;
     volunteers : Volunteers.t;
+    quests : Quests.t;
   }
 
-  type edit = Places of Places.edit
+  type edit =
+    | Places of Places.edit
+    | Task_types of Task_types.edit
+    | Volunteers of Volunteers.edit
+    | Quests of Quests.edit
 
   include S with type t := t and type edit := edit
 end
