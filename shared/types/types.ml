@@ -225,9 +225,9 @@ module Quest = struct
     name : string;
     description : string option;
     task_type : Task_type.t;
+    (* group: Quest_group.t TODO *)
     place : Place.t;
-    start_minute : int;
-    end_minute : int;
+    slot : Time_slot.t;
     required_volunteers : int;
   }
   [@@deriving jsont]
@@ -238,8 +238,8 @@ module Quest = struct
     | New_description of string option
     | New_task_type of Task_type.t
     | New_place of Place.t
-    | New_start_minute of int
-    | New_end_minute of int
+    | New_slot of Time_slot.t
+    | Update_slot of Time_slot.edit
     | New_required_volunteers of int
   [@@deriving jsont]
 
@@ -250,15 +250,15 @@ module Quest = struct
     | New_description description -> { t with description }
     | New_task_type task_type -> { t with task_type }
     | New_place place -> { t with place }
-    | New_start_minute start_minute -> { t with start_minute }
-    | New_end_minute end_minute -> { t with end_minute }
+    | New_slot slot -> { t with slot }
+    | Update_slot edit -> { t with slot = Time_slot.apply_edit edit t.slot }
     | New_required_volunteers required_volunteers ->
         { t with required_volunteers }
 
   let store : t Dynarray.t = Dynarray.create ()
 
-  let make ~slug ~name ?description ~task_type ~place ~start_minute ~end_minute
-      ~required_volunteers () =
+  let make ~slug ~name ?description ~task_type ~place ~slot ~required_volunteers
+      () =
     let id = Dynarray.length store in
     let v : t =
       {
@@ -268,8 +268,7 @@ module Quest = struct
         description;
         task_type;
         place;
-        start_minute;
-        end_minute;
+        slot;
         required_volunteers;
       }
     in
