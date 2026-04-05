@@ -1,0 +1,7 @@
+(library
+  (name ortools)
+  (public_name ortools)
+  (synopsis "Build and export Google OR-Tools models")
+  (modules sat cp_model sat_parameters)
+  (libraries pbrt)
+)

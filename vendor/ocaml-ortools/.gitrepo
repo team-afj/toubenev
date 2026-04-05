@@ -1,0 +1,12 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/ingydotnet/git-subrepo#readme
+;
+[subrepo]
+	remote = git@github.com:voodoos/ocaml-ortools.git
+	branch = master
+	commit = 0f5cbde41c032d726941469c162fc028f16526eb
+	parent = b8c16e5864dead6a02a11b836a783ed9a7372785
+	method = merge
+	cmdver = 0.4.5

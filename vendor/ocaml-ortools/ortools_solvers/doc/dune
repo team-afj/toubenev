@@ -1,0 +1,15 @@
+(documentation
+  (package "ortools_solvers")
+  (mld_files
+    index
+  )
+)
+
+(install
+  (package ortools_solvers)
+  (section doc)
+  (files
+    odoc-config.sexp
+  )
+)
+

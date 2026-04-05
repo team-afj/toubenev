@@ -1,0 +1,15 @@
+(documentation
+  (package "ortools")
+  (mld_files
+    index
+  )
+)
+
+(install
+  (package ortools)
+  (section doc)
+  (files
+    odoc-config.sexp
+  )
+)
+
