@@ -79,7 +79,13 @@ module Time_slots : sig
 end
 
 module Availability : sig
-  type status = Unavailable | Available of int [@@deriving jsont]
+  type status =
+    | Unavailable
+    | Available of int
+        (** The [int] argument quantifies the solution bonus or malus if this
+            time slot is used *)
+  [@@deriving jsont]
+
   type t = private { status : status; slot : Time_slot.t }
 
   include S with type t := t
@@ -107,7 +113,11 @@ module Volunteer : sig
   include S with type t := t
 
   val make :
-    ?friends:t list -> ?availabilities:Time_slots.t -> name:string -> unit -> t
+    ?friends:t list ->
+    ?availabilities:Availabilities.t ->
+    name:string ->
+    unit ->
+    t
 
   val to_shallow : t -> shallow
   val of_shallow : shallow -> t
@@ -125,8 +135,7 @@ module Quest : sig
     description : string option;
     task_type : Task_type.t;
     place : Place.t;
-    start_minute : int;
-    end_minute : int;
+    slot : Time_slot.t;
     required_volunteers : int;
   }
 
@@ -138,8 +147,7 @@ module Quest : sig
     ?description:string ->
     task_type:Task_type.t ->
     place:Place.t ->
-    start_minute:int ->
-    end_minute:int ->
+    slot:Time_slot.t ->
     required_volunteers:int ->
     unit ->
     t
@@ -149,8 +157,16 @@ module Quests : sig
   include module type of Random_access_list (Quest)
 end
 
+module Event_infos : sig
+  type kind = Finite of { start_date : Date.t; end_date : Date.t }
+  [@@deriving jsont]
+
+  type t = { name : string; kind : kind } [@@deriving jsont]
+end
+
 module Planning : sig
   type t = {
+    info : Event_infos.t;
     places : Places.t;
     task_types : Task_types.t;
     volunteers : Volunteers.t;

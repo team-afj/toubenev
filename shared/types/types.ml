@@ -278,8 +278,18 @@ end
 
 module Quests = Random_access_list (Quest)
 
+module Event_infos = struct
+  type kind =
+    (* TODO Weekly | Monthly *)
+    | Finite of { start_date : Date.t; end_date : Date.t }
+  [@@deriving jsont]
+
+  type t = { name : string; kind : kind } [@@deriving jsont]
+end
+
 module Planning = struct
   type t = {
+    info : Event_infos.t;
     places : Places.t;
     task_types : Task_types.t;
     volunteers : Volunteers.t;

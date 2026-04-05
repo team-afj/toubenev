@@ -1,0 +1,37 @@
+include Lunar
+
+module Weekday = struct
+  include Lunar.Weekday
+
+  let jsont : t Jsont.t =
+    Jsont.enum
+      [
+        ("Mon", Mon);
+        ("Tue", Tue);
+        ("Wed", Wed);
+        ("Thu", Thu);
+        ("Fri", Fri);
+        ("Sat", Sat);
+        ("Sun", Sun);
+      ]
+end
+
+module Duration = struct
+  include Lunar.Duration
+
+  let jsont : t Jsont.t = Jsont.map ~dec:from_int64 ~enc:to_int64 Jsont.int64
+end
+
+module Date = struct
+  include Lunar.Date
+
+  let jsont : t Jsont.t =
+    Jsont.map ~dec:from_string_exn ~enc:to_string Jsont.string
+end
+
+module Time = struct
+  include Lunar.Time
+
+  let jsont : t Jsont.t =
+    Jsont.map ~dec:from_string_exn ~enc:to_string Jsont.string
+end
