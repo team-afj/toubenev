@@ -106,31 +106,26 @@ module Volunteer : sig
     availabilities : Availabilities.t;
     arrival : Datetime.t option;
     departure : Datetime.t option;
-    proficiencies : Task_types.t;
-    friends : t list;
-    ennemis : t list;
-    forbidden_tasks : Task_types.t;
-    forbidden_places : Places.t;
-  }
-
-  type shallow = private {
-    id : int;
-    name : string;
+    proficiencies : int list;
     friends : int list;
-    availabilities : Availabilities.t;
+    ennemis : int list;
+    forbidden_tasks : int list;
+    forbidden_places : int list;
   }
 
   include S with type t := t
 
   val make :
-    ?friends:t list ->
+    ?id:int ->
+    ?friends:int list ->
+    ?ennemis:int list ->
+    ?proficiencies:int list ->
+    ?forbidden_tasks:int list ->
+    ?forbidden_places:int list ->
     ?availabilities:Availabilities.t ->
     name:string ->
     unit ->
     t
-
-  val to_shallow : t -> shallow
-  val of_shallow : shallow -> t
 end
 
 module Volunteers : sig
