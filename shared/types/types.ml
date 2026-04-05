@@ -6,6 +6,12 @@ open Lunar_jsont
 (* TODO we should probaly have a functor for "Stores" and rely primarily on
    cross-references *)
 
+module type Indexed = sig
+  type t
+
+  val get : int -> t
+end
+
 module type Editable = sig
   type t
   type edit
@@ -73,6 +79,7 @@ module Place = struct
     | New_description description -> { t with description }
 
   let store : t Dynarray.t = Dynarray.create ()
+  let get i = Dynarray.get store i
 
   let make ~slug ~name ?description () =
     let id = Dynarray.length store in
@@ -111,6 +118,7 @@ module Task_type = struct
     | New_divisible divisible -> { t with divisible }
 
   let store : t Dynarray.t = Dynarray.create ()
+  let get i = Dynarray.get store i
 
   let make ~slug ~name ?description ~specialist_only ~divisible () =
     let id = Dynarray.length store in
@@ -206,6 +214,7 @@ module Volunteer = struct
     | New_ennemis (ennemis : int list) -> { t with ennemis }
 
   let store : t Dynarray.t = Dynarray.create ()
+  let get i = Dynarray.get store i
 
   let make ?id ?(friends = []) ?(ennemis = []) ?(proficiencies = [])
       ?(forbidden_tasks = []) ?(forbidden_places = [])
@@ -271,6 +280,7 @@ module Quest = struct
         { t with required_volunteers }
 
   let store : t Dynarray.t = Dynarray.create ()
+  let get i = Dynarray.get store i
 
   let make ~slug ~name ?description ~task_type ~place ~slot ~required_volunteers
       () =

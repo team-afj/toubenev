@@ -1,5 +1,11 @@
 open Lunar_jsont
 
+module type Indexed = sig
+  type t
+
+  val get : int -> t
+end
+
 module type Editable = sig
   type t
   type edit
@@ -32,6 +38,7 @@ module Place : sig
   }
 
   include S with type t := t
+  include Indexed with type t := t
 
   val make : slug:string -> name:string -> ?description:string -> unit -> t
 end
@@ -51,6 +58,7 @@ module Task_type : sig
   }
 
   include S with type t := t
+  include Indexed with type t := t
 
   val make :
     slug:string ->
@@ -114,6 +122,7 @@ module Volunteer : sig
   }
 
   include S with type t := t
+  include Indexed with type t := t
 
   val make :
     ?id:int ->
@@ -145,6 +154,7 @@ module Quest : sig
   }
 
   include S with type t := t
+  include Indexed with type t := t
 
   val make :
     slug:string ->
