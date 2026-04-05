@@ -89,7 +89,8 @@ module Task_type = struct
     slug : string;
     name : string;
     description : string option;
-    places : Place.t list;
+    specialist_only : bool;
+    divisible : bool;
   }
   [@@deriving jsont]
 
@@ -97,7 +98,8 @@ module Task_type = struct
     | New_slug of string
     | New_name of string
     | New_description of string option
-    | New_places of Place.t list
+    | New_specialist_only of bool
+    | New_divisible of bool
   [@@deriving jsont]
 
   let apply_edit edit t =
@@ -105,14 +107,14 @@ module Task_type = struct
     | New_slug slug -> { t with slug }
     | New_name name -> { t with name }
     | New_description description -> { t with description }
-    | New_places places -> { t with places }
+    | New_specialist_only specialist_only -> { t with specialist_only }
+    | New_divisible divisible -> { t with divisible }
 
   let store : t Dynarray.t = Dynarray.create ()
 
-  let make ~slug ~name ?description ?places () =
-    let places = Option.value ~default:[] places in
+  let make ~slug ~name ?description ~specialist_only ~divisible () =
     let id = Dynarray.length store in
-    let v : t = { id; slug; name; description; places } in
+    let v : t = { id; slug; name; description; specialist_only; divisible } in
     Dynarray.add_last store v;
     v
 end
@@ -163,9 +165,17 @@ module Availabilities = Random_access_list (Availability)
 module Volunteer = struct
   type t = {
     id : int;
+    public_name : string option;
     name : string;
-    friends : t list;
+    daily_workload : int;
     availabilities : Availabilities.t;
+    arrival : Datetime.t option;
+    departure : Datetime.t option;
+    proficiencies : Task_types.t;
+    friends : t list;
+    ennemis : t list;
+    forbidden_tasks : Task_types.t;
+    forbidden_places : Places.t;
   }
   [@@deriving jsont]
 
@@ -177,20 +187,42 @@ module Volunteer = struct
   }
 
   type edit =
+    | New_public_name of string option
     | New_name of string
-    | New_friends of t list
+    | New_daily_workload of int
     | Update_availabilities of Availabilities.edit
+    | New_arrival of Datetime.t option
+    | New_departure of Datetime.t option
+    | Update_proficiencies of Task_types.edit
+    | New_friends of t list
+    | New_ennemis of t list
+    | Update_forbidden_tasks of Task_types.edit
+    | Update_forbidden_places of Places.edit
   [@@deriving jsont]
 
   let apply_edit (edit : edit) (t : t) : t =
     match edit with
+    | New_public_name public_name -> { t with public_name }
     | New_name name -> { t with name }
-    | New_friends (friends : t list) -> { t with friends }
+    | New_daily_workload daily_workload -> { t with daily_workload }
     | Update_availabilities edit ->
         {
           t with
           availabilities = Availabilities.apply_edit edit t.availabilities;
         }
+    | New_arrival arrival -> { t with arrival }
+    | New_departure departure -> { t with departure }
+    | Update_proficiencies edit ->
+        { t with proficiencies = Task_types.apply_edit edit t.proficiencies }
+    | New_friends (friends : t list) -> { t with friends }
+    | New_ennemis (ennemis : t list) -> { t with ennemis }
+    | Update_forbidden_tasks edit ->
+        {
+          t with
+          forbidden_tasks = Task_types.apply_edit edit t.forbidden_tasks;
+        }
+    | Update_forbidden_places edit ->
+        { t with forbidden_places = Places.apply_edit edit t.forbidden_places }
 
   let store : t Dynarray.t = Dynarray.create ()
 
@@ -198,7 +230,22 @@ module Volunteer = struct
     let friends = Option.value ~default:[] friends in
     let availabilities = Option.value ~default:CCRAL.empty availabilities in
     let id = Dynarray.length store in
-    let v : t = { id; name; friends; availabilities } in
+    let v : t =
+      {
+        id;
+        public_name = None;
+        name;
+        daily_workload = 0;
+        availabilities;
+        arrival = None;
+        departure = None;
+        proficiencies = CCRAL.empty;
+        friends;
+        ennemis = [];
+        forbidden_tasks = CCRAL.empty;
+        forbidden_places = CCRAL.empty;
+      }
+    in
     Dynarray.add_last store v;
     v
 
@@ -213,9 +260,17 @@ module Volunteer = struct
   let of_shallow (t : shallow) : t =
     {
       id = t.id;
+      public_name = None;
       name = t.name;
-      friends = List.map ~f:(Dynarray.get store) t.friends;
+      daily_workload = 0;
       availabilities = t.availabilities;
+      arrival = None;
+      departure = None;
+      proficiencies = CCRAL.empty;
+      friends = List.map ~f:(Dynarray.get store) t.friends;
+      ennemis = [];
+      forbidden_tasks = CCRAL.empty;
+      forbidden_places = CCRAL.empty;
     }
 end
 

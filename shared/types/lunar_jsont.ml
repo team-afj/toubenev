@@ -35,3 +35,9 @@ module Time = struct
   let jsont : t Jsont.t =
     Jsont.map ~dec:from_string_exn ~enc:to_string Jsont.string
 end
+
+module Datetime = struct
+  include Lunar.Datetime
+
+  let jsont = Jsont.string |> Jsont.map ~dec:from_string_exn ~enc:to_string
+end

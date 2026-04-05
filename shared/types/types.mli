@@ -46,7 +46,8 @@ module Task_type : sig
     slug : string;
     name : string;
     description : string option;
-    places : Place.t list;
+    specialist_only : bool;
+    divisible : bool;
   }
 
   include S with type t := t
@@ -55,7 +56,8 @@ module Task_type : sig
     slug:string ->
     name:string ->
     ?description:string ->
-    ?places:Place.t list ->
+    specialist_only:bool ->
+    divisible:bool ->
     unit ->
     t
 end
@@ -98,9 +100,17 @@ end
 module Volunteer : sig
   type t = private {
     id : int;
+    public_name : string option;
     name : string;
-    friends : t list;
+    daily_workload : int;
     availabilities : Availabilities.t;
+    arrival : Datetime.t option;
+    departure : Datetime.t option;
+    proficiencies : Task_types.t;
+    friends : t list;
+    ennemis : t list;
+    forbidden_tasks : Task_types.t;
+    forbidden_places : Places.t;
   }
 
   type shallow = private {
