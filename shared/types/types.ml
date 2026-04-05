@@ -19,7 +19,7 @@ module type S = sig
   include Jsontable with type t := t
 end
 
-module Random_access_list (X : S) : S = struct
+module Random_access_list (X : S) : S with type t = X.t CCRAL.t = struct
   type t = X.t CCRAL.t
 
   let jsont =
@@ -85,6 +85,9 @@ module Task_type = struct
   }
   [@@deriving jsont]
 
+  type edit = unit (* TODO *) [@@deriving jsont]
+
+  let apply_edit () t = t (* TODO *)
   let store : t Dynarray.t = Dynarray.create ()
 
   let make ~slug ~name ?description ?places () =
@@ -95,10 +98,14 @@ module Task_type = struct
     v
 end
 
-module Volunteer = struct
-  type t = { id : int; name : string; friends : t list }
-  type shallow = { id : int; name : string; friends : int list }
+module Task_types = Random_access_list (Task_type)
 
+module Volunteer = struct
+  type t = { id : int; name : string; friends : t list } [@@deriving jsont]
+  type shallow = { id : int; name : string; friends : int list }
+  type edit = unit (* TODO *) [@@deriving jsont]
+
+  let apply_edit () t = t (* TODO *)
   let store : t Dynarray.t = Dynarray.create ()
 
   let make ?friends ~name () =
@@ -123,11 +130,20 @@ module Volunteer = struct
     }
 end
 
+module Volunteers = Random_access_list (Volunteer)
+
 module Planning = struct
-  type t = { places : Places.t } [@@deriving jsont]
-  type edit = Places of Places.edit [@@deriving jsont]
+  type t = {
+    places : Places.t;
+    task_types : Task_types.t;
+    volunteers : Volunteers.t;
+  }
+  [@@deriving jsont]
+
+  type edit = Places of Places.edit (* TODO *) [@@deriving jsont]
 
   let apply_edit edit t =
+    (* TODO *)
     match edit with
-    | Places edit -> { places = Places.apply_edit edit t.places }
+    | Places edit -> { t with places = Places.apply_edit edit t.places }
 end

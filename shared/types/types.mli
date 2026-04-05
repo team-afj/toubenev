@@ -19,7 +19,7 @@ module type S = sig
   include Jsontable with type t := t
 end
 
-module Random_access_list : (_ : S) -> S
+module Random_access_list : (X : S) -> S with type t = X.t CCRAL.t
 
 module Place : sig
   type t = private {
@@ -47,7 +47,7 @@ module Task_type : sig
     places : Place.t list;
   }
 
-  val jsont : t Jsont.t
+  include S with type t := t
 
   val make :
     slug:string ->
@@ -58,17 +58,32 @@ module Task_type : sig
     t
 end
 
+module Task_types : sig
+  include module type of Random_access_list (Task_type)
+end
+
 module Volunteer : sig
   type t = private { id : int; name : string; friends : t list }
   type shallow = private { id : int; name : string; friends : int list }
+
+  include S with type t := t
 
   val make : ?friends:t list -> name:string -> unit -> t
   val to_shallow : t -> shallow
   val of_shallow : shallow -> t
 end
 
+module Volunteers : sig
+  include module type of Random_access_list (Volunteer)
+end
+
 module Planning : sig
-  type t = { places : Places.t }
+  type t = {
+    places : Places.t;
+    task_types : Task_types.t;
+    volunteers : Volunteers.t;
+  }
+
   type edit = Places of Places.edit
 
   include S with type t := t and type edit := edit
