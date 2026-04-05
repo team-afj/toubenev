@@ -3,6 +3,9 @@ open Lunar_jsont
 (* TODO the [edit] types are meant for use with a future web-ui supporting
    OT-style cooperative edition. Right now they are not exposed nor used. *)
 
+(* TODO we should probaly have a functor for "Stores" and rely primarily on
+   cross-references *)
+
 module type Editable = sig
   type t
   type edit
