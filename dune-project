@@ -41,4 +41,7 @@
   uuidm
   hector
   containers-data
-  base64))
+  base64
+  ; OR Tools
+  ortools
+  ortools_solvers))

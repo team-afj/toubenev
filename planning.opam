@@ -30,6 +30,8 @@ depends: [
   "hector"
   "containers-data"
   "base64"
+  "ortools"
+  "ortools_solvers"
   "odoc" {with-doc}
 ]
 build: [

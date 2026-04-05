@@ -1,0 +1,3 @@
+(library
+ (name cp_model)
+ (libraries ortools))
