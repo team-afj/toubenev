@@ -1,9 +1,17 @@
 open Lunar_jsont
 
+module type Id = sig
+  type id
+
+  val id_of_int : int -> id
+  val id_to_int : id -> int
+end
+
 module type Indexed = sig
   type t
+  type id
 
-  val get : int -> t
+  val get : id -> t
 end
 
 module type Editable = sig
@@ -30,15 +38,17 @@ end
 module Random_access_list : (X : S) -> S with type t = X.t CCRAL.t
 
 module Place : sig
+  include Id
+
   type t = private {
-    id : int;
+    id : id;
     slug : string;
     name : string;
     description : string option;
   }
 
   include S with type t := t
-  include Indexed with type t := t
+  include Indexed with type t := t and type id := id
 
   val make : slug:string -> name:string -> ?description:string -> unit -> t
 end
@@ -48,8 +58,10 @@ module Places : sig
 end
 
 module Task_type : sig
+  include Id
+
   type t = private {
-    id : int;
+    id : id;
     slug : string;
     name : string;
     description : string option;
@@ -58,7 +70,7 @@ module Task_type : sig
   }
 
   include S with type t := t
-  include Indexed with type t := t
+  include Indexed with type t := t and type id := id
 
   val make :
     slug:string ->
@@ -106,33 +118,38 @@ module Availabilities : sig
 end
 
 module Volunteer : sig
+  include Id
+
   type t = private {
-    id : int;
+    id : id;
     public_name : string option;
     name : string;
-    daily_workload : int;
+    daily_workload : Duration.t;
     availabilities : Availabilities.t;
     arrival : Datetime.t option;
     departure : Datetime.t option;
-    proficiencies : int list;
-    friends : int list;
-    ennemis : int list;
-    forbidden_tasks : int list;
-    forbidden_places : int list;
+    friends : id list;
+    ennemis : id list;
+    proficiencies : Task_types.t;
+    forbidden_tasks : Task_types.t;
+    forbidden_places : Places.t;
   }
 
   include S with type t := t
-  include Indexed with type t := t
+  include Indexed with type t := t and type id := id
 
   val make :
-    ?id:int ->
-    ?friends:int list ->
-    ?ennemis:int list ->
-    ?proficiencies:int list ->
-    ?forbidden_tasks:int list ->
-    ?forbidden_places:int list ->
+    ?friends:id list ->
+    ?ennemis:id list ->
+    ?proficiencies:Task_types.t ->
+    ?forbidden_tasks:Task_types.t ->
+    ?forbidden_places:Places.t ->
     ?availabilities:Availabilities.t ->
+    ?arrival:Datetime.t ->
+    ?departure:Datetime.t ->
+    daily_workload:Duration.t ->
     name:string ->
+    ?public_name:string ->
     unit ->
     t
 end
@@ -142,8 +159,10 @@ module Volunteers : sig
 end
 
 module Quest : sig
+  include Id
+
   type t = private {
-    id : int;
+    id : id;
     slug : string;
     name : string;
     description : string option;
@@ -154,7 +173,7 @@ module Quest : sig
   }
 
   include S with type t := t
-  include Indexed with type t := t
+  include Indexed with type t := t and type id := id
 
   val make :
     slug:string ->

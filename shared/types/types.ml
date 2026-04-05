@@ -1,15 +1,34 @@
 open Lunar_jsont
 
 (* TODO the [edit] types are meant for use with a future web-ui supporting
-   OT-style cooperative edition. Right now they are not exposed nor used. *)
+   OT-style cooperative edition. Right now they are not exposed nor used.
+
+   Also the existing "edits" would require most record fields to be mutable to
+   work properly, because objects are cross-referenced, this is not the case
+   right now and need to be thinked about carrefully. *)
 
 (* TODO we should probaly have a functor for "Stores" and rely primarily on
    cross-references *)
 
+module type Id = sig
+  type id
+
+  val id_of_int : int -> id
+  val id_to_int : id -> int
+end
+
+module Make_id () = struct
+  type id = int [@@deriving jsont]
+
+  let id_of_int = Fun.id
+  let id_to_int = Fun.id
+end
+
 module type Indexed = sig
   type t
+  type id
 
-  val get : int -> t
+  val get : id -> t
 end
 
 module type Editable = sig
@@ -58,8 +77,10 @@ module Random_access_list (X : S) : S with type t = X.t CCRAL.t = struct
 end
 
 module Place = struct
+  include Make_id ()
+
   type t = {
-    id : int;
+    id : id;
     slug : string;
     name : string;
     description : string option;
@@ -91,8 +112,10 @@ end
 module Places = Random_access_list (Place)
 
 module Task_type = struct
+  include Make_id ()
+
   type t = {
-    id : int;
+    id : id;
     slug : string;
     name : string;
     description : string option;
@@ -118,7 +141,7 @@ module Task_type = struct
     | New_divisible divisible -> { t with divisible }
 
   let store : t Dynarray.t = Dynarray.create ()
-  let get i = Dynarray.get store i
+  let get i = id_to_int i |> Dynarray.get store
 
   let make ~slug ~name ?description ~specialist_only ~divisible () =
     let id = Dynarray.length store in
@@ -171,26 +194,28 @@ end
 module Availabilities = Random_access_list (Availability)
 
 module Volunteer = struct
+  include Make_id ()
+
   type t = {
-    id : int;
+    id : id;
     public_name : string option;
     name : string;
-    daily_workload : int;
+    daily_workload : Duration.t;
     availabilities : Availabilities.t;
     arrival : Datetime.t option;
     departure : Datetime.t option;
-    proficiencies : int list;
-    friends : int list;
-    ennemis : int list;
-    forbidden_tasks : int list;
-    forbidden_places : int list;
+    friends : id list;
+    ennemis : id list;
+    proficiencies : Task_types.t;
+    forbidden_tasks : Task_types.t;
+    forbidden_places : Places.t;
   }
   [@@deriving jsont]
 
   type edit =
     | New_public_name of string option
     | New_name of string
-    | New_daily_workload of int
+    | New_daily_workload of Duration.t
     | Update_availabilities of Availabilities.edit
     | New_arrival of Datetime.t option
     | New_departure of Datetime.t option
@@ -216,19 +241,20 @@ module Volunteer = struct
   let store : t Dynarray.t = Dynarray.create ()
   let get i = Dynarray.get store i
 
-  let make ?id ?(friends = []) ?(ennemis = []) ?(proficiencies = [])
-      ?(forbidden_tasks = []) ?(forbidden_places = [])
-      ?(availabilities = CCRAL.empty) ~name () =
-    let id = Option.get_lazy (fun () -> Dynarray.length store) id in
+  let make ?(friends = []) ?(ennemis = []) ?(proficiencies = CCRAL.empty)
+      ?(forbidden_tasks = CCRAL.empty) ?(forbidden_places = CCRAL.empty)
+      ?(availabilities = CCRAL.empty) ?arrival ?departure ~daily_workload ~name
+      ?public_name () =
+    let id = Dynarray.length store in
     let v : t =
       {
         id;
-        public_name = None;
+        public_name;
         name;
-        daily_workload = 0;
+        daily_workload;
         availabilities;
-        arrival = None;
-        departure = None;
+        arrival;
+        departure;
         proficiencies;
         friends;
         ennemis;
@@ -243,8 +269,10 @@ end
 module Volunteers = Random_access_list (Volunteer)
 
 module Quest = struct
+  include Make_id ()
+
   type t = {
-    id : int;
+    id : id;
     slug : string;
     name : string;
     description : string option;
