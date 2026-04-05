@@ -1,5 +1,7 @@
+open! Lunar
 open Types
 open Ortools.Sat
 
-let source_planning : Planning.t = failwith "todo"
-let model = Ortools.Sat.make ~name:"Toubenev" ()
+let make (_data : Planning.t) =
+  let model = make ~name:"Toubenev" () in
+  model
