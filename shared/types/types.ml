@@ -81,6 +81,8 @@ module Place = struct
   }
   [@@deriving jsont]
 
+  let dummy = { id = Uuidm.nil; slug = ""; name = ""; description = None }
+
   type edit =
     | New_slug of string
     | New_name of string
@@ -110,6 +112,16 @@ module Task_type = struct
     divisible : bool;
   }
   [@@deriving jsont]
+
+  let dummy =
+    {
+      id = Uuidm.nil;
+      slug = "";
+      name = "";
+      description = None;
+      specialist_only = false;
+      divisible = false;
+    }
 
   type edit =
     | New_slug of string
@@ -273,6 +285,18 @@ module Quest = struct
     assigned_volunteers : Volunteers.t;
   }
   [@@deriving jsont]
+
+  let dummy =
+    {
+      id = Uuidm.nil;
+      name = "";
+      description = None;
+      task_type = Task_type.dummy;
+      place = Place.dummy;
+      slot = { recurrence = Daily; start = Time.noon; duration = Duration.zero };
+      required_volunteers = 0;
+      assigned_volunteers = CCRAL.empty;
+    }
 
   type edit =
     | New_name of string

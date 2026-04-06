@@ -179,6 +179,8 @@ module Quest : sig
     assigned_volunteers : Volunteers.t;
   }
 
+  val dummy : t
+
   include S with type t := t
 
   val make :

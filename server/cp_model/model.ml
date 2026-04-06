@@ -12,22 +12,21 @@ type context = {
   assignations : Volunteer.t -> Quest.t -> Sat.Var.t_bool;
   assignations_rev : int -> Sat.Var.t_bool * Volunteer.t * Quest.t;
   vs : Volunteers.t;
-  qs : Quest.t list;
+  qs : Quests.t;
   for_all_quests : (Quest.t -> unit) -> unit;
   for_all_volunteers : (Volunteer.t -> unit) -> unit;
 }
 
 let assignations m vs qs =
-  let size = Volunteers.cardinal vs * List.length qs in
+  let size = Volunteers.cardinal vs * Quests.cardinal qs in
   let c = ref 0 in
   let rev_tbl : (int, Sat.Var.t_bool * Volunteer.t * Quest.t) Hashtbl.t =
     Hashtbl.create size
   in
   let by_uuid =
-    Volunteers.fold
-      (fun (v : Volunteer.t) acc ->
+    Volunteers.fold vs ~init:Uuidm_map.empty ~f:(fun acc (v : Volunteer.t) ->
         let quests =
-          List.fold_left qs ~init:Uuidm_map.empty ~f:(fun acc (q : Quest.t) ->
+          Quests.fold qs ~init:Uuidm_map.empty ~f:(fun acc (q : Quest.t) ->
               let name =
                 Format.sprintf "%i_%s_is_assigned_to_%s" !c v.initial.name
                   q.name
@@ -38,7 +37,6 @@ let assignations m vs qs =
               Uuidm_map.add q.id var acc)
         in
         Uuidm_map.add v.id quests acc)
-      vs Uuidm_map.empty
   in
   let find =
    fun v q -> Uuidm_map.find v.Volunteer.id by_uuid |> Uuidm_map.find q.Quest.id
@@ -54,10 +52,12 @@ let prepare model (data : Planning.t) =
     |> Volunteers.of_list
   in
   let qs =
-    RAL.to_list data.quests |> List.concat_map ~f:(Quest.normalize data.info vs)
+    RAL.to_list data.quests
+    |> List.concat_map ~f:(Quest.normalize data.info vs)
+    |> Quests.of_list
   in
   let assignations, assignations_rev = assignations model vs qs in
-  let for_all_quests f = List.iter qs ~f in
+  let for_all_quests f = Quests.iter qs ~f in
   let for_all_volunteers f = Volunteers.iter ~f vs in
   {
     model;
@@ -92,8 +92,7 @@ let all_staffed (ctx : context) =
 let non_ubiquity_of_normal_humans (ctx : context) =
   ctx.for_all_quests @@ fun q ->
   let overlapping = Quest.overlaps_with ctx.options q ctx.qs in
-  Quest.Set.iter
-    (fun q' ->
+  Quests.iter overlapping ~f:(fun q' ->
       if not (Quest.equal q q') then
         ctx.for_all_volunteers @@ fun v ->
         let assig_v = ctx.assignations v in
@@ -103,7 +102,6 @@ let non_ubiquity_of_normal_humans (ctx : context) =
         in
         Sat.Constraint.at_most_one [ assig_v q; assig_v q' ]
         |> Sat.add ctx.model ~name)
-    overlapping
 
 (** Enforces manual assignations of volunteers, and prevents manually assigned
     volunteers from doing anything else. *)
