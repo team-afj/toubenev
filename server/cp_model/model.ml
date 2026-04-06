@@ -98,11 +98,25 @@ let non_ubiquity_of_normal_humans (ctx : context) =
         |> Sat.add ctx.model ~name)
     overlapping
 
+(** Enforces manual assignations of volunteers, and prevents manually assigned
+    volunteers from doing anything else. *)
 let enforce_assignations (ctx : context) =
-  ctx.for_all_quests @@ fun q ->
-  CCRAL.iter q.initial.assigned_volunteers ~f:(fun (v : Volunteer.t) ->
-      let name = Format.sprintf "%s_assigned_to_%s" v.name q.name in
-      Sat.(add ctx.model ~name (is_true (ctx.assignations v q))))
+  let assigned = Hashtbl.create 16 in
+  let () =
+    ctx.for_all_quests @@ fun q ->
+    CCRAL.iter q.initial.assigned_volunteers ~f:(fun (v : Volunteer.t) ->
+        let name = Format.sprintf "%s_assigned_to_%s" v.name q.name in
+        Hashtbl.add assigned (q.id, v.id) ();
+        Sat.(add ctx.model ~name (is_true (ctx.assignations v q))))
+  in
+  ctx.for_all_volunteers @@ fun v ->
+  if v.manually_assigned then
+    ctx.for_all_quests @@ fun q ->
+    if not (Hashtbl.mem assigned (q.id, v.id)) then
+      let name =
+        Format.sprintf "manually_assigned_%s_cannot_do_%s" v.name q.name
+      in
+      Sat.(add ctx.model ~name (is_false (ctx.assignations v q)))
 
 let make (data : Planning.t) =
   let model = Sat.make ~name:"Toubenev" () in

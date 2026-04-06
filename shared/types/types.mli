@@ -131,6 +131,7 @@ module Volunteer : sig
     public_name : string option;
     name : string;
     daily_workload : Duration.t;
+    manually_assigned : bool;
     availabilities : Availabilities.t;
     arrival : Datetime.t option;
     departure : Datetime.t option;
@@ -152,6 +153,7 @@ module Volunteer : sig
     ?availabilities:Availabilities.t ->
     ?arrival:Datetime.t ->
     ?departure:Datetime.t ->
+    ?manually_assigned:bool ->
     daily_workload:Duration.t ->
     name:string ->
     ?public_name:string ->

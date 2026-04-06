@@ -26,7 +26,9 @@ let example_planning : Planning.t =
   in
   let task_types = CCRAL.of_list [ t1; t2 ] in
   let daily_workload = Duration.from_hours 4 in
-  let v1 = Volunteer.make ~daily_workload ~name:"V1" () in
+  let v1 =
+    Volunteer.make ~daily_workload ~name:"V1" ~manually_assigned:true ()
+  in
   let v2 = Volunteer.make ~daily_workload ~name:"V2" () in
   let volunteers = CCRAL.of_list [ v1; v2 ] in
   let quests =

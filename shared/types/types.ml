@@ -181,6 +181,7 @@ module Volunteer = struct
     public_name : string option;
     name : string;
     daily_workload : Duration.t;
+    manually_assigned : bool;
     availabilities : Availabilities.t;
     arrival : Datetime.t option;
     departure : Datetime.t option;
@@ -220,14 +221,15 @@ module Volunteer = struct
 
   let make ?(friends = []) ?(ennemis = []) ?(proficiencies = CCRAL.empty)
       ?(forbidden_tasks = CCRAL.empty) ?(forbidden_places = CCRAL.empty)
-      ?(availabilities = CCRAL.empty) ?arrival ?departure ~daily_workload ~name
-      ?public_name () =
+      ?(availabilities = CCRAL.empty) ?arrival ?departure
+      ?(manually_assigned = false) ~daily_workload ~name ?public_name () =
     let id = make_uuid () in
     {
       id;
       public_name;
       name;
       daily_workload;
+      manually_assigned;
       availabilities;
       arrival;
       departure;
