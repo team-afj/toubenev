@@ -1,5 +1,0 @@
-(executable
- (name main)
- (libraries model types jsont.bytesrw)
- (preprocess
-  (pps ppx_deriving_jsont)))
