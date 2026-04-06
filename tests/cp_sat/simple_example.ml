@@ -41,4 +41,6 @@ let response = Ortools_solvers.Sat.solve model
 
 let () =
   let open Ortools.Sat.Response in
-  Format.printf "Status %s\n" (string_of_status response.status)
+  Format.printf "Status %s\n" (string_of_status response.status);
+  Format.(printf "%a\n" (pp_print_array pp_print_int) response.solution);
+  Format.printf "%s\n" response.solution_info
