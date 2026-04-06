@@ -48,7 +48,7 @@ module Quest = struct
     in
     List.map all_dates ~f:(fun date ->
         let start = Datetime.from date start_time in
-        let id = Utils.Random.new_random_uuid_v4 () in
+        let id = new_random_uuid_v4 () in
         let name = Format.sprintf "%s_%s" q.name (Date.to_string date) in
         { id; initial = q; name; slot = { Time_slot.start; duration } })
 end
