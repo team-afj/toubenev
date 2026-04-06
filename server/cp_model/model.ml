@@ -78,12 +78,27 @@ let all_staffed (ctx : context) =
   ctx.for_all_quests quest_is_staffed
 
 (** Volunteers cannot do several things at the same time *)
+let non_ubiquity_of_normal_humans (ctx : context) =
+  ctx.for_all_quests @@ fun q ->
+  let overlapping = Quest.overlaps_with ctx.options q ctx.qs in
+  Quest.Set.iter
+    (fun q' ->
+      if not (Quest.equal q q') then
+        ctx.for_all_volunteers @@ fun v ->
+        let assig_v = ctx.assignations v in
+        let name =
+          Format.sprintf "%s_cannot_do_both_%s_and_%s" v.name q.name q'.name
+        in
+        Sat.Constraint.at_most_one [ assig_v q; assig_v q' ]
+        |> Sat.add ctx.model ~name)
+    overlapping
 
 let make (data : Planning.t) =
   let model = Sat.make ~name:"Toubenev" () in
   let context = prepare model data in
 
   let () = all_staffed context in
+  let () = non_ubiquity_of_normal_humans context in
 
   context
 

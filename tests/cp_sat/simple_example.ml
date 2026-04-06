@@ -28,7 +28,8 @@ let example_planning : Planning.t =
   let volunteers =
     let daily_workload = Duration.from_hours 4 in
     let v1 = Volunteer.make ~daily_workload ~name:"V1" () in
-    CCRAL.of_list [ v1 ]
+    let v2 = Volunteer.make ~daily_workload ~name:"V2" () in
+    CCRAL.of_list [ v1; v2 ]
   in
   let quests =
     let slot =

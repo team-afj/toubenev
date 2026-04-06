@@ -16,6 +16,15 @@ module Quest = struct
     slot : Time_slot.t;
   }
 
+  let equal q1 q2 = Uuidm.equal q1.id q2.id
+
+  module Set = Set.Make (struct
+    type nonrec t = t
+
+    let compare q1 q2 =
+      if equal q1 q2 then 0 else Datetime.compare q1.slot.start q2.slot.start
+  end)
+
   (** Check if two quests are overlapping. If they are in separate places they
       must be separated by at least [Options.minimum_transfer_time]. *)
   let overlaps { Options.minimum_transfer_time; _ } (q1 : t) (q2 : t) =
@@ -29,6 +38,12 @@ module Quest = struct
           Datetime.(q2_end + minimum_transfer_time) )
     in
     not Datetime.(q1_end <= q2_start || q1_start >= q2_end)
+
+  (* Returns the set of quests from [qs] overlapping with [q].
+     Note that this set might contain [q] itself if [q] ∈ [qs]. *)
+  let overlaps_with options q qs =
+    List.fold_left qs ~init:Set.empty ~f:(fun acc q' ->
+        if overlaps options q q' then Set.add q' acc else acc)
 
   (** Generate sub-quests depending of the recurrence and the task type's
       divisibility. *)
