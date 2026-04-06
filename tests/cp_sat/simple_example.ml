@@ -20,7 +20,11 @@ let example_planning : Planning.t =
     Task_type.make ~slug:"🍻" ~name:"Service bar" ~specialist_only:false
       ~divisible:true ()
   in
-  let task_types = CCRAL.of_list [ t1 ] in
+  let t2 =
+    Task_type.make ~slug:"👋" ~name:"Accueil" ~specialist_only:false
+      ~divisible:true ()
+  in
+  let task_types = CCRAL.of_list [ t1; t2 ] in
   let volunteers =
     let daily_workload = Duration.from_hours 4 in
     let v1 = Volunteer.make ~daily_workload ~name:"V1" () in
@@ -32,10 +36,14 @@ let example_planning : Planning.t =
       { Time_spec.recurrence = Daily; start; duration = Duration.from_hours 2 }
     in
     let q1 =
-      Quest.make ~name:"Bar 1" ~task_type:t1 ~place:p1 ~slot
+      Quest.make ~name:"Bar" ~task_type:t1 ~place:p1 ~slot
         ~required_volunteers:1 ()
     in
-    CCRAL.of_list [ q1 ]
+    let q2 =
+      Quest.make ~name:"Accueil" ~task_type:t2 ~place:p1 ~slot
+        ~required_volunteers:1 ()
+    in
+    CCRAL.of_list [ q1; q2 ]
   in
   { options; info; places; task_types; volunteers; quests }
 

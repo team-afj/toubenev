@@ -1,3 +1,4 @@
 (library
  (name cp_model)
- (libraries utils ortools types))
+ (flags :standard -open Std)
+ (libraries std utils ortools types))
