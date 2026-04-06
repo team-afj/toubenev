@@ -63,6 +63,12 @@ let uuid_jsont _ =
 
 let make_uuid () = Uuidm.v4_gen (Random.get_state ()) ()
 
+module Options = struct
+  type t = { minimum_transfer_time : Duration.t } [@@deriving jsont]
+
+  let default = { minimum_transfer_time = Duration.from_minutes 15 }
+end
+
 module Place = struct
   type t = {
     id : t uuid;
@@ -125,12 +131,14 @@ end
 
 module Task_types = Random_access_list (Task_type)
 
-module Time_slot = struct
+module Time_spec = struct
   type recurrence = Daily | Weekly of Weekday.t list | On of Date.t list
   [@@deriving jsont]
 
   type t = { recurrence : recurrence; start : Time.t; duration : Duration.t }
   [@@deriving jsont]
+
+  let end_ t = Time.(t.start + t.duration)
 
   type edit =
     | New_recurrence of recurrence
@@ -145,23 +153,23 @@ module Time_slot = struct
     | New_duration duration -> { t with duration }
 end
 
-module Time_slots = Random_access_list (Time_slot)
+module Time_specs = Random_access_list (Time_spec)
 
 module Availability = struct
   type status = Unavailable | Available of int [@@deriving jsont]
-  type t = { status : status; slot : Time_slot.t } [@@deriving jsont]
+  type t = { status : status; slot : Time_spec.t } [@@deriving jsont]
 
   type edit =
     | New_status of status
-    | New_slot of Time_slot.t
-    | Slot_update of Time_slot.edit
+    | New_slot of Time_spec.t
+    | Slot_update of Time_spec.edit
   [@@deriving jsont]
 
   let apply_edit edit t =
     match edit with
     | New_status status -> { t with status }
     | New_slot slot -> { t with slot }
-    | Slot_update edit -> { t with slot = Time_slot.apply_edit edit t.slot }
+    | Slot_update edit -> { t with slot = Time_spec.apply_edit edit t.slot }
 end
 
 module Availabilities = Random_access_list (Availability)
@@ -240,7 +248,7 @@ module Quest = struct
     task_type : Task_type.t;
     (* group: Quest_group.t TODO *)
     place : Place.t;
-    slot : Time_slot.t;
+    slot : Time_spec.t;
     required_volunteers : int;
   }
   [@@deriving jsont]
@@ -250,8 +258,8 @@ module Quest = struct
     | New_description of string option
     | New_task_type of Task_type.t
     | New_place of Place.t
-    | New_slot of Time_slot.t
-    | Update_slot of Time_slot.edit
+    | New_slot of Time_spec.t
+    | Update_slot of Time_spec.edit
     | New_required_volunteers of int
   [@@deriving jsont]
 
@@ -262,7 +270,7 @@ module Quest = struct
     | New_task_type task_type -> { t with task_type }
     | New_place place -> { t with place }
     | New_slot slot -> { t with slot }
-    | Update_slot edit -> { t with slot = Time_slot.apply_edit edit t.slot }
+    | Update_slot edit -> { t with slot = Time_spec.apply_edit edit t.slot }
     | New_required_volunteers required_volunteers ->
         { t with required_volunteers }
 
@@ -284,6 +292,7 @@ end
 
 module Planning = struct
   type t = {
+    options : Options.t;
     info : Event_infos.t;
     places : Places.t;
     task_types : Task_types.t;

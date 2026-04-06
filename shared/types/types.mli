@@ -1,5 +1,6 @@
 open Lunar_jsont
 
+(** Utilities *)
 module type Editable = sig
   type t
   type edit
@@ -25,6 +26,26 @@ type _ uuid
 
 module Random_access_list : (X : S) -> sig
   include S with type t = X.t CCRAL.t
+end
+
+(** Model *)
+
+module Event_infos : sig
+  type kind = Finite of { start_date : Date.t; end_date : Date.t }
+  [@@deriving jsont]
+
+  type t = { name : string; kind : kind } [@@deriving jsont]
+end
+
+module Options : sig
+  type t = {
+    minimum_transfer_time : Duration.t;
+        (** The free time volunteers should have to move between two quests that
+            are in different places. *)
+  }
+  [@@deriving jsont]
+
+  val default : t
 end
 
 module Place : sig
@@ -70,7 +91,7 @@ module Task_types : sig
   include module type of Random_access_list (Task_type)
 end
 
-module Time_slot : sig
+module Time_spec : sig
   type recurrence = Daily | Weekly of Weekday.t list | On of Date.t list
   [@@deriving jsont]
 
@@ -80,8 +101,8 @@ module Time_slot : sig
   include S with type t := t
 end
 
-module Time_slots : sig
-  include module type of Random_access_list (Time_slot)
+module Time_specs : sig
+  include module type of Random_access_list (Time_spec)
 end
 
 module Availability : sig
@@ -92,7 +113,7 @@ module Availability : sig
             time slot is used *)
   [@@deriving jsont]
 
-  type t = private { status : status; slot : Time_slot.t }
+  type t = private { status : status; slot : Time_spec.t }
 
   include S with type t := t
 end
@@ -146,7 +167,7 @@ module Quest : sig
     description : string option;
     task_type : Task_type.t;
     place : Place.t;
-    slot : Time_slot.t;
+    slot : Time_spec.t;
     required_volunteers : int;
   }
 
@@ -157,7 +178,7 @@ module Quest : sig
     ?description:string ->
     task_type:Task_type.t ->
     place:Place.t ->
-    slot:Time_slot.t ->
+    slot:Time_spec.t ->
     required_volunteers:int ->
     unit ->
     t
@@ -167,15 +188,9 @@ module Quests : sig
   include module type of Random_access_list (Quest)
 end
 
-module Event_infos : sig
-  type kind = Finite of { start_date : Date.t; end_date : Date.t }
-  [@@deriving jsont]
-
-  type t = { name : string; kind : kind } [@@deriving jsont]
-end
-
 module Planning : sig
   type t = {
+    options : Options.t;
     info : Event_infos.t;
     places : Places.t;
     task_types : Task_types.t;

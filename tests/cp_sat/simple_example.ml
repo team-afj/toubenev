@@ -2,6 +2,7 @@ open Lunar
 open Types
 
 let example_planning : Planning.t =
+  let options = Options.default in
   let info =
     let start_date =
       Date.make ~year:2026 ~month:May ~day:26 () |> Result.get_ok
@@ -26,7 +27,7 @@ let example_planning : Planning.t =
   let quests =
     let slot =
       let start = Time.make ~hour:8 ~min:0 ~sec:0 () |> Result.get_ok in
-      { Time_slot.recurrence = Daily; start; duration = Duration.from_hours 2 }
+      { Time_spec.recurrence = Daily; start; duration = Duration.from_hours 2 }
     in
     let q1 =
       Quest.make ~name:"Bar 1" ~task_type:t1 ~place:p1 ~slot
@@ -34,7 +35,7 @@ let example_planning : Planning.t =
     in
     CCRAL.of_list [ q1 ]
   in
-  { info; places; task_types; volunteers; quests }
+  { options; info; places; task_types; volunteers; quests }
 
 let model = Cp_model.Model.make example_planning
 let response = Ortools_solvers.Sat.solve model
