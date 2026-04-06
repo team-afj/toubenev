@@ -172,6 +172,7 @@ module Quest : sig
     place : Place.t;
     slot : Time_spec.t;
     required_volunteers : int;
+    assigned_volunteers : Volunteers.t;
   }
 
   include S with type t := t
@@ -183,6 +184,7 @@ module Quest : sig
     place:Place.t ->
     slot:Time_spec.t ->
     required_volunteers:int ->
+    ?assigned_volunteers:Volunteers.t ->
     unit ->
     t
 end

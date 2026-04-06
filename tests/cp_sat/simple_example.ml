@@ -25,12 +25,10 @@ let example_planning : Planning.t =
       ~divisible:true ()
   in
   let task_types = CCRAL.of_list [ t1; t2 ] in
-  let volunteers =
-    let daily_workload = Duration.from_hours 4 in
-    let v1 = Volunteer.make ~daily_workload ~name:"V1" () in
-    let v2 = Volunteer.make ~daily_workload ~name:"V2" () in
-    CCRAL.of_list [ v1; v2 ]
-  in
+  let daily_workload = Duration.from_hours 4 in
+  let v1 = Volunteer.make ~daily_workload ~name:"V1" () in
+  let v2 = Volunteer.make ~daily_workload ~name:"V2" () in
+  let volunteers = CCRAL.of_list [ v1; v2 ] in
   let quests =
     let slot =
       let start = Time.make ~hour:8 ~min:0 ~sec:0 () |> Result.get_ok in
@@ -38,7 +36,7 @@ let example_planning : Planning.t =
     in
     let q1 =
       Quest.make ~name:"Bar" ~task_type:t1 ~place:p1 ~slot
-        ~required_volunteers:1 ()
+        ~required_volunteers:1 ~assigned_volunteers:(CCRAL.of_list [ v1 ]) ()
     in
     let q2 =
       Quest.make ~name:"Accueil" ~task_type:t2 ~place:p1 ~slot

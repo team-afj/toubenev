@@ -251,6 +251,7 @@ module Quest = struct
     place : Place.t;
     slot : Time_spec.t;
     required_volunteers : int;
+    assigned_volunteers : Volunteers.t;
   }
   [@@deriving jsont]
 
@@ -275,9 +276,19 @@ module Quest = struct
     | New_required_volunteers required_volunteers ->
         { t with required_volunteers }
 
-  let make ~name ?description ~task_type ~place ~slot ~required_volunteers () =
+  let make ~name ?description ~task_type ~place ~slot ~required_volunteers
+      ?(assigned_volunteers = CCRAL.empty) () =
     let id = make_uuid () in
-    { id; name; description; task_type; place; slot; required_volunteers }
+    {
+      id;
+      name;
+      description;
+      task_type;
+      place;
+      slot;
+      required_volunteers;
+      assigned_volunteers;
+    }
 end
 
 module Quests = Random_access_list (Quest)

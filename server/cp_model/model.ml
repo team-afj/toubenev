@@ -65,6 +65,11 @@ let prepare model (data : Planning.t) =
     for_all_volunteers;
   }
 
+(** Utilities *)
+let is_false v = Sat.(var v == of_int 0)
+
+let is_true v = Sat.(var v == of_int 1)
+
 (** All quests are fully staffed *)
 let all_staffed (ctx : context) =
   let quest_is_staffed (q : Quest.t) =
@@ -93,12 +98,19 @@ let non_ubiquity_of_normal_humans (ctx : context) =
         |> Sat.add ctx.model ~name)
     overlapping
 
+let enforce_assignations (ctx : context) =
+  ctx.for_all_quests @@ fun q ->
+  CCRAL.iter q.initial.assigned_volunteers ~f:(fun (v : Volunteer.t) ->
+      let name = Format.sprintf "%s_assigned_to_%s" v.name q.name in
+      Sat.(add ctx.model ~name (is_true (ctx.assignations v q))))
+
 let make (data : Planning.t) =
   let model = Sat.make ~name:"Toubenev" () in
   let context = prepare model data in
 
   let () = all_staffed context in
   let () = non_ubiquity_of_normal_humans context in
+  let () = enforce_assignations context in
 
   context
 
