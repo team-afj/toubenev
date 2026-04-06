@@ -8,21 +8,53 @@ module Time_slot = struct
   let end_ t = Datetime.(t.start + t.duration)
 end
 
+module Volunteer = struct
+  module T = struct
+    type t = { id : Uuidm.t; initial : Volunteer.t }
+
+    let equal v1 v2 = Uuidm.equal v1.id v2.id
+
+    let compare v1 v2 =
+      if equal v1 v2 then 0 else String.compare v1.initial.name v2.initial.name
+  end
+
+  include T
+
+  module Set = struct
+    include Set.Make (T)
+
+    let find_by_id id t = find { id; initial = Volunteer.dummy } t
+    let to_list_map ~f t = List.map ~f (to_list t)
+    let iter ~f t = iter f t
+  end
+
+  module Map = struct
+    include Map.Make (T)
+
+    let find_by_id id = find { id; initial = Volunteer.dummy }
+  end
+
+  let normalize (v : Volunteer.t) = { id = uuid_to_uuidm v.id; initial = v }
+end
+
 module Quest = struct
   type t = {
     id : Uuidm.t;
     initial : Quest.t;
     name : string;
     slot : Time_slot.t;
+    assigned_volunteers : Volunteer.Set.t;
   }
 
   let equal q1 q2 = Uuidm.equal q1.id q2.id
 
+  let compare q1 q2 =
+    if equal q1 q2 then 0 else Datetime.compare q1.slot.start q2.slot.start
+
   module Set = Set.Make (struct
     type nonrec t = t
 
-    let compare q1 q2 =
-      if equal q1 q2 then 0 else Datetime.compare q1.slot.start q2.slot.start
+    let compare = compare
   end)
 
   (** Check if two quests are overlapping. If they are in separate places they
@@ -47,8 +79,15 @@ module Quest = struct
 
   (** Generate sub-quests depending of the recurrence and the task type's
       divisibility. *)
-  let normalize { Event_infos.kind = Finite { start_date; end_date }; _ }
+  let normalize { Event_infos.kind = Finite { start_date; end_date }; _ } vs
       (q : Quest.t) =
+    let assigned_volunteers =
+      CCRAL.fold q.assigned_volunteers ~x:Volunteer.Set.empty
+        ~f:(fun acc (v : Types.Volunteer.t) ->
+          Volunteer.Set.add
+            (Volunteer.Set.find_by_id (uuid_to_uuidm v.id) vs)
+            acc)
+    in
     let spec = q.slot in
     let start_time = spec.start in
     let duration = spec.duration in
@@ -65,5 +104,11 @@ module Quest = struct
         let start = Datetime.from date start_time in
         let id = new_random_uuid_v4 () in
         let name = Format.sprintf "%s_%s" q.name (Date.to_string date) in
-        { id; initial = q; name; slot = { Time_slot.start; duration } })
+        {
+          id;
+          initial = q;
+          name;
+          slot = { Time_slot.start; duration };
+          assigned_volunteers;
+        })
 end

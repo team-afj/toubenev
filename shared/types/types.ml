@@ -193,6 +193,23 @@ module Volunteer = struct
   }
   [@@deriving jsont]
 
+  let dummy =
+    {
+      id = Uuidm.nil;
+      public_name = None;
+      name = "";
+      daily_workload = Duration.zero;
+      manually_assigned = false;
+      availabilities = CCRAL.empty;
+      arrival = None;
+      departure = None;
+      friends = [];
+      ennemis = [];
+      proficiencies = CCRAL.empty;
+      forbidden_tasks = CCRAL.empty;
+      forbidden_places = CCRAL.empty;
+    }
+
   type edit =
     | New_public_name of string option
     | New_name of string

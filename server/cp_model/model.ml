@@ -11,49 +11,54 @@ type context = {
   options : Options.t;
   assignations : Volunteer.t -> Quest.t -> Sat.Var.t_bool;
   assignations_rev : int -> Sat.Var.t_bool * Volunteer.t * Quest.t;
-  vs : Volunteer.t list;
+  vs : Volunteer.Set.t;
   qs : Quest.t list;
   for_all_quests : (Quest.t -> unit) -> unit;
   for_all_volunteers : (Volunteer.t -> unit) -> unit;
 }
 
 let assignations m vs qs =
-  let size = List.length vs * List.length qs in
+  let size = Volunteer.Set.cardinal vs * List.length qs in
   let c = ref 0 in
   let rev_tbl : (int, Sat.Var.t_bool * Volunteer.t * Quest.t) Hashtbl.t =
     Hashtbl.create size
   in
   let by_uuid =
-    List.fold_left vs ~init:Uuidm_map.empty ~f:(fun acc (v : Volunteer.t) ->
+    Volunteer.Set.fold
+      (fun (v : Volunteer.t) acc ->
         let quests =
           List.fold_left qs ~init:Uuidm_map.empty ~f:(fun acc (q : Quest.t) ->
               let name =
-                Format.sprintf "%i_%s_is_assigned_to_%s" !c v.name q.name
+                Format.sprintf "%i_%s_is_assigned_to_%s" !c v.initial.name
+                  q.name
               in
               let var = Sat.Var.new_bool m name in
               Hashtbl.add rev_tbl !c (var, v, q);
               incr c;
               Uuidm_map.add q.id var acc)
         in
-        Uuidm_map.add (uuid_to_uuidm v.id) quests acc)
+        Uuidm_map.add v.id quests acc)
+      vs Uuidm_map.empty
   in
   let find =
-   fun v q ->
-    Uuidm_map.find (uuid_to_uuidm v.Volunteer.id) by_uuid
-    |> Uuidm_map.find q.Quest.id
+   fun v q -> Uuidm_map.find v.Volunteer.id by_uuid |> Uuidm_map.find q.Quest.id
   in
   let rev_find = fun i -> Hashtbl.find rev_tbl i in
   (find, rev_find)
 
 let prepare model (data : Planning.t) =
   (* TODO: split quests, group friends and quests groups, etc *)
-  let vs = RAL.to_list data.volunteers in
+  let vs =
+    RAL.to_list data.volunteers
+    |> List.map ~f:Volunteer.normalize
+    |> Volunteer.Set.of_list
+  in
   let qs =
-    RAL.to_list data.quests |> List.concat_map ~f:(Quest.normalize data.info)
+    RAL.to_list data.quests |> List.concat_map ~f:(Quest.normalize data.info vs)
   in
   let assignations, assignations_rev = assignations model vs qs in
   let for_all_quests f = List.iter qs ~f in
-  let for_all_volunteers f = List.iter vs ~f in
+  let for_all_volunteers f = Volunteer.Set.iter ~f vs in
   {
     model;
     options = data.options;
@@ -76,7 +81,8 @@ let all_staffed (ctx : context) =
     let open Sat in
     let name = Format.sprintf "q_%s_is_staffed" q.name in
     let sum =
-      LinearExpr.sum_vars @@ List.map ctx.vs ~f:(fun v -> ctx.assignations v q)
+      LinearExpr.sum_vars
+      @@ Volunteer.Set.to_list_map ctx.vs ~f:(fun v -> ctx.assignations v q)
     in
     sum == of_int q.initial.required_volunteers |> add ctx.model ~name
   in
@@ -92,7 +98,8 @@ let non_ubiquity_of_normal_humans (ctx : context) =
         ctx.for_all_volunteers @@ fun v ->
         let assig_v = ctx.assignations v in
         let name =
-          Format.sprintf "%s_cannot_do_both_%s_and_%s" v.name q.name q'.name
+          Format.sprintf "%s_cannot_do_both_%s_and_%s" v.initial.name q.name
+            q'.name
         in
         Sat.Constraint.at_most_one [ assig_v q; assig_v q' ]
         |> Sat.add ctx.model ~name)
@@ -104,17 +111,17 @@ let enforce_assignations (ctx : context) =
   let assigned = Hashtbl.create 16 in
   let () =
     ctx.for_all_quests @@ fun q ->
-    CCRAL.iter q.initial.assigned_volunteers ~f:(fun (v : Volunteer.t) ->
-        let name = Format.sprintf "%s_assigned_to_%s" v.name q.name in
+    Volunteer.Set.iter q.assigned_volunteers ~f:(fun (v : Volunteer.t) ->
+        let name = Format.sprintf "%s_assigned_to_%s" v.initial.name q.name in
         Hashtbl.add assigned (q.id, v.id) ();
         Sat.(add ctx.model ~name (is_true (ctx.assignations v q))))
   in
   ctx.for_all_volunteers @@ fun v ->
-  if v.manually_assigned then
+  if v.initial.manually_assigned then
     ctx.for_all_quests @@ fun q ->
     if not (Hashtbl.mem assigned (q.id, v.id)) then
       let name =
-        Format.sprintf "manually_assigned_%s_cannot_do_%s" v.name q.name
+        Format.sprintf "manually_assigned_%s_cannot_do_%s" v.initial.name q.name
       in
       Sat.(add ctx.model ~name (is_false (ctx.assignations v q)))
 

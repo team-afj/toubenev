@@ -144,6 +144,8 @@ module Volunteer : sig
 
   include S with type t := t
 
+  val dummy : t
+
   val make :
     ?friends:t uuid list ->
     ?ennemis:t uuid list ->
