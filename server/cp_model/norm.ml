@@ -15,7 +15,10 @@ module Volunteer = struct
     let equal v1 v2 = Uuidm.equal v1.id v2.id
 
     let compare v1 v2 =
-      if equal v1 v2 then 0 else String.compare v1.initial.name v2.initial.name
+      if equal v1 v2 then 0
+      else
+        let c = String.compare v1.initial.name v2.initial.name in
+        if c = 0 then Uuidm.compare v1.id v2.id else c
   end
 
   include T
