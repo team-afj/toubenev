@@ -11,7 +11,11 @@ end
 
 module Volunteer = struct
   module T = struct
-    type t = { id : Uuidm.t; initial : Volunteer.t }
+    type t = {
+      id : Uuidm.t;
+      initial : Volunteer.t;
+      forbidden_tasks : Task_type.Set.t;
+    }
 
     let equal v1 v2 = Uuidm.equal v1.id v2.id
 
@@ -24,22 +28,30 @@ module Volunteer = struct
 
   include T
 
+  let dummy =
+    {
+      id = Uuidm.nil;
+      initial = Volunteer.dummy;
+      forbidden_tasks = Task_type.Set.empty;
+    }
+
   module Set = struct
     include Set.Make (T)
 
-    let find_by_id id t = find { id; initial = Volunteer.dummy } t
-    let to_list_map ~f t = List.map ~f (to_list t)
-    let iter ~f t = iter f t
-    let fold ~init ~f t = fold (Fun.flip f) t init
+    let find_by_id id t = find { dummy with id } t
   end
 
   module Map = struct
     include Map.Make (T)
 
-    let find_by_id id = find { id; initial = Volunteer.dummy }
+    let find_by_id id = find { dummy with id }
   end
 
-  let normalize (v : Volunteer.t) = { id = uuid_to_uuidm v.id; initial = v }
+  let normalize (v : Volunteer.t) =
+    let forbidden_tasks =
+      Task_type.Set.of_list (CCRAL.to_list v.forbidden_tasks)
+    in
+    { id = uuid_to_uuidm v.id; initial = v; forbidden_tasks }
 end
 
 module Volunteers = Volunteer.Set
@@ -78,9 +90,6 @@ module Quest = struct
     include Set.Make (T)
 
     let find_by_id id t = find { dummy with id } t
-    let to_list_map ~f t = List.map ~f (to_list t)
-    let iter ~f t = iter f t
-    let fold ~init ~f t = fold (Fun.flip f) t init
   end
 
   (** Check if two quests are overlapping. If they are in separate places they

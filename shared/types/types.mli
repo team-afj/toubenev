@@ -78,6 +78,7 @@ module Task_type : sig
     divisible : bool;
   }
 
+  module Set : Set.S with type elt = t
   include S with type t := t
 
   val make :

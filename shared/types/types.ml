@@ -103,15 +103,25 @@ end
 module Places = Random_access_list (Place)
 
 module Task_type = struct
-  type t = {
-    id : t uuid;
-    slug : string;
-    name : string;
-    description : string option;
-    specialist_only : bool;
-    divisible : bool;
-  }
-  [@@deriving jsont]
+  module T = struct
+    type t = {
+      id : t uuid;
+      slug : string;
+      name : string;
+      description : string option;
+      specialist_only : bool;
+      divisible : bool;
+    }
+    [@@deriving jsont]
+
+    let compare t1 t2 =
+      let c = String.compare t1.name t2.name in
+      if c = 0 then Uuidm.compare (uuid_to_uuidm t1.id) (uuid_to_uuidm t2.id)
+      else c
+  end
+
+  include T
+  module Set = Set.Make (T)
 
   let dummy =
     {
