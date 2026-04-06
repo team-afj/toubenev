@@ -1,6 +1,8 @@
 open Lunar
 open Types
 
+let () = Mirage_crypto_rng_unix.use_default ()
+
 let example_planning : Planning.t =
   let options = Options.default in
   let info =
@@ -37,11 +39,17 @@ let example_planning : Planning.t =
   in
   { options; info; places; task_types; volunteers; quests }
 
-let model = Cp_model.Model.make example_planning
-let response = Ortools_solvers.Sat.solve model
+let context = Cp_model.Model.make example_planning
+
+let parameters =
+  Ortools.Sat_parameters.make_sat_parameters ~log_search_progress:false ()
+
+let response = Ortools_solvers.Sat.solve ~parameters context.model
 
 let () =
   let open Ortools.Sat.Response in
-  Format.printf "Status %s\n" (string_of_status response.status);
-  Format.(printf "%a\n" (pp_print_array pp_print_int) response.solution);
-  Format.printf "%s\n" response.solution_info
+  let solution = Cp_model.Model.resolve_solution context response.solution in
+  Format.printf "\nStatus %s\n" (string_of_status response.status);
+  Format.(printf "Solution:@ @[%a@]\n" Cp_model.Model.pp_solution solution);
+  Format.printf "Solution info: %s\n" response.solution_info;
+  Format.printf "Log: %s\n" response.solve_log

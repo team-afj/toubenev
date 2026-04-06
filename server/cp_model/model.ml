@@ -3,50 +3,80 @@ open! Lunar
 open Types
 open Ortools
 module RAL = CCRAL
+module Uuidm_map = Map.Make (Uuidm)
 
 type context = {
   model : Sat.model;
-  assignations : Volunteer.t -> Quest.t -> [ `Bool ] Sat.Var.t;
+  assignations : Volunteer.t -> Norm.Quest.t -> Sat.Var.t_bool;
+  assignations_rev : int -> Sat.Var.t_bool * Volunteer.t * Norm.Quest.t;
   vs : Volunteer.t list;
-  qs : Quest.t list;
-  for_all_quests : (Quest.t -> unit) -> unit;
+  qs : Norm.Quest.t list;
+  for_all_quests : (Norm.Quest.t -> unit) -> unit;
   for_all_volunteers : (Volunteer.t -> unit) -> unit;
 }
 
 let assignations m vs qs =
+  let size = List.length vs * List.length qs in
   let c = ref 0 in
-  let tbl : (Volunteer.t uuid * Quest.t uuid, Sat.Var.t_bool) Hashtbl.t =
-    let tbl = Hashtbl.create (List.length vs * List.length qs) in
-    List.iter vs ~f:(fun (v : Volunteer.t) ->
-        List.iter qs ~f:(fun (q : Quest.t) ->
-            incr c;
-            Format.sprintf "%i_%s_is_assigned_to_%s" !c v.name q.name
-            |> Sat.Var.new_bool m
-            |> Hashtbl.add tbl (v.id, q.id)));
-    tbl
+  let rev_tbl : (int, Sat.Var.t_bool * Volunteer.t * Norm.Quest.t) Hashtbl.t =
+    Hashtbl.create size
   in
-  fun v q -> Hashtbl.find tbl (v.Volunteer.id, q.Quest.id)
+  let by_uuid =
+    List.fold_left vs ~init:Uuidm_map.empty ~f:(fun acc (v : Volunteer.t) ->
+        let quests =
+          List.fold_left qs ~init:Uuidm_map.empty
+            ~f:(fun acc (q : Norm.Quest.t) ->
+              let name =
+                Format.sprintf "%i_%s_is_assigned_to_%s" !c v.name q.name
+              in
+              let var = Sat.Var.new_bool m name in
+              Hashtbl.add rev_tbl !c (var, v, q);
+              incr c;
+              Uuidm_map.add q.id var acc)
+        in
+        Uuidm_map.add (uuid_to_uuidm v.id) quests acc)
+  in
+  let find =
+   fun v q ->
+    Uuidm_map.find (uuid_to_uuidm v.Volunteer.id) by_uuid
+    |> Uuidm_map.find q.Norm.Quest.id
+  in
+  let rev_find = fun i -> Hashtbl.find rev_tbl i in
+  (find, rev_find)
 
 let prepare model (data : Planning.t) =
   (* TODO: split quests, group friends and quests groups, etc *)
   let vs = RAL.to_list data.volunteers in
-  let qs = RAL.to_list data.quests in
-  let assignations = assignations model vs qs in
+  let qs =
+    RAL.to_list data.quests
+    |> List.concat_map ~f:(Norm.Quest.normalize data.info)
+  in
+  let assignations, assignations_rev = assignations model vs qs in
   let for_all_quests f = List.iter qs ~f in
   let for_all_volunteers f = List.iter vs ~f in
-  { model; assignations; vs; qs; for_all_quests; for_all_volunteers }
+  {
+    model;
+    assignations;
+    assignations_rev;
+    vs;
+    qs;
+    for_all_quests;
+    for_all_volunteers;
+  }
 
 (** All quests are fully staffed *)
 let all_staffed (ctx : context) =
-  let quest_is_staffed (q : Quest.t) =
+  let quest_is_staffed (q : Norm.Quest.t) =
     let open Sat in
     let name = Format.sprintf "q_%s_is_staffed" q.name in
     let sum =
       LinearExpr.sum_vars @@ List.map ctx.vs ~f:(fun v -> ctx.assignations v q)
     in
-    sum == of_int q.required_volunteers |> add ctx.model ~name
+    sum == of_int q.initial.required_volunteers |> add ctx.model ~name
   in
   ctx.for_all_quests quest_is_staffed
+
+(** Volunteers cannot do several things at the same time *)
 
 let make (data : Planning.t) =
   let model = Sat.make ~name:"Toubenev" () in
@@ -54,4 +84,17 @@ let make (data : Planning.t) =
 
   let () = all_staffed context in
 
-  model
+  context
+
+let resolve_solution ctx arr =
+  Array.mapi arr ~f:(fun i b ->
+      let name, v, q = ctx.assignations_rev i in
+      (name, v, q, b))
+
+let pp_solution fmt arr =
+  let open Format in
+  let pp_var fmt (var, _v, _q, b) =
+    fprintf fmt "%s: %b" (Sat.Var.to_string var) (Bool.of_int b)
+  in
+  let pp_sep fmt () = fprintf fmt ";@ " in
+  fprintf fmt "%a" (pp_print_array ~pp_sep pp_var) arr

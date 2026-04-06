@@ -24,6 +24,9 @@ end
 
 type _ uuid
 
+val uuid_equal : 'a uuid -> 'a uuid -> bool
+val uuid_to_uuidm : 'a uuid -> Uuidm.t
+
 module Random_access_list : (X : S) -> sig
   include S with type t = X.t CCRAL.t
 end

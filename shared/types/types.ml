@@ -57,11 +57,14 @@ end
 
 type _ uuid = Uuidm.t
 
+let uuid_equal u1 u2 = Uuidm.equal u1 u2
+
 let uuid_jsont _ =
   Jsont.map ~dec:Uuidm.unsafe_of_binary_string ~enc:Uuidm.to_binary_string
     Jsont.string
 
 let make_uuid () = Uuidm.v4_gen (Random.get_state ()) ()
+let uuid_to_uuidm t = t
 
 module Options = struct
   type t = { minimum_transfer_time : Duration.t } [@@deriving jsont]
@@ -137,8 +140,6 @@ module Time_spec = struct
 
   type t = { recurrence : recurrence; start : Time.t; duration : Duration.t }
   [@@deriving jsont]
-
-  let end_ t = Time.(t.start + t.duration)
 
   type edit =
     | New_recurrence of recurrence

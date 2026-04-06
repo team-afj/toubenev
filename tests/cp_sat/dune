@@ -1,4 +1,11 @@
 (test
  (name simple_example)
  (modules simple_example)
- (libraries ortools ortools_solvers lunar cp_model types jsont.bytesrw))
+ (libraries
+  mirage-crypto-rng.unix
+  ortools
+  ortools_solvers
+  lunar
+  cp_model
+  types
+  jsont.bytesrw))
