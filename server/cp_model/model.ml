@@ -13,6 +13,7 @@ type context = {
   assignations_rev : int -> Sat.Var.t_bool * Volunteer.t * Quest.t;
   vs : Volunteers.t;
   qs : Quests.t;
+  task_types : Task_type.Set.t;
   for_all_quests : (Quest.t -> unit) -> unit;
   for_all_volunteers : (Volunteer.t -> unit) -> unit;
 }
@@ -56,6 +57,7 @@ let prepare model (data : Planning.t) =
     |> List.concat_map ~f:(Quest.normalize data.info vs)
     |> Quests.of_list
   in
+  let task_types = RAL.to_list data.task_types |> Task_type.Set.of_list in
   let assignations, assignations_rev = assignations model vs qs in
   let for_all_quests f = Quests.iter qs ~f in
   let for_all_volunteers f = Volunteers.iter ~f vs in
@@ -66,14 +68,16 @@ let prepare model (data : Planning.t) =
     assignations_rev;
     vs;
     qs;
+    task_types;
     for_all_quests;
     for_all_volunteers;
   }
 
-(** Utilities *)
+(* Utilities *)
 let is_false v = Sat.(var v == of_int 0)
-
 let is_true v = Sat.(var v == of_int 1)
+
+(* Constraints *)
 
 (** All quests are fully staffed *)
 let all_staffed (ctx : context) =
@@ -123,6 +127,33 @@ let enforce_assignations (ctx : context) =
       in
       Sat.(add ctx.model ~name (is_false (ctx.assignations v q)))
 
+(** Force every volunteer to do at list one of a quest list. Warning, this
+    constraint can easily make the problem UNFEASIBLE.
+
+    Exceptions: manually assigned volunteers or with forbidden places *)
+let everyone_does (ctx : context) ?name (quests : Quests.t) =
+  ctx.for_all_volunteers @@ fun v ->
+  if not v.initial.manually_assigned then
+    let quests =
+      Quests.filter
+        (fun q -> not (Task_type.Set.mem q.initial.task_type v.forbidden_tasks))
+        quests
+    in
+    let vars = Quests.to_list_map ~f:(ctx.assignations v) quests in
+    let name = Option.map (Format.sprintf "%s_do_one_%s" v.initial.name) name in
+    Sat.add ctx.model ?name @@ Sat.Constraint.at_least_one vars
+
+let enforce_mandatory_tasks (ctx : context) =
+  let mandatory t =
+    Equal.poly t.Task_type.everyone_should_do_it At_least_once
+  in
+  Task_type.Set.filter mandatory ctx.task_types
+  |> Task_type.Set.iter ~f:(fun tt ->
+      let quests =
+        Quests.filter (fun q -> Task_type.equal tt q.initial.task_type) ctx.qs
+      in
+      everyone_does ctx ~name:tt.name quests)
+
 let make (data : Planning.t) =
   let model = Sat.make ~name:"Toubenev" () in
   let context = prepare model data in
@@ -130,6 +161,7 @@ let make (data : Planning.t) =
   let () = all_staffed context in
   let () = non_ubiquity_of_normal_humans context in
   let () = enforce_assignations context in
+  let () = enforce_mandatory_tasks context in
 
   context
 

@@ -69,14 +69,20 @@ module Places : sig
 end
 
 module Task_type : sig
+  (* Only [At_least_once] is handled right now *)
+  type task_sharing = Not_necessarily | At_least_once | In_equal_proportion
+
   type t = private {
     id : t uuid;
     slug : string;
     name : string;
     description : string option;
+    everyone_should_do_it : task_sharing;
     specialist_only : bool;
     divisible : bool;
   }
+
+  val equal : t -> t -> bool
 
   module Set : Set.S with type elt = t
   include S with type t := t
@@ -85,6 +91,7 @@ module Task_type : sig
     slug:string ->
     name:string ->
     ?description:string ->
+    ?everyone_should_do_it:task_sharing ->
     specialist_only:bool ->
     divisible:bool ->
     unit ->

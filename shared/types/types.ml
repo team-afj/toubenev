@@ -103,16 +103,22 @@ end
 module Places = Random_access_list (Place)
 
 module Task_type = struct
+  type task_sharing = Not_necessarily | At_least_once | In_equal_proportion
+  [@@deriving jsont]
+
   module T = struct
     type t = {
       id : t uuid;
       slug : string;
       name : string;
       description : string option;
+      everyone_should_do_it : task_sharing;
       specialist_only : bool;
       divisible : bool;
     }
     [@@deriving jsont]
+
+    let equal t1 t2 = Uuidm.equal (uuid_to_uuidm t1.id) (uuid_to_uuidm t2.id)
 
     let compare t1 t2 =
       let c = String.compare t1.name t2.name in
@@ -129,6 +135,7 @@ module Task_type = struct
       slug = "";
       name = "";
       description = None;
+      everyone_should_do_it = Not_necessarily;
       specialist_only = false;
       divisible = false;
     }
@@ -149,9 +156,18 @@ module Task_type = struct
     | New_specialist_only specialist_only -> { t with specialist_only }
     | New_divisible divisible -> { t with divisible }
 
-  let make ~slug ~name ?description ~specialist_only ~divisible () =
+  let make ~slug ~name ?description ?(everyone_should_do_it = Not_necessarily)
+      ~specialist_only ~divisible () =
     let id = make_uuid () in
-    { id; slug; name; description; specialist_only; divisible }
+    {
+      id;
+      slug;
+      name;
+      description;
+      everyone_should_do_it;
+      specialist_only;
+      divisible;
+    }
 end
 
 module Task_types = Random_access_list (Task_type)
