@@ -10,27 +10,6 @@ open Lunar_jsont
 (* TODO we should probaly have a functor for "Stores" and rely primarily on
    cross-references *)
 
-module type Id = sig
-  type id
-
-  val id_of_int : int -> id
-  val id_to_int : id -> int
-end
-
-module Make_id () = struct
-  type id = int [@@deriving jsont]
-
-  let id_of_int = Fun.id
-  let id_to_int = Fun.id
-end
-
-module type Indexed = sig
-  type t
-  type id
-
-  val get : id -> t
-end
-
 module type Editable = sig
   type t
   type edit
@@ -76,11 +55,17 @@ module Random_access_list (X : S) : S with type t = X.t CCRAL.t = struct
           t (CCRAL.get t i)
 end
 
-module Place = struct
-  include Make_id ()
+type _ uuid = Uuidm.t
 
+let uuid_jsont _ =
+  Jsont.map ~dec:Uuidm.unsafe_of_binary_string ~enc:Uuidm.to_binary_string
+    Jsont.string
+
+let make_uuid () = Uuidm.v4_gen (Random.get_state ()) ()
+
+module Place = struct
   type t = {
-    id : id;
+    id : t uuid;
     slug : string;
     name : string;
     description : string option;
@@ -99,23 +84,16 @@ module Place = struct
     | New_name name -> { t with name }
     | New_description description -> { t with description }
 
-  let store : t Dynarray.t = Dynarray.create ()
-  let get i = Dynarray.get store i
-
   let make ~slug ~name ?description () =
-    let id = Dynarray.length store in
-    let v : t = { id; slug; name; description } in
-    Dynarray.add_last store v;
-    v
+    let id = make_uuid () in
+    { id; slug; name; description }
 end
 
 module Places = Random_access_list (Place)
 
 module Task_type = struct
-  include Make_id ()
-
   type t = {
-    id : id;
+    id : t uuid;
     slug : string;
     name : string;
     description : string option;
@@ -140,14 +118,9 @@ module Task_type = struct
     | New_specialist_only specialist_only -> { t with specialist_only }
     | New_divisible divisible -> { t with divisible }
 
-  let store : t Dynarray.t = Dynarray.create ()
-  let get i = id_to_int i |> Dynarray.get store
-
   let make ~slug ~name ?description ~specialist_only ~divisible () =
-    let id = Dynarray.length store in
-    let v : t = { id; slug; name; description; specialist_only; divisible } in
-    Dynarray.add_last store v;
-    v
+    let id = make_uuid () in
+    { id; slug; name; description; specialist_only; divisible }
 end
 
 module Task_types = Random_access_list (Task_type)
@@ -194,18 +167,16 @@ end
 module Availabilities = Random_access_list (Availability)
 
 module Volunteer = struct
-  include Make_id ()
-
   type t = {
-    id : id;
+    id : t uuid;
     public_name : string option;
     name : string;
     daily_workload : Duration.t;
     availabilities : Availabilities.t;
     arrival : Datetime.t option;
     departure : Datetime.t option;
-    friends : id list;
-    ennemis : id list;
+    friends : t uuid list;
+    ennemis : t uuid list;
     proficiencies : Task_types.t;
     forbidden_tasks : Task_types.t;
     forbidden_places : Places.t;
@@ -219,8 +190,8 @@ module Volunteer = struct
     | Update_availabilities of Availabilities.edit
     | New_arrival of Datetime.t option
     | New_departure of Datetime.t option
-    | New_friends of int list
-    | New_ennemis of int list
+    | New_friends of t uuid list
+    | New_ennemis of t uuid list
   [@@deriving jsont]
 
   let apply_edit (edit : edit) (t : t) : t =
@@ -235,44 +206,35 @@ module Volunteer = struct
         }
     | New_arrival arrival -> { t with arrival }
     | New_departure departure -> { t with departure }
-    | New_friends (friends : int list) -> { t with friends }
-    | New_ennemis (ennemis : int list) -> { t with ennemis }
-
-  let store : t Dynarray.t = Dynarray.create ()
-  let get i = Dynarray.get store i
+    | New_friends (friends : t uuid list) -> { t with friends }
+    | New_ennemis (ennemis : t uuid list) -> { t with ennemis }
 
   let make ?(friends = []) ?(ennemis = []) ?(proficiencies = CCRAL.empty)
       ?(forbidden_tasks = CCRAL.empty) ?(forbidden_places = CCRAL.empty)
       ?(availabilities = CCRAL.empty) ?arrival ?departure ~daily_workload ~name
       ?public_name () =
-    let id = Dynarray.length store in
-    let v : t =
-      {
-        id;
-        public_name;
-        name;
-        daily_workload;
-        availabilities;
-        arrival;
-        departure;
-        proficiencies;
-        friends;
-        ennemis;
-        forbidden_tasks;
-        forbidden_places;
-      }
-    in
-    Dynarray.add_last store v;
-    v
+    let id = make_uuid () in
+    {
+      id;
+      public_name;
+      name;
+      daily_workload;
+      availabilities;
+      arrival;
+      departure;
+      proficiencies;
+      friends;
+      ennemis;
+      forbidden_tasks;
+      forbidden_places;
+    }
 end
 
 module Volunteers = Random_access_list (Volunteer)
 
 module Quest = struct
-  include Make_id ()
-
   type t = {
-    id : id;
+    id : t uuid;
     name : string;
     description : string option;
     task_type : Task_type.t;
@@ -304,16 +266,9 @@ module Quest = struct
     | New_required_volunteers required_volunteers ->
         { t with required_volunteers }
 
-  let store : t Dynarray.t = Dynarray.create ()
-  let get i = Dynarray.get store i
-
   let make ~name ?description ~task_type ~place ~slot ~required_volunteers () =
-    let id = Dynarray.length store in
-    let v : t =
-      { id; name; description; task_type; place; slot; required_volunteers }
-    in
-    Dynarray.add_last store v;
-    v
+    let id = make_uuid () in
+    { id; name; description; task_type; place; slot; required_volunteers }
 end
 
 module Quests = Random_access_list (Quest)
