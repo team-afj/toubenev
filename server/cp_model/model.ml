@@ -11,20 +11,20 @@ type context = {
   options : Options.t;
   assignations : Volunteer.t -> Quest.t -> Sat.Var.t_bool;
   assignations_rev : int -> Sat.Var.t_bool * Volunteer.t * Quest.t;
-  vs : Volunteer.Set.t;
+  vs : Volunteers.t;
   qs : Quest.t list;
   for_all_quests : (Quest.t -> unit) -> unit;
   for_all_volunteers : (Volunteer.t -> unit) -> unit;
 }
 
 let assignations m vs qs =
-  let size = Volunteer.Set.cardinal vs * List.length qs in
+  let size = Volunteers.cardinal vs * List.length qs in
   let c = ref 0 in
   let rev_tbl : (int, Sat.Var.t_bool * Volunteer.t * Quest.t) Hashtbl.t =
     Hashtbl.create size
   in
   let by_uuid =
-    Volunteer.Set.fold
+    Volunteers.fold
       (fun (v : Volunteer.t) acc ->
         let quests =
           List.fold_left qs ~init:Uuidm_map.empty ~f:(fun acc (q : Quest.t) ->
@@ -51,14 +51,14 @@ let prepare model (data : Planning.t) =
   let vs =
     RAL.to_list data.volunteers
     |> List.map ~f:Volunteer.normalize
-    |> Volunteer.Set.of_list
+    |> Volunteers.of_list
   in
   let qs =
     RAL.to_list data.quests |> List.concat_map ~f:(Quest.normalize data.info vs)
   in
   let assignations, assignations_rev = assignations model vs qs in
   let for_all_quests f = List.iter qs ~f in
-  let for_all_volunteers f = Volunteer.Set.iter ~f vs in
+  let for_all_volunteers f = Volunteers.iter ~f vs in
   {
     model;
     options = data.options;
@@ -82,7 +82,7 @@ let all_staffed (ctx : context) =
     let name = Format.sprintf "q_%s_is_staffed" q.name in
     let sum =
       LinearExpr.sum_vars
-      @@ Volunteer.Set.to_list_map ctx.vs ~f:(fun v -> ctx.assignations v q)
+      @@ Volunteers.to_list_map ctx.vs ~f:(fun v -> ctx.assignations v q)
     in
     sum == of_int q.initial.required_volunteers |> add ctx.model ~name
   in
@@ -111,7 +111,7 @@ let enforce_assignations (ctx : context) =
   let assigned = Hashtbl.create 16 in
   let () =
     ctx.for_all_quests @@ fun q ->
-    Volunteer.Set.iter q.assigned_volunteers ~f:(fun (v : Volunteer.t) ->
+    Volunteers.iter q.assigned_volunteers ~f:(fun (v : Volunteer.t) ->
         let name = Format.sprintf "%s_assigned_to_%s" v.initial.name q.name in
         Hashtbl.add assigned (q.id, v.id) ();
         Sat.(add ctx.model ~name (is_true (ctx.assignations v q))))

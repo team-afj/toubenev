@@ -37,6 +37,8 @@ module Volunteer = struct
   let normalize (v : Volunteer.t) = { id = uuid_to_uuidm v.id; initial = v }
 end
 
+module Volunteers = Volunteer.Set
+
 module Quest = struct
   type t = {
     id : Uuidm.t;
@@ -112,3 +114,5 @@ module Quest = struct
           assigned_volunteers;
         })
 end
+
+module Quests = Quest.Set
