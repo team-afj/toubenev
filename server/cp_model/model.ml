@@ -4,28 +4,29 @@ open Types
 open Ortools
 module RAL = CCRAL
 module Uuidm_map = Map.Make (Uuidm)
+open Norm
 
 type context = {
   model : Sat.model;
-  assignations : Volunteer.t -> Norm.Quest.t -> Sat.Var.t_bool;
-  assignations_rev : int -> Sat.Var.t_bool * Volunteer.t * Norm.Quest.t;
+  options : Options.t;
+  assignations : Volunteer.t -> Quest.t -> Sat.Var.t_bool;
+  assignations_rev : int -> Sat.Var.t_bool * Volunteer.t * Quest.t;
   vs : Volunteer.t list;
-  qs : Norm.Quest.t list;
-  for_all_quests : (Norm.Quest.t -> unit) -> unit;
+  qs : Quest.t list;
+  for_all_quests : (Quest.t -> unit) -> unit;
   for_all_volunteers : (Volunteer.t -> unit) -> unit;
 }
 
 let assignations m vs qs =
   let size = List.length vs * List.length qs in
   let c = ref 0 in
-  let rev_tbl : (int, Sat.Var.t_bool * Volunteer.t * Norm.Quest.t) Hashtbl.t =
+  let rev_tbl : (int, Sat.Var.t_bool * Volunteer.t * Quest.t) Hashtbl.t =
     Hashtbl.create size
   in
   let by_uuid =
     List.fold_left vs ~init:Uuidm_map.empty ~f:(fun acc (v : Volunteer.t) ->
         let quests =
-          List.fold_left qs ~init:Uuidm_map.empty
-            ~f:(fun acc (q : Norm.Quest.t) ->
+          List.fold_left qs ~init:Uuidm_map.empty ~f:(fun acc (q : Quest.t) ->
               let name =
                 Format.sprintf "%i_%s_is_assigned_to_%s" !c v.name q.name
               in
@@ -39,7 +40,7 @@ let assignations m vs qs =
   let find =
    fun v q ->
     Uuidm_map.find (uuid_to_uuidm v.Volunteer.id) by_uuid
-    |> Uuidm_map.find q.Norm.Quest.id
+    |> Uuidm_map.find q.Quest.id
   in
   let rev_find = fun i -> Hashtbl.find rev_tbl i in
   (find, rev_find)
@@ -48,14 +49,14 @@ let prepare model (data : Planning.t) =
   (* TODO: split quests, group friends and quests groups, etc *)
   let vs = RAL.to_list data.volunteers in
   let qs =
-    RAL.to_list data.quests
-    |> List.concat_map ~f:(Norm.Quest.normalize data.info)
+    RAL.to_list data.quests |> List.concat_map ~f:(Quest.normalize data.info)
   in
   let assignations, assignations_rev = assignations model vs qs in
   let for_all_quests f = List.iter qs ~f in
   let for_all_volunteers f = List.iter vs ~f in
   {
     model;
+    options = data.options;
     assignations;
     assignations_rev;
     vs;
@@ -66,7 +67,7 @@ let prepare model (data : Planning.t) =
 
 (** All quests are fully staffed *)
 let all_staffed (ctx : context) =
-  let quest_is_staffed (q : Norm.Quest.t) =
+  let quest_is_staffed (q : Quest.t) =
     let open Sat in
     let name = Format.sprintf "q_%s_is_staffed" q.name in
     let sum =
