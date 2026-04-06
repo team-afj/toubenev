@@ -63,7 +63,7 @@ let uuid_jsont _ =
   Jsont.map ~dec:Uuidm.unsafe_of_binary_string ~enc:Uuidm.to_binary_string
     Jsont.string
 
-let make_uuid () = Uuidm.v4_gen (Random.get_state ()) ()
+let make_uuid () = new_random_uuid_v4 ()
 let uuid_to_uuidm t = t
 
 module Options = struct
