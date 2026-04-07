@@ -32,6 +32,8 @@ module Volunteer = struct
       id : Uuidm.t;
       initial : Volunteer.t;
       forbidden_tasks : Task_type.Set.t;
+      unavailabilities : Time_slot.t list;
+      preferences : (int * Time_slot.t) list;
     }
 
     let equal v1 v2 = Uuidm.equal v1.id v2.id
@@ -50,6 +52,8 @@ module Volunteer = struct
       id = Uuidm.nil;
       initial = Volunteer.dummy;
       forbidden_tasks = Task_type.Set.empty;
+      unavailabilities = [];
+      preferences = [];
     }
 
   module Set = struct
@@ -64,11 +68,26 @@ module Volunteer = struct
     let find_by_id id = find { dummy with id }
   end
 
-  let normalize (v : Volunteer.t) =
+  let normalize event_infos (v : Volunteer.t) =
     let forbidden_tasks =
       Task_type.Set.of_list (CCRAL.to_list v.forbidden_tasks)
     in
-    { id = uuid_to_uuidm v.id; initial = v; forbidden_tasks }
+    let unavailabilities, preferences =
+      CCRAL.fold v.availabilities ~x:([], [])
+        ~f:(fun (u_acc, p_acc) { Availability.status; slot } ->
+          let slots = expand_time_spec event_infos slot in
+          match status with
+          | Unavailable -> (List.rev_append slots u_acc, p_acc)
+          | Available pref ->
+              (u_acc, List.rev_append (List.map slots ~f:(Pair.make pref)) p_acc))
+    in
+    {
+      id = uuid_to_uuidm v.id;
+      initial = v;
+      forbidden_tasks;
+      unavailabilities;
+      preferences;
+    }
 end
 
 module Volunteers = Volunteer.Set

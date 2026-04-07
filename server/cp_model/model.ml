@@ -49,7 +49,7 @@ let prepare model (data : Planning.t) =
   (* TODO: split quests, group friends and quests groups, etc *)
   let vs =
     RAL.to_list data.volunteers
-    |> List.map ~f:Volunteer.normalize
+    |> List.map ~f:(Volunteer.normalize data.info)
     |> Volunteers.of_list
   in
   let qs =
