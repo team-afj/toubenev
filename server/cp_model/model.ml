@@ -198,6 +198,13 @@ let enforce_mandatory_tasks (ctx : context) =
       in
       everyone_does ctx ~name:tt.name requirement quests)
 
+(** Quests groups *)
+
+(* TODO:
+   - at least one volunteer in all of them
+   - or most volunteers stay the same
+   - prevent volunteers to participate in the same recurring group more than
+     once *)
 let make (data : Planning.t) =
   let model = Sat.make ~name:"Toubenev" () in
   let context = prepare model data in
