@@ -123,8 +123,8 @@ module Quest = struct
     in
     not Datetime.(q1_end <= q2_start || q1_start >= q2_end)
 
-  (* Returns the set of quests from [qs] overlapping with [q].
-     Note that this set might contain [q] itself if [q] ∈ [qs]. *)
+  (** Returns the set of quests from [qs] overlapping with [q]. Note that this
+      set might contain [q] itself if [q] ∈ [qs]. *)
   let overlaps_with options q qs = Set.filter (overlaps options q) qs
 
   (** Generate sub-quests depending of the recurrence and the task type's
