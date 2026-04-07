@@ -9,3 +9,15 @@
   cp_model
   types
   jsont.bytesrw))
+
+(test
+ (name equal_proportions)
+ (modules equal_proportions)
+ (libraries
+  mirage-crypto-rng.unix
+  ortools
+  ortools_solvers
+  lunar
+  cp_model
+  types
+  jsont.bytesrw))

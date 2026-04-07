@@ -1,5 +1,5 @@
 open Std
-open! Lunar
+open! Lunar_jsont
 open Types
 open Ortools
 module RAL = CCRAL
@@ -127,32 +127,76 @@ let enforce_assignations (ctx : context) =
       in
       Sat.(add ctx.model ~name (is_false (ctx.assignations v q)))
 
-(** Force every volunteer to do at list one of a quest list. Warning, this
-    constraint can easily make the problem UNFEASIBLE.
+(** Force every volunteer to do at least one of a quest list. Warning, this
+    constraint can easily make the problem UNFEASIBLE, especially in "equal
+    proportion" mode.
 
     Exceptions: manually assigned volunteers or with forbidden places *)
-let everyone_does (ctx : context) ?name (quests : Quests.t) =
-  ctx.for_all_volunteers @@ fun v ->
-  if not v.initial.manually_assigned then
-    let quests =
-      Quests.filter
-        (fun q -> not (Task_type.Set.mem q.initial.task_type v.forbidden_tasks))
-        quests
-    in
-    let vars = Quests.to_list_map ~f:(ctx.assignations v) quests in
-    let name = Option.map (Format.sprintf "%s_do_one_%s" v.initial.name) name in
-    Sat.add ctx.model ?name @@ Sat.Constraint.at_least_one vars
+let everyone_does (ctx : context) ?name requirement (quests : Quests.t) =
+  let available_volunteers =
+    Volunteers.filter (fun v -> not v.initial.manually_assigned) ctx.vs
+  in
+  Volunteers.iter available_volunteers ~f:(fun v ->
+      let quests =
+        Quests.filter
+          (fun q ->
+            not (Task_type.Set.mem q.initial.task_type v.forbidden_tasks))
+          quests
+      in
+      match requirement with
+      | `Once ->
+          let name =
+            Option.map (Format.sprintf "%s_do_one_%s" v.initial.name) name
+          in
+          let vars = Quests.to_list_map ~f:(ctx.assignations v) quests in
+          Sat.add ctx.model ?name @@ Sat.Constraint.at_least_one vars
+      | `Equal_proportion ->
+          let n_volunteers = Volunteers.cardinal available_volunteers in
+          let longuest_quest, total_time =
+            Quests.fold ~init:(Duration.zero, Duration.zero) quests
+              ~f:(fun (max, acc) q ->
+                let max = Duration.max max q.slot.duration in
+                (max, Duration.(q.slot.duration + acc)))
+          in
+          let longuest_quest = Duration.to_minutes longuest_quest in
+          let total_time = Duration.to_minutes total_time in
+          let time_per_v = (total_time / n_volunteers) - longuest_quest in
+          let vars =
+            Quests.to_list_map
+              ~f:(fun q ->
+                (Duration.to_minutes q.slot.duration, ctx.assignations v q))
+              quests
+          in
+          let sum = Sat.LinearExpr.weighted_sum vars in
+          let name =
+            Option.map
+              (Format.sprintf "%s_do_as_much_%s_as_everyone" v.initial.name)
+              name
+          in
+          Sat.(add ctx.model ?name (sum >= of_int time_per_v)))
 
+(** Force every volunteer to participate at least once to a mandatory task.
+    Warning, this constraint can easily make the problem UNFEASIBLE, especially
+    in "equal proportion" mode.
+
+    Exceptions: manually assigned volunteers or with forbidden places are not
+    taken into account. *)
 let enforce_mandatory_tasks (ctx : context) =
   let mandatory t =
-    Equal.poly t.Task_type.everyone_should_do_it At_least_once
+    not (Equal.poly t.Task_type.everyone_should_do_it Not_necessarily)
   in
   Task_type.Set.filter mandatory ctx.task_types
   |> Task_type.Set.iter ~f:(fun tt ->
+      let requirement =
+        match tt.everyone_should_do_it with
+        | At_least_once -> `Once
+        | In_equal_proportion -> `Equal_proportion
+        | Not_necessarily -> assert false
+      in
       let quests =
         Quests.filter (fun q -> Task_type.equal tt q.initial.task_type) ctx.qs
       in
-      everyone_does ctx ~name:tt.name quests)
+      everyone_does ctx ~name:tt.name requirement quests)
 
 let make (data : Planning.t) =
   let model = Sat.make ~name:"Toubenev" () in
