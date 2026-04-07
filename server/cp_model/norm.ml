@@ -9,6 +9,23 @@ module Time_slot = struct
   let end_ t = Datetime.(t.start + t.duration)
 end
 
+let expand_time_spec { Event_infos.kind = Finite { start_date; end_date }; _ }
+    (spec : Time_spec.t) =
+  let start_time = spec.start in
+  let duration = spec.duration in
+  let all_dates =
+    match spec.recurrence with
+    | On dates -> dates
+    | Daily ->
+        Date.Range.(
+          make ~first:start_date ~last:end_date
+          |> to_list ~include_boundaries:true ~iterator:iterator_day)
+    | Weekly _ -> failwith "Not implemented"
+  in
+  List.map all_dates ~f:(fun date ->
+      let start = Datetime.from date start_time in
+      { Time_slot.start; duration })
+
 module Volunteer = struct
   module T = struct
     type t = {
@@ -112,8 +129,7 @@ module Quest = struct
 
   (** Generate sub-quests depending of the recurrence and the task type's
       divisibility. *)
-  let normalize { Event_infos.kind = Finite { start_date; end_date }; _ } vs
-      (q : Quest.t) =
+  let normalize event_infos vs (q : Quest.t) =
     let assigned_volunteers =
       CCRAL.fold q.assigned_volunteers ~x:Volunteer.Set.empty
         ~f:(fun acc (v : Types.Volunteer.t) ->
@@ -121,29 +137,12 @@ module Quest = struct
             (Volunteer.Set.find_by_id (uuid_to_uuidm v.id) vs)
             acc)
     in
-    let spec = q.slot in
-    let start_time = spec.start in
-    let duration = spec.duration in
-    let all_dates =
-      match spec.recurrence with
-      | On dates -> dates
-      | Daily ->
-          Date.Range.(
-            make ~first:start_date ~last:end_date
-            |> to_list ~include_boundaries:true ~iterator:iterator_day)
-      | Weekly _ -> failwith "Not implemented"
-    in
-    List.map all_dates ~f:(fun date ->
-        let start = Datetime.from date start_time in
+    let slots = expand_time_spec event_infos q.slot in
+    List.map slots ~f:(fun (slot : Time_slot.t) ->
+        let date = Datetime.date slot.start in
         let id = new_random_uuid_v4 () in
         let name = Format.sprintf "%s_%s" q.name (Date.to_string date) in
-        {
-          id;
-          initial = q;
-          name;
-          slot = { Time_slot.start; duration };
-          assigned_volunteers;
-        })
+        { id; initial = q; name; slot; assigned_volunteers })
 end
 
 module Quests = Quest.Set
