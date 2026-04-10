@@ -1,0 +1,7 @@
+(executable
+ (name grist_conv)
+ (libraries grist_import jsont.bytesrw))
+
+(cram
+ (applies_to :whole_subtree)
+ (deps %{exe:grist_conv.exe}))

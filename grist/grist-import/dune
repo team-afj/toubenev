@@ -1,0 +1,6 @@
+(library
+ (name grist_import)
+ (libraries std_js jsont lunar)
+ (flags :standard -open Std_js)
+ (preprocess
+  (pps ppx_deriving_jsont)))

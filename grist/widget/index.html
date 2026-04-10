@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Page Title</title>
+  <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+</head>
+
+<body>
+
+  <pre id="readout">Waiting for data...</pre>
+  <script>
+    grist.ready({
+      requiredAccess: 'full',
+      columns: []
+    });
+    // Transform a dictionary of arrays to an array of dicts
+    function toRows(table) {
+      const keys = Object.keys(table);
+      return table.id.map((_, i) => Object.fromEntries(keys.map(k => [k, table[k][i]])));
+    }
+    grist.onRecords(function (record) {
+      table = grist.docApi.fetchTable("Types_de_quete").then(table => {
+        rows = toRows(table)
+        console.log(rows[0])
+
+        document.getElementById('readout').innerHTML = JSON.stringify(rows, null, 2)
+      });
+      table = grist.docApi.fetchTable("Lieux").then(table => {
+        rows = toRows(table)
+        console.log(rows[0])
+      });
+      table = grist.docApi.fetchTable("Quetes").then(table => {
+        rows = toRows(table)
+        console.log(rows[0])
+      });
+      table = grist.docApi.fetchTable("Benevoles").then(table => {
+        rows = toRows(table)
+        console.log(rows[0])
+      })
+    });
+  </script>
+
+</body>
+
+</html>
