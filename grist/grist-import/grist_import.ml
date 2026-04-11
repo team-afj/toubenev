@@ -45,13 +45,15 @@ let grist_list elt_jsont =
     | Ok r -> r
     | Error err -> raise (Jsont.Error err)
   in
+  let tag_l = Jsont.Json.encode' Jsont.string "L" |> Result.get_ok in
   let enc f acc l =
     let i = ref 0 in
+
     Stdlib.List.fold_left
       (fun acc e ->
         incr i;
         f acc !i (Jsont.Json.encode' elt_jsont e |> Result.get_ok))
-      acc l
+      (f acc 0 tag_l) l
   in
   let dec_empty () = [] in
   let dec_add i elt l =
@@ -70,11 +72,13 @@ let grist_list elt_jsont =
         let e = Jsont.Json.decode' elt_jsont elt |> get_or_raise in
         e :: l
   in
-  let dec_finish _meta _i = Fun.id in
+  let dec_finish _meta _i = List.rev in
   Jsont.Array.map ~enc:{ enc } ~dec_empty ~dec_add ~dec_finish Jsont.json
   |> Jsont.Array.array
 
-type t = string * int [@@deriving jsont]
+type grist_int_list = int list
+
+let grist_int_list_jsont = grist_list Jsont.int
 
 module Benevole = struct
   type t = {
@@ -95,7 +99,7 @@ module Benevole = struct
     ennemis : (Jsont.Json.t[@jsont Jsont.json]) option; [@key "Ennemis"]
     date_d_arrivee : int option; [@key "Date_d_arrivee"]
     date_de_depart : int option; [@key "Date_de_depart"]
-    indisponibilites_quotidiennes : (Jsont.Json.t[@jsont Jsont.json]) option;
+    indisponibilites_quotidiennes : grist_int_list;
         [@key "Indisponibilites_quotidiennes"]
     horaires_preferes : (Jsont.Json.t[@jsont Jsont.json]) option;
         [@key "Horaires_preferes"]

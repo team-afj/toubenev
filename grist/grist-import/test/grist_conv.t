@@ -70,7 +70,12 @@
   >   ],
   >   "Date_d_arrivee": null,
   >   "Date_de_depart": null,
-  >   "Indisponibilites_quotidiennes": null,
+  >   "Indisponibilites_quotidiennes": [
+  >     "L",
+  >     8,
+  >     9,
+  >     11
+  >   ],
   >   "Horaires_preferes": null,
   >   "Horaires_contraints": null,
   >   "Indisponibilites_ponctuelles": null
