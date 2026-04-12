@@ -20,3 +20,8 @@ web-dev:
 .PHONY: dev
 dev:
 	sh scripts/build_and_serve.sh
+
+.PHONY: docker
+docker:
+	docker compose up -d
+	echo "Grist running at http://localhost:7531/"
