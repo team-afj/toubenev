@@ -48,6 +48,9 @@ let routes =
     get (rel /?? nil) --> default;
     get (rel / "bundle.js" /?? nil) --> js;
     get (rel / "sse" /?? nil) --> sse;
+    (* TODO generic static files serving *)
+    get (rel / "grist" /?? any) --> Grist.index;
+    get (rel / "grist" / "index.html" /?? nil) --> Grist.index;
   ]
 
 let () = Logs.set_level ~all:true (Some Debug)
@@ -68,18 +71,18 @@ let _cfg =
       |> X509.Private_key.decode_pem
     in
     let certificates = `Single ([ cert ], key) in
-    Tls.Config.server ~certificates ()
+    Tls.Config.server ~certificates ~alpn_protocols:[ "h2" ] ()
   in
   match tls with
   | Error (`Msg err) ->
       Logs.err (fun l -> l "TLS config error: %S" err);
       exit 1
   | Ok tls ->
-      let sockaddr = Unix.(ADDR_INET (Unix.inet_addr_loopback, 7531)) in
+      let sockaddr = Unix.(ADDR_INET (Unix.inet_addr_loopback, 1357)) in
       Vif.config ~http:(`H2 H2.Config.default) ~tls sockaddr
 
 let cfg =
-  let sockaddr = Unix.(ADDR_INET (Unix.inet_addr_loopback, 7531)) in
+  let sockaddr = Unix.(ADDR_INET (Unix.inet_addr_loopback, 1357)) in
   Vif.config sockaddr
 
 let () =
