@@ -14,10 +14,11 @@
       requiredAccess: 'full',
       columns: []
     });
-    // Transform a dictionary of arrays to an array of dicts
+    // Transform a dictionary of arrays into an array of dicts
     function toRows(table) {
       const keys = Object.keys(table);
-      return table.id.map((_, i) => Object.fromEntries(keys.map(k => [k, table[k][i]])));
+      console.log(table)
+      return table[keys[0]].map((_, i) => Object.fromEntries(keys.map(k => [k, table[k][i]])));
     }
     grist.onRecords(function (record) {
       table = grist.docApi.fetchTable("Types_de_quete").then(table => {
@@ -40,7 +41,9 @@
       })
     });
   </script>
+  <script src="index.bc.js"></script>
 
 </body>
+z
 
 </html>

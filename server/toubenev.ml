@@ -51,6 +51,7 @@ let routes =
     (* TODO generic static files serving *)
     get (rel / "grist" /?? any) --> Grist.index;
     get (rel / "grist" / "index.html" /?? nil) --> Grist.index;
+    get (rel / "grist" / "index.bc.js" /?? nil) --> Grist.js;
   ]
 
 let () = Logs.set_level ~all:true (Some Debug)

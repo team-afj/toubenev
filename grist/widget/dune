@@ -1,0 +1,12 @@
+(executable
+ (name index)
+ (modes js)
+ (js_of_ocaml
+  (javascript_files stubs.js))
+ (promote (until-clean))
+ (flags :standard -open Std_js)
+ (libraries std_js brr grist_import))
+
+(alias
+ (name app)
+ (deps index.bc.js))
