@@ -64,10 +64,7 @@
   >     "L",
   >     1
   >   ],
-  >   "Ennemis": [
-  >     "L",
-  >     1
-  >   ],
+  >   "Ennemis": null,
   >   "Date_d_arrivee": null,
   >   "Date_de_depart": null,
   >   "Indisponibilites_quotidiennes": [
@@ -86,3 +83,34 @@
   $ cat initial | ./grist_conv.exe benevole | jq >recoded
 
   $ diff initial recoded
+
+
+  $ cat >initial <<'EOF'
+  > {
+  >   "id": 1,
+  >   "manualSort": 1,
+  >   "Nom": "Clean 1",
+  >   "Type": 1,
+  >   "Lieu": 1,
+  >   "Recurrence": "Ponctuelle",
+  >   "Jours": null,
+  >   "Date_et_heure_de_debut": 1775752200,
+  >   "benevoles": 2,
+  >   "Duree_heures_": 2,
+  >   "Date_et_heure_de_fin": 1775759400,
+  >   "ModCount": 6,
+  >   "Benevoles_assignes": [
+  >     "L",
+  >     1
+  >   ],
+  >   "gristHelper_Display2": "🧹 Clean",
+  >   "gristHelper_Display": "🌍 Site",
+  >   "gristHelper_Display4": [
+  >     "L",
+  >     "jjj"
+  >   ],
+  >   "Display": "🧹 Clean"
+  > }
+  > EOF
+
+  $ cat initial | ./grist_conv.exe quete | jq >recoded

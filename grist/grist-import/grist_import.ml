@@ -76,6 +76,13 @@ let grist_list elt_jsont =
   Jsont.Array.map ~enc:{ enc } ~dec_empty ~dec_add ~dec_finish Jsont.json
   |> Jsont.Array.array
 
+let grist_list elt =
+  let jsont = grist_list elt in
+
+  let null = Jsont.null [] in
+  let enc = function [] -> null | _ -> jsont in
+  Jsont.any ~dec_null:null ~dec_array:jsont ~enc ()
+
 type grist_int_list = int list
 
 let grist_int_list_jsont = grist_list Jsont.int
@@ -112,6 +119,9 @@ module Benevole = struct
 end
 
 type jour = Lun | Mar | Mer | Jeu | Ven | Sam | Dim [@@deriving jsont]
+type jour_list = jour list
+
+let jour_list_jsont = grist_list jour_jsont
 
 module Quete = struct
   type t = {
@@ -120,13 +130,22 @@ module Quete = struct
     type_ : int; [@key "Type"]
     lieu : int; [@key "Lieu"]
     recurrence : string; [@key "Recurrence"]
-    jours : jour list; [@jsont grist_list jour_jsont] [@key "Jours"]
+    jours : jour_list; [@default []] [@key "Jours"]
     date_et_heure_de_debut : int; [@key "Date_et_heure_de_debut"]
     benevoles : int; [@key "benevoles"]
     duree_heures : int; [@key "Duree_heures_"]
     date_et_heure_de_fin : int; [@key "Date_et_heure_de_fin"]
-    benevoles_assignes : int list;
-        [@jsont grist_list Jsont.int] [@key "Benevoles_assignes"]
+    benevoles_assignes : grist_int_list; [@key "Benevoles_assignes"]
   }
   [@@deriving jsont]
 end
+
+type data = {
+  (* options : Options.t;
+    info : Event_infos.t; *)
+  places : Lieu.t list;
+  task_types : Task_type.t list;
+  volunteers : Benevole.t list;
+  quests : Quete.t list;
+}
+[@@deriving jsont]
