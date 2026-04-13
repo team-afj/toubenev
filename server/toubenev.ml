@@ -44,14 +44,19 @@ let sse =
 let routes =
   let open Vif.Uri in
   let open Vif.Route in
+  (* TODO generic static files serving ? *)
+  (* TODO auth and doc identification *)
   [
     get (rel /?? nil) --> default;
     get (rel / "bundle.js" /?? nil) --> js;
     get (rel / "sse" /?? nil) --> sse;
-    (* TODO generic static files serving *)
     get (rel / "grist" /?? any) --> Grist.index;
     get (rel / "grist" / "index.html" /?? nil) --> Grist.index;
     get (rel / "grist" / "index.bc.js" /?? nil) --> Grist.js;
+    put
+      (Type.json_encoding Grist_import.data_jsont)
+      (rel / "grist" / "data" /?? nil)
+    --> Grist.handle_put_data;
   ]
 
 let () = Logs.set_level ~all:true (Some Debug)

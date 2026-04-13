@@ -1,62 +1,48 @@
 open Brr
+open Fut.Result_syntax
 
-module Js = struct
-  module Object = struct
-    external array_of_obj_from_obj_of_arrays : Jv.t -> Jv.t
-      = "array_of_obj_from_obj_of_arrays"
-  end
-end
+let places_tbl_id = Jstr.v "Lieux"
+let task_types_tbl_id = Jstr.v "Types_de_quete"
+let times_tbl_id = Jstr.v "Horaires"
+let time_slots_tbl_id = Jstr.v "Plages_horaires_ponctuelles"
+let volunteers_tbl_id = Jstr.v "Benevoles"
+let quests_tbl_id = Jstr.v "Quetes"
 
-module Grist : sig
-  module Data : sig
-    module Row_records : sig
-      include Jv.CONV
-
-      val by_row : t -> Jv.t
-    end
-  end
-
-  module Doc_API : sig
-    include Jv.CONV
-
-    val fetch_table : table_id:Jstr.t -> t -> Data.Row_records.t Fut.or_error
-  end
-
-  val doc_API : Doc_API.t
-end = struct
-  let g = Jv.get Jv.global "grist"
-  let () = Console.error [ g ]
-
-  module Data = struct
-    module Row_records = struct
-      type t = Jv.t
-
-      external to_jv : t -> Jv.t = "%identity"
-      external of_jv : Jv.t -> t = "%identity"
-
-      let by_row t = Js.Object.array_of_obj_from_obj_of_arrays t
-    end
-  end
-
-  module Doc_API = struct
-    type t = Jv.t
-
-    external to_jv : t -> Jv.t = "%identity"
-    external of_jv : Jv.t -> t = "%identity"
-
-    let fetch_table ~table_id t =
-      Jv.call t "fetchTable" [| Jv.of_jstr table_id |]
-      |> Fut.of_promise ~ok:Data.Row_records.of_jv
-  end
-
-  let doc_API = Jv.get g "docApi" |> Doc_API.of_jv
-end
+let fetch table_id =
+  let open Grist in
+  let+ result = Doc_API.fetch_table ~table_id in
+  Data.Row_records.by_row result
 
 let _ =
-  let open Grist in
-  let open Fut.Result_syntax in
-  let+ records =
-    Doc_API.fetch_table doc_API ~table_id:(Jstr.v "Types_de_quete")
+  let* places = fetch places_tbl_id in
+  let* task_types = fetch task_types_tbl_id in
+  let* _times = fetch times_tbl_id in
+  let* _time_slots = fetch time_slots_tbl_id in
+  let* volunteers = fetch volunteers_tbl_id in
+  let* quests = fetch quests_tbl_id in
+
+  let data =
+    Jv.obj
+      [|
+        ("places", places);
+        ("task_types", task_types);
+        ("volunteers", volunteers);
+        ("quests", quests);
+      |]
   in
   Console.log [ "POUET POUET" ];
-  Console.log [ Data.Row_records.by_row records ]
+  Console.log [ data ];
+  let+ res =
+    let open Brr_io.Fetch in
+    let body = Body.of_jstr (Json.encode data) in
+
+    Console.log [ "BODY"; body ];
+    let method' = Jstr.v "PUT" in
+    let url = Jstr.v "/grist/data" in
+    let headers =
+      Headers.of_assoc [ (Jstr.v "Content-Type", Jstr.v "application/json") ]
+    in
+    let init = Request.init ~body ~method' ~headers () in
+    Brr_io.Fetch.url ~init url
+  in
+  Console.log [ res ]
