@@ -143,8 +143,8 @@ module Volunteer : sig
     availabilities : Availabilities.t;
     arrival : Datetime.t option;
     departure : Datetime.t option;
-    friends : t uuid list;
-    ennemis : t uuid list;
+    mutable friends : t uuid list;
+    mutable ennemis : t uuid list;
     proficiencies : Task_types.t;
     forbidden_tasks : Task_types.t;
     forbidden_places : Places.t;
@@ -169,6 +169,9 @@ module Volunteer : sig
     ?public_name:string ->
     unit ->
     t
+
+  val set_friends : t -> t uuid list -> unit
+  val set_ennemis : t -> t uuid list -> unit
 end
 
 module Volunteers : sig
@@ -210,7 +213,7 @@ end
 module Planning : sig
   type t = {
     options : Options.t;
-    info : Event_infos.t;
+    infos : Event_infos.t;
     places : Places.t;
     task_types : Task_types.t;
     volunteers : Volunteers.t;

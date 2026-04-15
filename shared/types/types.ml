@@ -223,8 +223,8 @@ module Volunteer = struct
     availabilities : Availabilities.t;
     arrival : Datetime.t option;
     departure : Datetime.t option;
-    friends : t uuid list;
-    ennemis : t uuid list;
+    mutable friends : t uuid list;
+    mutable ennemis : t uuid list;
     proficiencies : Task_types.t;
     forbidden_tasks : Task_types.t;
     forbidden_places : Places.t;
@@ -294,6 +294,9 @@ module Volunteer = struct
       forbidden_tasks;
       forbidden_places;
     }
+
+  let set_friends t fs = t.friends <- fs
+  let set_ennemis t fs = t.ennemis <- fs
 end
 
 module Volunteers = Random_access_list (Volunteer)
@@ -374,7 +377,7 @@ end
 module Planning = struct
   type t = {
     options : Options.t;
-    info : Event_infos.t;
+    infos : Event_infos.t;
     places : Places.t;
     task_types : Task_types.t;
     volunteers : Volunteers.t;

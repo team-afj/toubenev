@@ -5,7 +5,7 @@ let () = Mirage_crypto_rng_unix.use_default ()
 
 let example_planning : Planning.t =
   let options = Options.default in
-  let info =
+  let infos =
     let start_date =
       Date.make ~year:2026 ~month:May ~day:26 () |> Result.get_ok
     in
@@ -46,7 +46,7 @@ let example_planning : Planning.t =
     in
     CCRAL.of_list [ q1; q2 ]
   in
-  { options; info; places; task_types; volunteers; quests }
+  { options; infos; places; task_types; volunteers; quests }
 
 let context = Cp_model.Model.make example_planning
 
