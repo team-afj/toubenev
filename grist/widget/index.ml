@@ -1,6 +1,8 @@
 open Brr
 open Fut.Result_syntax
 
+let infos_tbl_id = Jstr.v "Infos_generales"
+let options_tbl_id = Jstr.v "Options_du_solveur"
 let places_tbl_id = Jstr.v "Lieux"
 let task_types_tbl_id = Jstr.v "Types_de_quete"
 let times_tbl_id = Jstr.v "Horaires"
@@ -14,6 +16,8 @@ let fetch table_id =
   Data.Row_records.by_row result
 
 let _ =
+  let* infos = fetch infos_tbl_id in
+  let* options = fetch options_tbl_id in
   let* places = fetch places_tbl_id in
   let* task_types = fetch task_types_tbl_id in
   let* _times = fetch times_tbl_id in
@@ -24,6 +28,8 @@ let _ =
   let data =
     Jv.obj
       [|
+        ("infos", infos);
+        ("options", options);
         ("places", places);
         ("task_types", task_types);
         ("volunteers", volunteers);

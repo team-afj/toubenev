@@ -21,23 +21,11 @@
       return table[keys[0]].map((_, i) => Object.fromEntries(keys.map(k => [k, table[k][i]])));
     }
     grist.onRecords(function (record) {
-      table = grist.docApi.fetchTable("Types_de_quete").then(table => {
-        rows = toRows(table)
-        console.log(rows[0])
-
-        document.getElementById('readout').innerHTML = JSON.stringify(rows, null, 2)
-      });
-      table = grist.docApi.fetchTable("Lieux").then(table => {
-        rows = toRows(table)
-        console.log(rows[0])
-      });
       table = grist.docApi.fetchTable("Quetes").then(table => {
         rows = toRows(table)
         console.log(rows[0])
-      });
-      table = grist.docApi.fetchTable("Benevoles").then(table => {
-        rows = toRows(table)
-        console.log(rows[0])
+        document.getElementById('readout').innerHTML = JSON.stringify(rows, null, 2)
+
       })
     });
   </script>
