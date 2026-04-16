@@ -118,6 +118,15 @@ end
 type jour = Lun | Mar | Mer | Jeu | Ven | Sam | Dim [@@deriving jsont]
 type jour_list = jour list
 
+let day_of_jour = function
+  | Lun -> Weekday.Mon
+  | Mar -> Tue
+  | Mer -> Wed
+  | Jeu -> Thu
+  | Ven -> Fri
+  | Sam -> Sat
+  | Dim -> Sun
+
 let jour_list_jsont = grist_list jour_jsont
 
 module Quete = struct
@@ -131,7 +140,7 @@ module Quete = struct
     date_et_heure_de_debut : int; [@key "Date_et_heure_de_debut"]
     benevoles : int; [@key "benevoles"]
     duree_heures : float; [@key "Duree_heures_"]
-    date_et_heure_de_fin : int; [@key "Date_et_heure_de_fin"]
+    fin_de_recurrence : int option; [@key "Fin_de_recurrence"]
     benevoles_assignes : grist_int_list;
         [@default []] [@key "Benevoles_assignes"]
   }
@@ -171,6 +180,35 @@ let mandatory_of_string = function
 
 let to_planning ?(id_map = new_id_map ())
     ({ infos; options; places; task_types; volunteers = vols; quests } : data) =
+  let make_spec ~rec_flag ~days ~start ~duration_h ~end_date =
+    let start =
+      (* TODO TIMEZONE *)
+      Datetime.from_duration @@ Duration.from_seconds start
+    in
+    let recurrence =
+      match rec_flag with
+      | "Ponctuelle" -> Types.Time_spec.On [ Datetime.date start ]
+      | "Quotidienne" -> Daily
+      | "Hebdomadaire" -> Weekly (List.map ~f:day_of_jour days)
+      | s -> raise (Invalid_argument s)
+    in
+    let duration =
+      Duration.from_seconds (Float.to_int (duration_h *. 60. *. 60.))
+    in
+    let first_day = Some (Datetime.date start) in
+    let last_day =
+      Option.map
+        (fun d -> Date.from_duration (Duration.from_seconds d))
+        end_date
+    in
+    {
+      Types.Time_spec.recurrence;
+      start = Datetime.time start;
+      duration;
+      first_day;
+      last_day;
+    }
+  in
   let infos =
     let infos = List.hd infos in
     let start_date = Date.from_duration (Duration.from_seconds infos.start) in
@@ -271,23 +309,6 @@ let to_planning ?(id_map = new_id_map ())
         Types.Volunteer.set_ennemis v ennemis)
   in
   let quests =
-    let make_spec rec_flag _jours start_date_s_timestamp duration_h =
-      let start =
-        (* TODO TIMEZONE *)
-        Datetime.from_duration @@ Duration.from_seconds start_date_s_timestamp
-      in
-      let recurrence =
-        match rec_flag with
-        | "Ponctuelle" -> Types.Time_spec.On [ Datetime.date start ]
-        | "Quotidienne" -> Daily
-        | "Hebdomadaire" -> Weekly [ (* TODO *) ]
-        | s -> raise (Invalid_argument s)
-      in
-      let duration =
-        Duration.from_seconds (Float.to_int (duration_h *. 60. *. 60.))
-      in
-      { Types.Time_spec.recurrence; start = Datetime.time start; duration }
-    in
     let convert_quests
         {
           Quete.id;
@@ -299,6 +320,8 @@ let to_planning ?(id_map = new_id_map ())
           recurrence;
           date_et_heure_de_debut;
           duree_heures;
+          jours;
+          fin_de_recurrence;
           _;
         } =
       let task_type = Hashtbl.find id_map.task_types type_ in
@@ -306,7 +329,10 @@ let to_planning ?(id_map = new_id_map ())
       let assigned_volunteers =
         CCRAL.of_list_map ~f:(Hashtbl.find id_map.volunteers) benevoles_assignes
       in
-      let slot = make_spec recurrence [] date_et_heure_de_debut duree_heures in
+      let slot =
+        make_spec ~rec_flag:recurrence ~days:jours ~start:date_et_heure_de_debut
+          ~duration_h:duree_heures ~end_date:fin_de_recurrence
+      in
       let v =
         Types.Quest.make ~name ~task_type ~place ~slot ~required_volunteers
           ~assigned_volunteers ()

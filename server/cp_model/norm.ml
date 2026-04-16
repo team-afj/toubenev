@@ -11,6 +11,16 @@ end
 
 let expand_time_spec { Event_infos.kind = Finite { start_date; end_date }; _ }
     (spec : Time_spec.t) =
+  let first_day =
+    match spec.first_day with
+    | None -> start_date
+    | Some date -> Date.max start_date date
+  in
+  let last_day =
+    match spec.last_day with
+    | None -> end_date
+    | Some date -> Date.min end_date date
+  in
   let start_time = spec.start in
   let duration = spec.duration in
   let all_dates =
@@ -18,7 +28,7 @@ let expand_time_spec { Event_infos.kind = Finite { start_date; end_date }; _ }
     | On dates -> dates
     | Daily ->
         Date.Range.(
-          make ~first:start_date ~last:end_date
+          make ~first:first_day ~last:last_day
           |> to_list ~include_boundaries:true ~iterator:iterator_day)
     | Weekly _ -> failwith "Not implemented"
   in

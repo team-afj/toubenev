@@ -34,7 +34,7 @@ let example_planning : Planning.t =
   let quests =
     let slot =
       let start = Time.make ~hour:8 ~min:0 ~sec:0 () |> Result.get_ok in
-      { Time_spec.recurrence = Daily; start; duration = Duration.from_hours 2 }
+      Time_spec.make Daily start @@ Duration.from_hours 2
     in
     let q1 =
       Quest.make ~name:"Bar" ~task_type:t1 ~place:p1 ~slot

@@ -106,10 +106,24 @@ module Time_spec : sig
   type recurrence = Daily | Weekly of Weekday.t list | On of Date.t list
   [@@deriving jsont]
 
-  type t = { recurrence : recurrence; start : Time.t; duration : Duration.t }
+  type t = {
+    recurrence : recurrence;
+    start : Time.t;
+    duration : Duration.t;
+    first_day : Date.t option;
+    last_day : Date.t option;
+  }
   [@@deriving jsont]
 
   include S with type t := t
+
+  val make :
+    recurrence ->
+    ?first_day:Date.t ->
+    ?last_day:Date.t ->
+    Time.t ->
+    Duration.t ->
+    t
 end
 
 module Time_specs : sig

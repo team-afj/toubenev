@@ -176,7 +176,13 @@ module Time_spec = struct
   type recurrence = Daily | Weekly of Weekday.t list | On of Date.t list
   [@@deriving jsont]
 
-  type t = { recurrence : recurrence; start : Time.t; duration : Duration.t }
+  type t = {
+    recurrence : recurrence;
+    start : Time.t;
+    duration : Duration.t;
+    first_day : Date.t option;
+    last_day : Date.t option;
+  }
   [@@deriving jsont]
 
   type edit =
@@ -190,6 +196,9 @@ module Time_spec = struct
     | New_recurrence recurrence -> { t with recurrence }
     | New_start start -> { t with start }
     | New_duration duration -> { t with duration }
+
+  let make recurrence ?first_day ?last_day start duration =
+    { recurrence; first_day; last_day; start; duration }
 end
 
 module Time_specs = Random_access_list (Time_spec)
@@ -322,7 +331,7 @@ module Quest = struct
       description = None;
       task_type = Task_type.dummy;
       place = Place.dummy;
-      slot = { recurrence = Daily; start = Time.noon; duration = Duration.zero };
+      slot = Time_spec.make Daily Time.noon Duration.zero;
       required_volunteers = 0;
       assigned_volunteers = CCRAL.empty;
     }
