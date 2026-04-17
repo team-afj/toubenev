@@ -9,6 +9,7 @@ open Norm
 type context = {
   model : Sat.model;
   options : Options.t;
+  with_assumptions : bool;
   assignations : Volunteer.t -> Quest.t -> Sat.Var.t_bool;
   assignations_rev : int -> Sat.Var.t_bool * Volunteer.t * Quest.t;
   vs : Volunteers.t;
@@ -45,7 +46,7 @@ let assignations m vs qs =
   let rev_find = fun i -> Hashtbl.find rev_tbl i in
   (find, rev_find)
 
-let prepare model (data : Planning.t) =
+let prepare ~with_assumptions model (data : Planning.t) =
   (* TODO: split quests, group friends and quests groups, etc *)
   let vs =
     RAL.to_list data.volunteers
@@ -63,6 +64,7 @@ let prepare model (data : Planning.t) =
   let for_all_volunteers f = Volunteers.iter ~f vs in
   {
     model;
+    with_assumptions;
     options = data.options;
     assignations;
     assignations_rev;
@@ -79,6 +81,13 @@ let is_true v = Sat.(var v == of_int 1)
 
 (* Constraints *)
 
+let assume ctx name =
+  if ctx.with_assumptions then (
+    let assumption = Sat.Var.new_bool ctx.model name in
+    Sat.add_assumptions ctx.model [ assumption ];
+    Some [ assumption ])
+  else None
+
 (** All quests are fully staffed *)
 let all_staffed (ctx : context) =
   let quest_is_staffed (q : Quest.t) =
@@ -88,7 +97,16 @@ let all_staffed (ctx : context) =
       LinearExpr.sum_vars
       @@ Volunteers.to_list_map ctx.vs ~f:(fun v -> ctx.assignations v q)
     in
-    sum == of_int q.initial.required_volunteers |> add ctx.model ~name
+    let only_enforce_if =
+      let name =
+        Format.sprintf "%i people do %s"
+          q.initial.Types.Quest.required_volunteers q.name
+      in
+      assume ctx name
+    in
+    sum
+    == of_int q.initial.required_volunteers
+    |> add ctx.model ~name ?only_enforce_if
   in
   ctx.for_all_quests quest_is_staffed
 
@@ -205,9 +223,9 @@ let enforce_mandatory_tasks (ctx : context) =
    - or most volunteers stay the same
    - prevent volunteers to participate in the same recurring group more than
      once *)
-let make (data : Planning.t) =
+let make ~with_assumptions (data : Planning.t) =
   let model = Sat.make ~name:"Toubenev" () in
-  let context = prepare model data in
+  let context = prepare ~with_assumptions model data in
 
   let () = all_staffed context in
   let () = non_ubiquity_of_normal_humans context in
@@ -218,10 +236,13 @@ let make (data : Planning.t) =
 
 let resolve_solution ctx arr =
   Array.mapi arr ~f:(fun i b ->
-      let name, v, q = ctx.assignations_rev i in
-      (name, v, q, b))
+      try
+        let name, v, q = ctx.assignations_rev i in
+        Some (name, v, q, b)
+      with Not_found -> None)
+  |> Array.filter_map ~f:Fun.id
 
-let pp_solution fmt arr =
+let pp_solution (fmt : Format.formatter) arr =
   let open Format in
   let pp_var fmt (var, _v, _q, b) =
     fprintf fmt "%s: %b" (Sat.Var.to_string var) (Bool.of_int b)

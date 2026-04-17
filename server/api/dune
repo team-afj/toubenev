@@ -1,3 +1,5 @@
 (library
  (name api)
- (libraries logs vif ortools ortools_solvers cp_model))
+ (libraries logs vif ortools ortools_solvers cp_model)
+ (preprocess
+  (pps ppx_deriving_jsont)))
