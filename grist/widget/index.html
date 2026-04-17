@@ -8,30 +8,29 @@
 
 <body>
 
-  <pre id="readout">Waiting for data...</pre>
+  <div id="readout">Waiting for data...</div>
   <script>
     grist.ready({
       requiredAccess: 'full',
       columns: []
     });
     // Transform a dictionary of arrays into an array of dicts
-    function toRows(table) {
-      const keys = Object.keys(table);
-      console.log(table)
-      return table[keys[0]].map((_, i) => Object.fromEntries(keys.map(k => [k, table[k][i]])));
-    }
-    grist.onRecords(function (record) {
-      table = grist.docApi.fetchTable("Quetes").then(table => {
-        rows = toRows(table)
-        console.log(rows[0])
-        document.getElementById('readout').innerHTML = JSON.stringify(rows, null, 2)
+    // function toRows(table) {
+    //   const keys = Object.keys(table);
+    //   console.log(table)
+    //   return table[keys[0]].map((_, i) => Object.fromEntries(keys.map(k => [k, table[k][i]])));
+    // }
+    // grist.onRecords(function (record) {
+    //   table = grist.docApi.fetchTable("Quetes").then(table => {
+    //     rows = toRows(table)
+    //     console.log(rows[0])
+    //     document.getElementById('readout').innerHTML = JSON.stringify(rows, null, 2)
 
-      })
-    });
+    //   })
+    // });
   </script>
   <script src="index.bc.js"></script>
 
 </body>
-z
 
 </html>
