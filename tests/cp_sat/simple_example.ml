@@ -48,7 +48,7 @@ let example_planning : Planning.t =
   in
   { options; infos; places; task_types; volunteers; quests }
 
-let context = Cp_model.Model.make example_planning
+let context = Cp_model.Model.make ~with_assumptions:true example_planning
 
 let parameters =
   Ortools.Sat_parameters.make_sat_parameters ~log_search_progress:false ()
