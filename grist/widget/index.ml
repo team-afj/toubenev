@@ -20,7 +20,6 @@ let _ =
   let* options = fetch options_tbl_id in
   let* places = fetch places_tbl_id in
   let* task_types = fetch task_types_tbl_id in
-  let* _times = fetch times_tbl_id in
   let* _time_slots = fetch time_slots_tbl_id in
   let* volunteers = fetch volunteers_tbl_id in
   let* quests = fetch quests_tbl_id in

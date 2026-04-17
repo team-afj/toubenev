@@ -257,6 +257,34 @@ let to_planning ?(id_map = new_id_map ())
     CCRAL.of_list_map ~f:convert_task_types task_types
   in
   let volunteers =
+    let gather_time_slots l =
+      let mk start end_ =
+        ( Time.make ~hour:(start - 1) ~min:0 ~sec:0 () |> Result.get_ok,
+          Duration.from_hours (end_ - start) )
+      in
+      let rec aux (groups, current) l =
+        match (current, l) with
+        | None, [] -> groups
+        | None, start :: tl -> aux (groups, Some (start, start + 1)) tl
+        | Some (start, end_), [] -> mk start end_ :: groups
+        | Some (start, end_), start' :: tl when Int.equal start' end_ ->
+            aux (groups, Some (start, start' + 1)) tl
+        | Some (start, end_), start' :: tl ->
+            aux (mk start end_ :: groups, Some (start', start' + 1)) tl
+      in
+      aux ([], None) (List.sort ~cmp:Int.compare l)
+    in
+    let daily_spec l =
+      let slots = gather_time_slots l in
+      List.map slots ~f:(fun (start, duration) ->
+          {
+            Types.Time_spec.recurrence = Daily;
+            start;
+            duration;
+            first_day = None;
+            last_day = None;
+          })
+    in
     let convert_colunteers
         {
           Benevole.id;
@@ -267,6 +295,9 @@ let to_planning ?(id_map = new_id_map ())
           specialites;
           taches_interdites;
           lieux_interdits;
+          indisponibilites_quotidiennes;
+          horaires_preferes;
+          horaires_contraints;
           _;
         } =
       let name =
@@ -287,9 +318,27 @@ let to_planning ?(id_map = new_id_map ())
       let forbidden_places =
         CCRAL.of_list_map ~f:(Hashtbl.find id_map.places) lieux_interdits
       in
+      let availabilities =
+        let unavailable =
+          daily_spec indisponibilites_quotidiennes
+          |> List.map ~f:(fun slot ->
+              { Types.Availability.status = Unavailable; slot })
+        in
+        let best =
+          daily_spec horaires_preferes
+          |> List.map ~f:(fun slot ->
+              { Types.Availability.status = Available 1; slot })
+        in
+        let worse =
+          daily_spec horaires_contraints
+          |> List.map ~f:(fun slot ->
+              { Types.Availability.status = Available (-1); slot })
+        in
+        CCRAL.of_list (List.concat [ unavailable; best; worse ])
+      in
       let v =
         Types.Volunteer.make ?public_name ~name ~daily_workload ~proficiencies
-          ~forbidden_tasks ~forbidden_places ()
+          ~forbidden_tasks ~forbidden_places ~availabilities ()
       in
       Hashtbl.add id_map.volunteers id v;
       v
