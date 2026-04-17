@@ -189,7 +189,8 @@ let to_planning ?(id_map = new_id_map ())
       match rec_flag with
       | "Ponctuelle" -> Types.Time_spec.On [ Datetime.date start ]
       | "Quotidienne" -> Daily
-      | "Hebdomadaire" -> Weekly (List.map ~f:day_of_jour days)
+      | "Hebdomadaire" ->
+          Weekly (Weekday.Set.of_list @@ List.map ~f:day_of_jour days)
       | s -> raise (Invalid_argument s)
     in
     let duration =

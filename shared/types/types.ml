@@ -173,7 +173,7 @@ end
 module Task_types = Random_access_list (Task_type)
 
 module Time_spec = struct
-  type recurrence = Daily | Weekly of Weekday.t list | On of Date.t list
+  type recurrence = Daily | Weekly of Weekday.Set.t | On of Date.t list
   [@@deriving jsont]
 
   type t = {

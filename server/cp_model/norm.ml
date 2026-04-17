@@ -24,13 +24,19 @@ let expand_time_spec { Event_infos.kind = Finite { start_date; end_date }; _ }
   let start_time = spec.start in
   let duration = spec.duration in
   let all_dates =
+    let all_days_in_range () =
+      Date.Range.(
+        make ~first:first_day ~last:last_day
+        |> to_list ~include_boundaries:true ~iterator:iterator_day)
+    in
     match spec.recurrence with
     | On dates -> dates
-    | Daily ->
-        Date.Range.(
-          make ~first:first_day ~last:last_day
-          |> to_list ~include_boundaries:true ~iterator:iterator_day)
-    | Weekly _ -> failwith "Not implemented"
+    | Daily -> all_days_in_range ()
+    | Weekly weekdays ->
+        let range = all_days_in_range () in
+        List.filter range ~f:(fun d ->
+            let wd = Date.day_of_week d in
+            Weekday.Set.mem wd weekdays)
   in
   List.map all_dates ~f:(fun date ->
       let start = Datetime.from date start_time in

@@ -103,7 +103,7 @@ module Task_types : sig
 end
 
 module Time_spec : sig
-  type recurrence = Daily | Weekly of Weekday.t list | On of Date.t list
+  type recurrence = Daily | Weekly of Weekday.Set.t | On of Date.t list
   [@@deriving jsont]
 
   type t = {

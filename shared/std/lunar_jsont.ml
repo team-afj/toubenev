@@ -12,6 +12,12 @@ module Weekday = struct
         ("Sat", Sat);
         ("Sun", Sun);
       ]
+
+  module Set = struct
+    include Set
+
+    let jsont = Jsont.map ~dec:of_list ~enc:to_list (Jsont.list jsont)
+  end
 end
 
 module Duration = struct
