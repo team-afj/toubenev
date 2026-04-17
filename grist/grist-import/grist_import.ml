@@ -110,7 +110,7 @@ module Benevole = struct
     horaires_contraints : grist_int_list;
         [@default []] [@key "Horaires_contraints"]
     indisponibilites_ponctuelles : grist_int_list;
-        [@default []] [@key "Indisponibilites_ponctuelles"]
+        [@default []] [@key "Autres_indisponibilites"]
   }
   [@@deriving jsont]
 end
@@ -128,6 +128,17 @@ let day_of_jour = function
   | Dim -> Sun
 
 let jour_list_jsont = grist_list jour_jsont
+
+module Time_spec = struct
+  type t = {
+    recurrence : string;
+    start : int;
+    duration_h : float;
+    days : jour_list;
+    end_date : int option;
+  }
+  [@@deriving jsont]
+end
 
 module Quete = struct
   type t = {
@@ -152,6 +163,7 @@ type data = {
   infos : Infos.t list;
   places : Lieu.t list;
   task_types : Task_type.t list;
+  time_specs : Time_spec.t list;
   volunteers : Benevole.t list;
   quests : Quete.t list;
 }
@@ -179,7 +191,16 @@ let mandatory_of_string = function
   | s -> failwith ("Unexpected value:" ^ s)
 
 let to_planning ?(id_map = new_id_map ())
-    ({ infos; options; places; task_types; volunteers = vols; quests } : data) =
+    ({
+       infos;
+       options;
+       places;
+       task_types;
+       time_specs;
+       volunteers = vols;
+       quests;
+     } :
+      data) =
   let make_spec ~rec_flag ~days ~start ~duration_h ~end_date =
     let start =
       (* TODO TIMEZONE *)
@@ -256,6 +277,13 @@ let to_planning ?(id_map = new_id_map ())
     in
     CCRAL.of_list_map ~f:convert_task_types task_types
   in
+  let time_specs =
+    let convert_spec { Time_spec.recurrence; start; duration_h; days; end_date }
+        =
+      make_spec ~rec_flag:recurrence ~days ~start ~duration_h ~end_date
+    in
+    List.map ~f:convert_spec time_specs |> Array.of_list
+  in
   let volunteers =
     let gather_time_slots l =
       let mk start end_ =
@@ -298,6 +326,7 @@ let to_planning ?(id_map = new_id_map ())
           indisponibilites_quotidiennes;
           horaires_preferes;
           horaires_contraints;
+          indisponibilites_ponctuelles;
           _;
         } =
       let name =
@@ -324,6 +353,12 @@ let to_planning ?(id_map = new_id_map ())
           |> List.map ~f:(fun slot ->
               { Types.Availability.status = Unavailable; slot })
         in
+        let ponctually_unavailable =
+          List.map indisponibilites_ponctuelles ~f:(fun i ->
+              Printf.eprintf "\nPRT\n%!";
+              let slot = time_specs.(i - 1) in
+              { Types.Availability.status = Unavailable; slot })
+        in
         let best =
           daily_spec horaires_preferes
           |> List.map ~f:(fun slot ->
@@ -334,7 +369,8 @@ let to_planning ?(id_map = new_id_map ())
           |> List.map ~f:(fun slot ->
               { Types.Availability.status = Available (-1); slot })
         in
-        CCRAL.of_list (List.concat [ unavailable; best; worse ])
+        CCRAL.of_list
+          (List.concat [ unavailable; best; worse; ponctually_unavailable ])
       in
       let v =
         Types.Volunteer.make ?public_name ~name ~daily_workload ~proficiencies

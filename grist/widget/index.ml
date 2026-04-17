@@ -5,7 +5,6 @@ let infos_tbl_id = Jstr.v "Infos_generales"
 let options_tbl_id = Jstr.v "Options_du_solveur"
 let places_tbl_id = Jstr.v "Lieux"
 let task_types_tbl_id = Jstr.v "Types_de_quete"
-let times_tbl_id = Jstr.v "Horaires"
 let time_slots_tbl_id = Jstr.v "Plages_horaires_ponctuelles"
 let volunteers_tbl_id = Jstr.v "Benevoles"
 let quests_tbl_id = Jstr.v "Quetes"
@@ -20,7 +19,7 @@ let _ =
   let* options = fetch options_tbl_id in
   let* places = fetch places_tbl_id in
   let* task_types = fetch task_types_tbl_id in
-  let* _time_slots = fetch time_slots_tbl_id in
+  let* time_specs = fetch time_slots_tbl_id in
   let* volunteers = fetch volunteers_tbl_id in
   let* quests = fetch quests_tbl_id in
 
@@ -31,6 +30,7 @@ let _ =
         ("options", options);
         ("places", places);
         ("task_types", task_types);
+        ("time_specs", time_specs);
         ("volunteers", volunteers);
         ("quests", quests);
       |]

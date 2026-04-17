@@ -138,7 +138,7 @@ module Availability : sig
             time slot is used *)
   [@@deriving jsont]
 
-  type t = private { status : status; slot : Time_spec.t }
+  type t = { status : status; slot : Time_spec.t }
 
   include S with type t := t
 end
