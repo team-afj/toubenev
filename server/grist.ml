@@ -22,8 +22,13 @@ let handle_put_data (req : (Vif.Type.json, Grist_import.data) Request.t) _server
       Jsont_bytesrw.encode_string Grist_import.data_jsont v
       |> Rresult.R.(map_error msg)
     in
-    Logs.debug (fun m -> m "%s" s)
+    let planning = Grist_import.to_planning v in
+    let status = Api.Planning.solve planning in
+    Logs.debug (fun m -> m "%s" s);
+    status
   in
-  Result.iter_error (fun (`Msg msg) -> Logs.err (fun m -> m "ARG %s" msg)) r;
-  let* () = Response.empty in
+  let status =
+    match r with Error (`Msg err) -> Format.sprintf "ERROR %s" err | Ok s -> s
+  in
+  let* () = Response.with_string req status in
   Response.respond `OK
