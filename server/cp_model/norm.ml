@@ -51,6 +51,7 @@ module Volunteer = struct
   module T = struct
     type t = {
       id : Uuidm.t;
+      name : string;
       initial : Volunteer.t;
       forbidden_tasks : Task_type.Set.t;
       unavailabilities : Time_slot.t list;
@@ -71,6 +72,7 @@ module Volunteer = struct
   let dummy =
     {
       id = Uuidm.nil;
+      name = "";
       initial = Volunteer.dummy;
       forbidden_tasks = Task_type.Set.empty;
       unavailabilities = [];
@@ -90,6 +92,11 @@ module Volunteer = struct
   end
 
   let normalize event_infos (v : Volunteer.t) =
+    let name =
+      match v.public_name with
+      | Some public_name -> public_name
+      | None -> v.name
+    in
     let forbidden_tasks =
       Task_type.Set.of_list (CCRAL.to_list v.forbidden_tasks)
     in
@@ -104,6 +111,7 @@ module Volunteer = struct
     in
     {
       id = uuid_to_uuidm v.id;
+      name;
       initial = v;
       forbidden_tasks;
       unavailabilities;

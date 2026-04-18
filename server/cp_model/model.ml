@@ -146,7 +146,7 @@ let enforce_assignations (ctx : context) =
   let () =
     ctx.for_all_quests @@ fun q ->
     Volunteers.iter q.assigned_volunteers ~f:(fun (v : Volunteer.t) ->
-        let name = Format.sprintf "%s_assigned_to_%s" v.initial.name q.name in
+        let name = Format.sprintf "%s_assigned_to_%s" v.name q.name in
         Hashtbl.add assigned (q.id, v.id) ();
         Sat.(add ctx.model ~name (is_true (ctx.assignations v q))))
   in

@@ -322,7 +322,7 @@ let to_planning ?(id_map = new_id_map ())
         {
           Benevole.id;
           pseudo = public_name;
-          nom = _;
+          nom;
           prenom;
           nb_heures;
           specialites;
@@ -335,7 +335,9 @@ let to_planning ?(id_map = new_id_map ())
           _;
         } =
       let name =
-        match public_name with None -> prenom | Some pseudo -> pseudo
+        match (nom, prenom) with
+        | None, s | Some "", s | Some s, "" -> s
+        | Some n, p -> Printf.sprintf "%s %s" p n
       in
       let daily_workload =
         let seconds = nb_heures *. 60. *. 60. in
