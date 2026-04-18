@@ -12,7 +12,11 @@ let example_planning : Planning.t =
     let end_date =
       Date.make ~year:2026 ~month:May ~day:30 () |> Result.get_ok
     in
-    { Event_infos.name = "Event 1"; kind = Finite { start_date; end_date } }
+    {
+      Event_infos.name = "Event 1";
+      kind = Finite { start_date; end_date };
+      timezone = Timezones.europe_paris;
+    }
   in
   let p1 = Place.make ~slug:"🍺" ~name:"Bar" () in
   let places = CCRAL.of_list [ p1 ] in

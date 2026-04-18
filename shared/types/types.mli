@@ -1,4 +1,5 @@
 open Lunar_jsont
+module Timezones = Timezones
 
 (** Utilities *)
 module type Editable = sig
@@ -37,7 +38,8 @@ module Event_infos : sig
   type kind = Finite of { start_date : Date.t; end_date : Date.t }
   [@@deriving jsont]
 
-  type t = { name : string; kind : kind } [@@deriving jsont]
+  type t = { name : string; kind : kind; timezone : Timezone.t }
+  [@@deriving jsont]
 end
 
 module Options : sig

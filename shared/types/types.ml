@@ -1,4 +1,5 @@
 open Lunar_jsont
+module Timezones = Timezones
 
 (* TODO the [edit] types are meant for use with a future web-ui supporting
    OT-style cooperative edition. Right now they are not exposed nor used.
@@ -380,7 +381,8 @@ module Event_infos = struct
     | Finite of { start_date : Date.t; end_date : Date.t }
   [@@deriving jsont]
 
-  type t = { name : string; kind : kind } [@@deriving jsont]
+  type t = { name : string; kind : kind; timezone : Timezone.t }
+  [@@deriving jsont]
 end
 
 module Planning = struct

@@ -30,6 +30,13 @@ module Duration = struct
   let jsont : t Jsont.t = Jsont.map ~dec:from_int64 ~enc:to_int64 Jsont.int64
 end
 
+module Timezone = struct
+  include Lunar.Timezone
+
+  let jsont : t Jsont.t =
+    Jsont.map ~dec:from_string_exn ~enc:to_string Jsont.string
+end
+
 module Date = struct
   include Lunar.Date
 

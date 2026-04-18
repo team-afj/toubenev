@@ -235,9 +235,11 @@ let to_planning ?(id_map = new_id_map ())
     let infos = List.hd infos in
     let start_date = Date.from_duration (Duration.from_seconds infos.start) in
     let end_date = Date.from_duration (Duration.from_seconds infos.end_) in
+    let timezone = Types.Timezones.of_string infos.timezone in
     {
       Types.Event_infos.name = infos.name;
       kind = Finite { start_date; end_date };
+      timezone;
     }
   in
   let options =
@@ -286,9 +288,12 @@ let to_planning ?(id_map = new_id_map ())
   in
   let volunteers =
     let gather_time_slots l =
+      let tz = Timezone.to_duration infos.timezone in
       let mk start end_ =
-        ( Time.make ~hour:(start - 1) ~min:0 ~sec:0 () |> Result.get_ok,
-          Duration.from_hours (end_ - start) )
+        let start_time =
+          Time.make ~hour:(start - 1) ~min:0 ~sec:0 () |> Result.get_ok
+        in
+        (Time.(start_time - tz), Duration.from_hours (end_ - start))
       in
       let rec aux (groups, current) l =
         match (current, l) with
