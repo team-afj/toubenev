@@ -125,6 +125,20 @@ let non_ubiquity_of_normal_humans (ctx : context) =
         Sat.Constraint.at_most_one [ assig_v q; assig_v q' ]
         |> Sat.add ctx.model ~name)
 
+(** Not everyone is available all the time *)
+let check_unavailabilities (ctx : context) =
+  ctx.for_all_volunteers @@ fun v ->
+  List.iter v.unavailabilities ~f:(fun (slot : Time_slot.t) ->
+      ctx.for_all_quests @@ fun q ->
+      if Time_slot.overlaps slot q.slot then
+        let name = Format.sprintf "%s_unavailable_for_%s" v.name q.name in
+        let only_enforce_if =
+          let name = Format.sprintf "%s not available for %s" v.name q.name in
+          assume ctx name
+        in
+        Sat.(
+          add ctx.model ~name ?only_enforce_if (is_false (ctx.assignations v q))))
+
 (** Enforces manual assignations of volunteers, and prevents manually assigned
     volunteers from doing anything else. *)
 let enforce_assignations (ctx : context) =
@@ -231,6 +245,7 @@ let make ~with_assumptions (data : Planning.t) =
   let () = non_ubiquity_of_normal_humans context in
   let () = enforce_assignations context in
   let () = enforce_mandatory_tasks context in
+  let () = check_unavailabilities context in
 
   context
 

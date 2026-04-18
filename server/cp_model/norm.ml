@@ -7,6 +7,11 @@ module Time_slot = struct
 
   let dummy = { start = Datetime.epoch; duration = Duration.zero }
   let end_ t = Datetime.(t.start + t.duration)
+
+  let overlaps t1 t2 =
+    let t1_start, t1_end = (t1.start, end_ t1) in
+    let t2_start, t2_end = (t2.start, end_ t2) in
+    not Datetime.(t1_end <= t2_start || t1_start >= t2_end)
 end
 
 let expand_time_spec { Event_infos.kind = Finite { start_date; end_date }; _ }
