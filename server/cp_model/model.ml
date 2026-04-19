@@ -1,79 +1,7 @@
-open Std
 open! Lunar_jsont
 open Types
 open Ortools
-module RAL = CCRAL
-module Uuidm_map = Map.Make (Uuidm)
 open Norm
-
-type context = {
-  model : Sat.model;
-  options : Options.t;
-  with_assumptions : bool;
-  assignations : Volunteer.t -> Quest.t -> Sat.Var.t_bool;
-  assignations_rev : int -> Sat.Var.t_bool * Volunteer.t * Quest.t;
-  vs : Volunteers.t;
-  qs : Quests.t;
-  task_types : Task_type.Set.t;
-  for_all_quests : (Quest.t -> unit) -> unit;
-  for_all_volunteers : (Volunteer.t -> unit) -> unit;
-}
-
-let assignations m vs qs =
-  let size = Volunteers.cardinal vs * Quests.cardinal qs in
-  let c = ref 0 in
-  let rev_tbl : (int, Sat.Var.t_bool * Volunteer.t * Quest.t) Hashtbl.t =
-    Hashtbl.create size
-  in
-  let by_uuid =
-    Volunteers.fold vs ~init:Uuidm_map.empty ~f:(fun acc (v : Volunteer.t) ->
-        let quests =
-          Quests.fold qs ~init:Uuidm_map.empty ~f:(fun acc (q : Quest.t) ->
-              let name =
-                Format.sprintf "%i_%s_is_assigned_to_%s" !c v.initial.name
-                  q.name
-              in
-              let var = Sat.Var.new_bool m name in
-              Hashtbl.add rev_tbl !c (var, v, q);
-              incr c;
-              Uuidm_map.add q.id var acc)
-        in
-        Uuidm_map.add v.id quests acc)
-  in
-  let find =
-   fun v q -> Uuidm_map.find v.Volunteer.id by_uuid |> Uuidm_map.find q.Quest.id
-  in
-  let rev_find = fun i -> Hashtbl.find rev_tbl i in
-  (find, rev_find)
-
-let prepare ~with_assumptions model (data : Planning.t) =
-  (* TODO: split quests, group friends and quests groups, etc *)
-  let vs =
-    RAL.to_list data.volunteers
-    |> List.map ~f:(Volunteer.normalize data.infos)
-    |> Volunteers.of_list
-  in
-  let qs =
-    RAL.to_list data.quests
-    |> List.concat_map ~f:(Quest.normalize data.infos vs)
-    |> Quests.of_list
-  in
-  let task_types = RAL.to_list data.task_types |> Task_type.Set.of_list in
-  let assignations, assignations_rev = assignations model vs qs in
-  let for_all_quests f = Quests.iter qs ~f in
-  let for_all_volunteers f = Volunteers.iter ~f vs in
-  {
-    model;
-    with_assumptions;
-    options = data.options;
-    assignations;
-    assignations_rev;
-    vs;
-    qs;
-    task_types;
-    for_all_quests;
-    for_all_volunteers;
-  }
 
 (* Utilities *)
 let is_false v = Sat.(var v == of_int 0)
@@ -81,7 +9,7 @@ let is_true v = Sat.(var v == of_int 1)
 
 (* Constraints *)
 
-let assume ctx name =
+let assume (ctx : Context.t) name =
   if ctx.with_assumptions then (
     let assumption = Sat.Var.new_bool ctx.model name in
     Sat.add_assumptions ctx.model [ assumption ];
@@ -89,7 +17,7 @@ let assume ctx name =
   else None
 
 (** All quests are fully staffed *)
-let all_staffed (ctx : context) =
+let all_staffed (ctx : Context.t) =
   let quest_is_staffed (q : Quest.t) =
     let open Sat in
     let name = Format.sprintf "q_%s_is_staffed" q.name in
@@ -111,7 +39,7 @@ let all_staffed (ctx : context) =
   ctx.for_all_quests quest_is_staffed
 
 (** Volunteers cannot do several things at the same time *)
-let non_ubiquity_of_normal_humans (ctx : context) =
+let non_ubiquity_of_normal_humans (ctx : Context.t) =
   ctx.for_all_quests @@ fun q ->
   let overlapping = Quest.overlaps_with ctx.options q ctx.qs in
   Quests.iter overlapping ~f:(fun q' ->
@@ -126,7 +54,7 @@ let non_ubiquity_of_normal_humans (ctx : context) =
         |> Sat.add ctx.model ~name)
 
 (** Not everyone is available all the time *)
-let check_unavailabilities (ctx : context) =
+let check_unavailabilities (ctx : Context.t) =
   ctx.for_all_volunteers @@ fun v ->
   List.iter v.unavailabilities ~f:(fun (slot : Time_slot.t) ->
       ctx.for_all_quests @@ fun q ->
@@ -141,7 +69,7 @@ let check_unavailabilities (ctx : context) =
 
 (** Enforces manual assignations of volunteers, and prevents manually assigned
     volunteers from doing anything else. *)
-let enforce_assignations (ctx : context) =
+let enforce_assignations (ctx : Context.t) =
   let assigned = Hashtbl.create 16 in
   let () =
     ctx.for_all_quests @@ fun q ->
@@ -164,7 +92,7 @@ let enforce_assignations (ctx : context) =
     proportion" mode.
 
     Exceptions: manually assigned volunteers or with forbidden places *)
-let everyone_does (ctx : context) ?name requirement (quests : Quests.t) =
+let everyone_does (ctx : Context.t) ?name requirement (quests : Quests.t) =
   let available_volunteers =
     Volunteers.filter (fun v -> not v.initial.manually_assigned) ctx.vs
   in
@@ -213,7 +141,7 @@ let everyone_does (ctx : context) ?name requirement (quests : Quests.t) =
 
     Exceptions: manually assigned volunteers or with forbidden places are not
     taken into account. *)
-let enforce_mandatory_tasks (ctx : context) =
+let enforce_mandatory_tasks (ctx : Context.t) =
   let mandatory t =
     not (Equal.poly t.Task_type.everyone_should_do_it Not_necessarily)
   in
@@ -239,7 +167,7 @@ let enforce_mandatory_tasks (ctx : context) =
      once *)
 let make ~with_assumptions (data : Planning.t) =
   let model = Sat.make ~name:"Toubenev" () in
-  let context = prepare ~with_assumptions model data in
+  let context = Context.prepare ~with_assumptions model data in
 
   let () = all_staffed context in
   let () = non_ubiquity_of_normal_humans context in
@@ -249,7 +177,7 @@ let make ~with_assumptions (data : Planning.t) =
 
   context
 
-let resolve_solution ctx arr =
+let resolve_solution (ctx : Context.t) arr =
   Array.mapi arr ~f:(fun i b ->
       try
         let name, v, q = ctx.assignations_rev i in
