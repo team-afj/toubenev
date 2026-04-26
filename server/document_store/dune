@@ -1,3 +1,3 @@
 (library
  (name document_store)
- (libraries types))
+ (libraries datarepr))

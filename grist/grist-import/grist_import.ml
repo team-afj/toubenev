@@ -1,4 +1,5 @@
 open Lunar
+open Datarepr
 
 module Infos = struct
   type t = { name : string; start : int; end_ : int; timezone : string }
@@ -165,10 +166,10 @@ type data = {
 [@@deriving jsont]
 
 type id_map = {
-  places : (int, Types.Place.t) Hashtbl.t;
-  task_types : (int, Types.Task_type.t) Hashtbl.t;
-  volunteers : (int, Types.Volunteer.t) Hashtbl.t;
-  quests : (int, Types.Quest.t) Hashtbl.t;
+  places : (int, Rich.Place.t) Hashtbl.t;
+  task_types : (int, Rich.Task_type.t) Hashtbl.t;
+  volunteers : (int, Rich.Volunteer.t) Hashtbl.t;
+  quests : (int, Rich.Quest.t) Hashtbl.t;
 }
 
 let new_id_map () =
@@ -180,7 +181,7 @@ let new_id_map () =
   }
 
 let mandatory_of_string = function
-  | "Non" -> Types.Task_type.Not_necessarily
+  | "Non" -> Rich.Task_type.Not_necessarily
   | "Au moins une fois" -> At_least_once
   | "Tout le monde autant" -> In_equal_proportion
   | s -> failwith ("Unexpected value:" ^ s)
@@ -203,7 +204,7 @@ let to_planning ?(id_map = new_id_map ())
     in
     let recurrence =
       match rec_flag with
-      | "Ponctuelle" -> Types.Time_spec.On [ Datetime.date start ]
+      | "Ponctuelle" -> Rich.Time_spec.On [ Datetime.date start ]
       | "Quotidienne" -> Daily
       | "Hebdomadaire" ->
           Weekly (Weekday.Set.of_list @@ List.map ~f:day_of_jour days)
@@ -219,7 +220,7 @@ let to_planning ?(id_map = new_id_map ())
         end_date
     in
     {
-      Types.Time_spec.recurrence;
+      Rich.Time_spec.recurrence;
       start = Datetime.time start;
       duration;
       first_day;
@@ -230,9 +231,9 @@ let to_planning ?(id_map = new_id_map ())
     let infos = List.hd infos in
     let start_date = Date.from_duration (Duration.from_seconds infos.start) in
     let end_date = Date.from_duration (Duration.from_seconds infos.end_) in
-    let timezone = Types.Timezones.of_string infos.timezone in
+    let timezone = Rich.Timezones.of_string infos.timezone in
     {
-      Types.Event_infos.name = infos.name;
+      Rich.Event_infos.name = infos.name;
       kind = Finite { start_date; end_date };
       timezone;
     }
@@ -240,13 +241,13 @@ let to_planning ?(id_map = new_id_map ())
   let options =
     let options = List.hd options in
     {
-      Types.Options.minimum_transfer_time =
+      Rich.Options.minimum_transfer_time =
         Duration.from_minutes options.inter_quest;
     }
   in
   let places =
     let convert_place { Lieu.id; slug; nom; description } =
-      let place = Types.Place.make ~slug ~name:nom ~description () in
+      let place = Rich.Place.make ~slug ~name:nom ~description () in
       Hashtbl.add id_map.places id place;
       place
     in
@@ -265,7 +266,7 @@ let to_planning ?(id_map = new_id_map ())
         } =
       let everyone_should_do_it = mandatory_of_string impose in
       let v =
-        Types.Task_type.make ~slug ~name ~description ~everyone_should_do_it
+        Rich.Task_type.make ~slug ~name ~description ~everyone_should_do_it
           ~specialist_only ~divisible ()
       in
       Hashtbl.add id_map.task_types id v;
@@ -305,7 +306,7 @@ let to_planning ?(id_map = new_id_map ())
       let slots = gather_time_slots l in
       List.map slots ~f:(fun (start, duration) ->
           {
-            Types.Time_spec.recurrence = Daily;
+            Rich.Time_spec.recurrence = Daily;
             start;
             duration;
             first_day = None;
@@ -349,29 +350,29 @@ let to_planning ?(id_map = new_id_map ())
         let unavailable =
           daily_spec indisponibilites_quotidiennes
           |> List.map ~f:(fun slot ->
-              { Types.Availability.status = Unavailable; slot })
+              { Rich.Availability.status = Unavailable; slot })
         in
         let ponctually_unavailable =
           List.map indisponibilites_ponctuelles ~f:(fun i ->
               Printf.eprintf "\nPRT\n%!";
               let slot = time_specs.(i - 1) in
-              { Types.Availability.status = Unavailable; slot })
+              { Rich.Availability.status = Unavailable; slot })
         in
         let best =
           daily_spec horaires_preferes
           |> List.map ~f:(fun slot ->
-              { Types.Availability.status = Available 1; slot })
+              { Rich.Availability.status = Available 1; slot })
         in
         let worse =
           daily_spec horaires_contraints
           |> List.map ~f:(fun slot ->
-              { Types.Availability.status = Available (-1); slot })
+              { Rich.Availability.status = Available (-1); slot })
         in
         CCRAL.of_list
           (List.concat [ unavailable; best; worse; ponctually_unavailable ])
       in
       let v =
-        Types.Volunteer.make ?public_name ~name ~daily_workload ~proficiencies
+        Rich.Volunteer.make ?public_name ~name ~daily_workload ~proficiencies
           ~forbidden_tasks ~forbidden_places ~availabilities ()
       in
       Hashtbl.add id_map.volunteers id v;
@@ -389,8 +390,8 @@ let to_planning ?(id_map = new_id_map ())
         let ennemis =
           List.map ~f:(fun id -> (Hashtbl.find id_map.volunteers id).id) ennemis
         in
-        Types.Volunteer.set_friends v friends;
-        Types.Volunteer.set_ennemis v ennemis)
+        Rich.Volunteer.set_friends v friends;
+        Rich.Volunteer.set_ennemis v ennemis)
   in
   let quests =
     let convert_quests
@@ -418,7 +419,7 @@ let to_planning ?(id_map = new_id_map ())
           ~duration_h:duree_heures ~end_date:fin_de_recurrence
       in
       let v =
-        Types.Quest.make ~name ~task_type ~place ~slot ~required_volunteers
+        Rich.Quest.make ~name ~task_type ~place ~slot ~required_volunteers
           ~assigned_volunteers ()
       in
       Hashtbl.add id_map.quests id v;
@@ -426,4 +427,4 @@ let to_planning ?(id_map = new_id_map ())
     in
     CCRAL.of_list_map ~f:convert_quests quests
   in
-  { Types.Planning.options; infos; places; task_types; volunteers; quests }
+  { Rich.Planning.options; infos; places; task_types; volunteers; quests }

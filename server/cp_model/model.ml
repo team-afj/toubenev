@@ -1,7 +1,8 @@
-open! Lunar_jsont
-open Types
 open Ortools
-open Norm
+open! Lunar_jsont
+open Datarepr
+open Rich
+open Normal
 
 (* Utilities *)
 let is_false v = Sat.(var v == of_int 0)
@@ -28,7 +29,7 @@ let all_staffed (ctx : Context.t) =
     let only_enforce_if =
       let name =
         Format.sprintf "%i people do %s"
-          q.initial.Types.Quest.required_volunteers q.name
+          q.initial.Rich.Quest.required_volunteers q.name
       in
       assume ctx name
     in

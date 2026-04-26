@@ -1,1 +1,3 @@
-let v : (string, Types.Planning.t) Hashtbl.t = Hashtbl.create 16
+open Datarepr
+
+let v : (string, Rich.Planning.t) Hashtbl.t = Hashtbl.create 16

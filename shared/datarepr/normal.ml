@@ -1,5 +1,4 @@
-open Std
-open Types
+open Rich
 open Lunar_jsont
 
 module Time_slot = struct
@@ -180,7 +179,7 @@ module Quest = struct
   let normalize event_infos vs (q : Quest.t) =
     let assigned_volunteers =
       CCRAL.fold q.assigned_volunteers ~x:Volunteer.Set.empty
-        ~f:(fun acc (v : Types.Volunteer.t) ->
+        ~f:(fun acc (v : Rich.Volunteer.t) ->
           Volunteer.Set.add
             (Volunteer.Set.find_by_id (uuid_to_uuidm v.id) vs)
             acc)

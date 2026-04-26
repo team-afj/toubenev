@@ -7,7 +7,7 @@
   ortools_solvers
   lunar
   cp_model
-  types
+  datarepr
   jsont.bytesrw))
 
 (test
@@ -19,5 +19,5 @@
   ortools_solvers
   lunar
   cp_model
-  types
+  datarepr
   jsont.bytesrw))

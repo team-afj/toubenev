@@ -1,6 +1,6 @@
 open Ortools
-open Types
-open Norm
+open Datarepr.Rich
+open Datarepr.Normal
 module Uuidm_map = Map.Make (Uuidm)
 
 type t = {

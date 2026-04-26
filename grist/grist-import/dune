@@ -1,6 +1,6 @@
 (library
  (name grist_import)
- (libraries std_js jsont lunar types)
+ (libraries std_js jsont lunar datarepr)
  (flags :standard -open Std_js)
  (preprocess
   (pps ppx_deriving_jsont)))
