@@ -26,7 +26,7 @@ let sat =
     let* time_specs = fetch time_slots_tbl_id in
     let* volunteers = fetch volunteers_tbl_id in
     let* quests = fetch quests_tbl_id in
-    let data =
+    let data_json =
       Jv.obj
         [|
           ("infos", infos);
@@ -37,14 +37,18 @@ let sat =
           ("volunteers", volunteers);
           ("quests", quests);
         |]
+      |> Json.encode
     in
-    match !last_data with
-    | Some last when Jv.equal last data -> Fut.return (Ok ())
-    | _ ->
+    match (Jsont_brr.decode Grist_import.data_jsont data_json, !last_data) with
+    | Ok data, Some last when Equal.poly last data ->
+        Console.debug [ "Nothing to do" ];
+        Fut.return (Ok ())
+    | Ok data, _ ->
+        let () = Console.debug [ "Data changes" ] in
         let () = last_data := Some data in
         let+ res =
           let open Brr_io.Fetch in
-          let body = Body.of_jstr (Json.encode data) in
+          let body = Body.of_jstr data_json in
 
           let method' = Jstr.v "PUT" in
           let uri = Jstr.v "/grist/data" in
@@ -65,5 +69,8 @@ let sat =
         El.set_children elt
         @@ List.map ~f:(fun s -> El.pre [ El.txt s ])
         @@ Jstr.cuts ~sep:(Jstr.v "\\n") str
+    | Error err, _ ->
+        Console.error [ "Decoding error: "; Jv.Error.message err ];
+        Fut.return (Ok ())
 
 let _ = Brr.G.set_interval ~ms:2000 sat

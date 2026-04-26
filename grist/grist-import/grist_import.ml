@@ -142,6 +142,17 @@ module Quete = struct
   [@@deriving jsont]
 end
 
+module Assignation = struct
+  type t = {
+    name : string;
+    initial_quest : int;
+    start : int;
+    end_ : int;
+    volunteers : int list;
+  }
+  [@@deriving jsont]
+end
+
 type data = {
   options : Options.t list;
   infos : Infos.t list;

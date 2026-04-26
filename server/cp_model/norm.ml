@@ -189,7 +189,7 @@ module Quest = struct
     List.map slots ~f:(fun (slot : Time_slot.t) ->
         let id = new_random_uuid_v4 () in
         let name =
-          Format.sprintf "%s_%s" q.name (Datetime.to_string slot.start)
+          Printf.sprintf "%s_%s" q.name (Datetime.to_string slot.start)
         in
         { id; initial = q; name; slot; assigned_volunteers })
 end
