@@ -20,11 +20,15 @@
 (** A CP-SAT model. *)
 type model
 
-(** Create an empty model. The [nvars] argument optionally specifies the
-    expected number of variables, which determines the size and growth of
-    internal data structures. The optional [name] argument is useful for
-    debugging and logging applications with multiple models. *)
-val make : ?nvars:int -> ?name:string -> unit -> model
+(** An interval variable, represented internally by an interval constraint. *)
+type interval_var
+
+(** Create an empty model. The [nvars] and [nconstraints] argument optionally
+      specifies the expected number of variables and constraints, which
+      determines the size and growth of internal data structures. The optional
+      [name] argument is useful for debugging and logging applications with
+      multiple models. *)
+val make : ?nvars:int -> ?nconstraints:int -> ?name:string -> unit -> model
 
 (** A subset of the integers. *)
 module Domain : sig (* {{{ *)
@@ -228,6 +232,12 @@ module Constraint : sig (* {{{ *)
     arg2:   LinearExpr.t;
   }
 
+  type interval = {
+    start : LinearExpr.t;
+    size : LinearExpr.t;
+    end_ : LinearExpr.t;
+  }
+
   (** The primitive constraints treated by CP-SAT. *)
   type t =
     | Or of Var.t_bool list
@@ -254,8 +264,12 @@ module Constraint : sig (* {{{ *)
           Values of type [Linear of lt] are created by the {!(<=)}, {!(==)},
           and similar operators. *)
     | AllDiff of LinearExpr.t list
-    (** Require that a list of (scaled) variables and constants have
-        different values from each other. *)
+      (** Require that a list of (scaled) variables and constants have
+          different values from each other. *)
+    | Interval of interval
+      (** An interval constraint for scheduling. *)
+    | NoOverlap of interval_var list
+      (** A no-overlap constraint for scheduling. *)
     (* TODO:
     | Element of element_constraint_proto
     | Circuit of circuit_constraint_proto
@@ -264,8 +278,6 @@ module Constraint : sig (* {{{ *)
     | Automaton of automaton_constraint_proto
     | Inverse of inverse_constraint_proto
     | Reservoir of reservoir_constraint_proto
-    | Interval of interval_constraint_proto
-    | NoOverlap of no_overlap_constraint_proto
     | NoOverlap2D of no_overlap2_dconstraint_proto
     | Cumulative of cumulative_constraint_proto
     | Dummy of list_of_variables_proto
@@ -431,6 +443,39 @@ val add_implication :
   -> ?name:string
   -> Var.t_bool list
   -> Var.t_bool list
+  -> unit
+
+(** Add an interval variable linking start, size, and end expressions. An
+    interval variable is a constraint, that is itself used in other constraints
+    like NoOverlap. Internally, it ensures that [start + size == end_]. The name
+    is attached to the underlying interval constraint. *)
+val new_interval_var :
+     model
+  -> start:LinearExpr.t
+  -> size:LinearExpr.t
+  -> end_:LinearExpr.t
+  -> string
+  -> interval_var
+
+(** Add an optional interval variable, active only when [is_present] is true.
+    Internally, it ensures that [is_present] implies [start + size == end_].
+    The name is attached to the underlying interval constraint. *)
+val new_optional_interval_var :
+     model
+  -> start:LinearExpr.t
+  -> size:LinearExpr.t
+  -> end_:LinearExpr.t
+  -> is_present:Var.t_bool
+  -> string
+  -> interval_var
+
+(** Add a no-overlap scheduling constraint to the model. A NoOverlap constraint
+  ensures that all present intervals do not overlap in time. *)
+val add_no_overlap :
+     model
+  -> ?name:string
+  -> ?only_enforce_if:Var.t_bool list
+  -> interval_var list
   -> unit
 
 include module type of Constraint.Linear

@@ -61,11 +61,12 @@ end (* }}} *)
 
 type var = int (* int32 *)
 type intval = int (* int64 *)
+type interval_var = int
 
 type t = {
   name                : string option;
   variables           : PB.integer_variable_proto DynArray.t;
-  mutable constraints : PB.constraint_proto list;
+  mutable constraints : PB.constraint_proto  DynArray.t;
   mutable objective   : PB.cp_objective_proto option;
   mutable hints       : (var * intval) list;
   mutable assumptions : int32 list;
@@ -325,6 +326,12 @@ module Constraint = struct (* {{{ *)
      | (_, [ (_, _v) ]) -> () (* should check that _v.ub = _v.lb... *)
      | _ -> invalid_arg "arg2 must be a (scaled) constant")
 
+  type interval = {
+    start : LinearExpr.t;
+    size : LinearExpr.t;
+    end_ : LinearExpr.t;
+  }
+
   type t =
     | Or of Var.t_bool list
     | And of Var.t_bool list
@@ -337,6 +344,8 @@ module Constraint = struct (* {{{ *)
     | Max of equality
     | Linear of LinearExpr.t * Domain.t
     | AllDiff of LinearExpr.t list
+    | Interval of interval
+    | NoOverlap of interval_var list
     (* TODO:
     | Element of element_constraint_proto
     | Circuit of circuit_constraint_proto
@@ -345,8 +354,6 @@ module Constraint = struct (* {{{ *)
     | Automaton of automaton_constraint_proto
     | Inverse of inverse_constraint_proto
     | Reservoir of reservoir_constraint_proto
-    | Interval of interval_constraint_proto
-    | No_overlap of no_overlap_constraint_proto
     | No_overlap_2d of no_overlap2_dconstraint_proto
     | Cumulative of cumulative_constraint_proto
     | Dummy_constraint of list_of_variables_proto
@@ -356,7 +363,7 @@ module Constraint = struct (* {{{ *)
     | Div eq2 | Mod eq2 -> check_equality2 eq2
     | Prod eq | Max eq -> check_equality eq
     | Or _ | And _ | AtMostOne _ | ExactlyOne _ | Xor _ | AllDiff _
-    | Linear (_, _) -> ()
+    | Linear (_, _) | Interval _ | NoOverlap _ -> ()
 
   let bool_or bs = Or bs
   let bool_and bs = And bs
@@ -432,6 +439,16 @@ module Constraint = struct (* {{{ *)
       ~domain:(List.map (fun b -> Int64.(sub b k)) (Domain.flatten domain))
       ()
 
+  let interval_proto { start; size; end_} =
+    let start = LinearExpr.to_proto start in
+    let size = LinearExpr.to_proto size in
+    let end_ = LinearExpr.to_proto end_ in
+    PB.make_interval_constraint_proto ~start ~size ~end_ ()
+
+  let no_overlap_to_proto intervals =
+    let intervals = List.map Int32.of_int intervals in
+    PB.make_no_overlap_constraint_proto ~intervals ()
+
   let to_proto = function
     | Or bs  -> PB.(Bool_or (make_bool_argument_proto ~literals:(int32 bs) ()))
     | And bs -> PB.(Bool_and (make_bool_argument_proto ~literals:(int32 bs) ()))
@@ -446,6 +463,8 @@ module Constraint = struct (* {{{ *)
     | AllDiff exprs ->
         let exprs = List.map LinearExpr.to_proto exprs in
         PB.(All_diff (PB.make_all_different_constraint_proto ~exprs ()))
+    | Interval inter -> PB.(Interval (interval_proto inter))
+    | NoOverlap inters -> PB.(No_overlap (no_overlap_to_proto inters))
 
   let of_expr expr ~lb ~ub = Linear (expr, Domain.of_interval ~lb ~ub ())
 
@@ -540,10 +559,10 @@ module Constraint = struct (* {{{ *)
 
 end (* }}} *)
 
-let make ?(nvars=10000) ?name () = {
+let make ?(nvars=10000) ?(nconstraints=1000) ?name () = {
   name;
   variables = DynArray.make nvars;
-  constraints = [];
+  constraints = DynArray.make nconstraints;
   objective = None;
   hints = [];
   assumptions = [];
@@ -565,7 +584,7 @@ let to_proto { name; variables; constraints; objective;
   PB.make_cp_model_proto
     ?name
     ~variables:(DynArray.to_list variables)
-    ~constraints
+    ~constraints:(DynArray.to_list constraints)
     ?objective
     ?solution_hint
     ?assumptions
@@ -603,10 +622,23 @@ let add ({ constraints; _ } as m) ?name ?(only_enforce_if=[]) c =
                             only_enforce_if)
     ~constraint_ ()
   in
-  m.constraints <- c :: constraints
+  DynArray.add_last m.constraints c
+
+let new_interval_var m ~start ~size ~end_ name =
+  add m ~name (Constraint.Interval { start; size; end_ })
+
+let new_optional_interval_var m ~start ~size ~end_ ~is_present name =
+  add m ~name ~only_enforce_if:[is_present]
+    (Constraint.Interval { start; size; end_ })
+
+let add m ?name ?only_enforce_if c = ignore @@ add m ?name ?only_enforce_if c
 
 let add_implication m ?name lhs rhs =
   add m ?name ~only_enforce_if:lhs (Constraint.And rhs)
+
+
+let add_no_overlap m ?name ?(only_enforce_if=[]) intervals =
+  add m ?name ~only_enforce_if (Constraint.NoOverlap intervals)
 
 let minimize m expr =
   m.objective <- Some LinearExpr.(to_objective_proto expr)
