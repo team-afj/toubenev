@@ -50,8 +50,13 @@ let non_ubiquity_of_normal_humans (ctx : Context.t) =
           Format.sprintf "%s_cannot_do_both_%s_and_%s" v.initial.name q.name
             q'.name
         in
+        let only_enforce_if =
+          assume ctx
+          @@ Format.sprintf "%s cannot do both %s and %s" v.initial.name q.name
+               q'.name
+        in
         Sat.Constraint.at_most_one [ assig_v q; assig_v q' ]
-        |> Sat.add ctx.model ~name)
+        |> Sat.add ctx.model ?only_enforce_if ~name)
 
 (** Not everyone is available all the time *)
 let check_unavailabilities (ctx : Context.t) =
@@ -66,6 +71,41 @@ let check_unavailabilities (ctx : Context.t) =
         in
         Sat.(
           add ctx.model ~name ?only_enforce_if (is_false (ctx.assignations v q))))
+
+(** Some quests require specialists *)
+let required_specialists (ctx : Context.t) =
+  ctx.for_all_quests @@ fun q ->
+  if q.initial.task_type.specialist_only then
+    ctx.for_all_volunteers @@ fun v ->
+    let skills = CCRAL.to_list v.initial.proficiencies in
+    if not (List.mem ~eq:Task_type.equal q.initial.task_type skills) then
+      let name =
+        Format.sprintf "%s_does_not_have_the_skill_for_%s" v.name q.name
+      in
+      let only_enforce_if =
+        let name =
+          Format.sprintf "%s does not have the skill to do %s" v.name q.name
+        in
+        assume ctx name
+      in
+      Sat.(
+        add ctx.model ~name ?only_enforce_if (is_false (ctx.assignations v q)))
+
+(** Some volunteers are banned from some quests types *)
+let enforce_bans (ctx : Context.t) =
+  ctx.for_all_volunteers @@ fun v ->
+  ctx.for_all_quests @@ fun q ->
+  if Task_type.Set.mem q.initial.task_type v.forbidden_tasks then
+    let name =
+      Format.sprintf "%s_does_not_have_the_right_to_do_%s" v.name q.name
+    in
+    let only_enforce_if =
+      let name =
+        Format.sprintf "%s does not have the right to do %s" v.name q.name
+      in
+      assume ctx name
+    in
+    Sat.(add ctx.model ~name ?only_enforce_if (is_false (ctx.assignations v q)))
 
 (** Enforces manual assignations of volunteers, and prevents manually assigned
     volunteers from doing anything else. *)
@@ -85,7 +125,12 @@ let enforce_assignations (ctx : Context.t) =
       let name =
         Format.sprintf "manually_assigned_%s_cannot_do_%s" v.initial.name q.name
       in
-      Sat.(add ctx.model ~name (is_false (ctx.assignations v q)))
+      let only_enforce_if =
+        assume ctx
+        @@ Format.sprintf "%s is manually assigned to %s" v.initial.name q.name
+      in
+      Sat.(
+        add ctx.model ~name ?only_enforce_if (is_false (ctx.assignations v q)))
 
 (** Force every volunteer to do at least one of a quest list. Warning, this
     constraint can easily make the problem UNFEASIBLE, especially in "equal
@@ -158,6 +203,40 @@ let enforce_mandatory_tasks (ctx : Context.t) =
       in
       everyone_does ctx ~name:tt.name requirement quests)
 
+(** Some people refuse to work with other people *)
+let know_your_ennemy (ctx : Context.t) =
+  let processed_pairs : (Uuidm.t * Uuidm.t, unit) Hashtbl.t =
+    Hashtbl.create 32
+  in
+  ctx.for_all_volunteers @@ fun (v : Volunteer.t) ->
+  List.iter v.initial.ennemis ~f:(fun ennemy_uuid ->
+      let ennemy_id = uuid_to_uuidm ennemy_uuid in
+      if not (Uuidm.equal v.id ennemy_id) then
+        let a, b =
+          if Uuidm.compare v.id ennemy_id <= 0 then (v.id, ennemy_id)
+          else (ennemy_id, v.id)
+        in
+        if not (Hashtbl.mem processed_pairs (a, b)) then
+          match Volunteers.find_by_id ennemy_id ctx.vs with
+          | exception Not_found -> ()
+          | ennemy ->
+              Hashtbl.add processed_pairs (a, b) ();
+              ctx.for_all_quests @@ fun q ->
+              let name =
+                Format.sprintf "%s_cannot_do_%s_with_%s" v.name q.name
+                  ennemy.name
+              in
+              let only_enforce_if =
+                assume ctx
+                @@ Format.sprintf "%s wannot work with %s on %s" v.name
+                     ennemy.name q.name
+              in
+              Sat.Constraint.at_most_one
+                [ ctx.assignations v q; ctx.assignations ennemy q ]
+              |> Sat.add ctx.model ~name ?only_enforce_if)
+
+(* Daily break *)
+
 (** Quests groups *)
 
 (* TODO:
@@ -174,6 +253,9 @@ let make ~with_assumptions (data : Planning.t) =
   let () = enforce_assignations context in
   let () = enforce_mandatory_tasks context in
   let () = check_unavailabilities context in
+  let () = required_specialists context in
+  let () = enforce_bans context in
+  let () = know_your_ennemy context in
 
   context
 
