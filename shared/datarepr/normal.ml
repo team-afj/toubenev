@@ -194,3 +194,5 @@ module Quest = struct
 end
 
 module Quests = Quest.Set
+
+type data = { volunteers : Volunteers.t; quests : Quests.t }
