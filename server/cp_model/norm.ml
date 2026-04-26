@@ -187,9 +187,10 @@ module Quest = struct
     in
     let slots = expand_time_spec event_infos q.slot in
     List.map slots ~f:(fun (slot : Time_slot.t) ->
-        let date = Datetime.date slot.start in
         let id = new_random_uuid_v4 () in
-        let name = Format.sprintf "%s_%s" q.name (Date.to_string date) in
+        let name =
+          Format.sprintf "%s_%s" q.name (Datetime.to_string slot.start)
+        in
         { id; initial = q; name; slot; assigned_volunteers })
 end
 

@@ -1,40 +1,29 @@
 open Lunar
 
 module Infos = struct
-  type t = {
-    name : string; [@key "Nom"]
-    start : int; [@key "Date_debut"]
-    end_ : int; [@key "Date_fin"]
-    timezone : string; [@key "Timezone"]
-  }
+  type t = { name : string; start : int; end_ : int; timezone : string }
   [@@deriving jsont]
 end
 
 module Options = struct
-  type t = { inter_quete : int [@key "Duree_inter_quete"] } [@@deriving jsont]
+  type t = { inter_quest : int } [@@deriving jsont]
 end
 
 module Task_type = struct
   type t = {
     id : int;
-    slug : string; [@key "Slug"]
-    nom : string; [@key "Nom"]
-    fiche_de_poste : string; [@key "Fiche_de_poste"]
-    impose : string; [@key "Impose"]
-    specialiste_requis : bool; [@key "Specialiste_requis"]
-    decoupable : bool; [@key "Decoupable"]
-    lieu_par_defaut : int; [@key "Lieu_par_defaut"]
+    slug : string;
+    nom : string;
+    fiche_de_poste : string;
+    impose : string;
+    specialiste_requis : bool;
+    decoupable : bool;
   }
   [@@deriving jsont]
 end
 
 module Lieu = struct
-  type t = {
-    id : int;
-    slug : string; [@key "Slug"]
-    nom : string; [@key "Nom"]
-    description : string; [@key "Description"]
-  }
+  type t = { id : int; slug : string; nom : string; description : string }
   [@@deriving jsont]
 end
 
@@ -90,27 +79,23 @@ let grist_string_list_jsont = grist_list Jsont.string
 module Benevole = struct
   type t = {
     id : int;
-    pseudo : string option; [@key "Pseudo"]
-    nom : string option; [@key "Nom"]
-    prenom : string; [@key "Prenom"]
-    nb_heures : float; [@key "Nb_heures"]
-    langues : grist_string_list; [@default []] [@key "Langues"]
-    telephone : string; [@key "Telephone"]
-    email : string; [@key "Email"]
-    specialites : grist_int_list; [@default []] [@key "Specialites"]
-    taches_interdites : grist_int_list; [@default []] [@key "Taches_interdites"]
-    lieux_interdits : grist_int_list; [@default []] [@key "Lieux_interdits"]
-    amis : grist_int_list; [@default []] [@key "Amis"]
-    ennemis : grist_int_list; [@default []] [@key "Ennemis"]
-    date_d_arrivee : int option; [@key "Date_d_arrivee"]
-    date_de_depart : int option; [@key "Date_de_depart"]
-    indisponibilites_quotidiennes : grist_int_list;
-        [@default []] [@key "Indisponibilites_quotidiennes"]
-    horaires_preferes : grist_int_list; [@default []] [@key "Horaires_preferes"]
-    horaires_contraints : grist_int_list;
-        [@default []] [@key "Horaires_contraints"]
-    indisponibilites_ponctuelles : grist_int_list;
-        [@default []] [@key "Autres_indisponibilites"]
+    pseudo : string option;
+    nom : string option;
+    prenom : string;
+    nb_heures : float;
+    langues : grist_string_list; [@default []]
+    telephone : string;
+    email : string;
+    specialites : grist_int_list; [@default []]
+    taches_interdites : grist_int_list; [@default []]
+    amis : grist_int_list; [@default []]
+    ennemis : grist_int_list; [@default []]
+    date_d_arrivee : int option;
+    date_de_depart : int option;
+    indisponibilites_quotidiennes : grist_int_list; [@default []]
+    horaires_preferes : grist_int_list; [@default []]
+    horaires_contraints : grist_int_list; [@default []]
+    indisponibilites_ponctuelles : grist_int_list; [@default []]
   }
   [@@deriving jsont]
 end
@@ -143,17 +128,16 @@ end
 module Quete = struct
   type t = {
     id : int;
-    nom : string; [@key "Nom"]
-    type_ : int; [@key "Type"]
-    lieu : int; [@key "Lieu"]
-    recurrence : string; [@key "Recurrence"]
-    jours : jour_list; [@default []] [@key "Jours"]
-    date_et_heure_de_debut : int; [@key "Date_et_heure_de_debut"]
-    benevoles : int; [@key "benevoles"]
-    duree_heures : float; [@key "Duree_heures_"]
-    fin_de_recurrence : int option; [@key "Fin_de_recurrence"]
-    benevoles_assignes : grist_int_list;
-        [@default []] [@key "Benevoles_assignes"]
+    nom : string;
+    type_ : int;
+    lieu : int;
+    recurrence : string;
+    jours : jour_list; [@default []]
+    date_et_heure_de_debut : int;
+    benevoles : int;
+    duree_heures : float;
+    fin_de_recurrence : int option;
+    benevoles_assignes : grist_int_list; [@default []]
   }
   [@@deriving jsont]
 end
@@ -246,7 +230,7 @@ let to_planning ?(id_map = new_id_map ())
     let options = List.hd options in
     {
       Types.Options.minimum_transfer_time =
-        Duration.from_minutes options.inter_quete;
+        Duration.from_minutes options.inter_quest;
     }
   in
   let places =
@@ -267,7 +251,6 @@ let to_planning ?(id_map = new_id_map ())
           impose;
           specialiste_requis = specialist_only;
           decoupable = divisible;
-          lieu_par_defaut = _;
         } =
       let everyone_should_do_it = mandatory_of_string impose in
       let v =
@@ -327,7 +310,6 @@ let to_planning ?(id_map = new_id_map ())
           nb_heures;
           specialites;
           taches_interdites;
-          lieux_interdits;
           indisponibilites_quotidiennes;
           horaires_preferes;
           horaires_contraints;
@@ -350,7 +332,7 @@ let to_planning ?(id_map = new_id_map ())
         CCRAL.of_list_map ~f:(Hashtbl.find id_map.task_types) taches_interdites
       in
       let forbidden_places =
-        CCRAL.of_list_map ~f:(Hashtbl.find id_map.places) lieux_interdits
+        CCRAL.of_list_map ~f:(Hashtbl.find id_map.places) []
       in
       let availabilities =
         let unavailable =
