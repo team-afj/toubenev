@@ -61,7 +61,6 @@ let sat =
           Response.as_body response |> Body.json
         in
         let elt = El.find_first_by_selector (Jstr.v "#readout") |> Option.get in
-        Console.log [ res ];
         let j = Jv.get Jv.global "JSON" in
         let str =
           Jv.call j "stringify" [| res; Jv.null; Jv.of_int 2 |] |> Jv.to_jstr
