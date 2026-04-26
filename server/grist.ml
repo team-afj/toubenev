@@ -18,7 +18,7 @@ let handle_put_data (req : (Vif.Type.json, Grist_import.data) Request.t) _server
     Logs.debug (fun m -> m "BEFORE");
     let+ v = Request.of_json req in
     Logs.debug (fun m -> m "AFTER");
-    let planning = Grist_import.to_planning v in
+    let _, planning = Grist_import.to_planning v in
     let status = Api.Planning.solve planning in
     (* let+ s =
       Jsont_bytesrw.encode_string Types.Planning.jsont planning

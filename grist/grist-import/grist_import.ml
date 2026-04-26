@@ -166,18 +166,19 @@ type data = {
 [@@deriving jsont]
 
 type id_map = {
-  places : (int, Rich.Place.t) Hashtbl.t;
-  task_types : (int, Rich.Task_type.t) Hashtbl.t;
-  volunteers : (int, Rich.Volunteer.t) Hashtbl.t;
-  quests : (int, Rich.Quest.t) Hashtbl.t;
+  places : Rich.Place.t Int.Map.t;
+  task_types : Rich.Task_type.t Int.Map.t;
+  volunteers : Rich.Volunteer.t Int.Map.t;
+  quests : Rich.Quest.t Int.Map.t;
 }
+(* TODO It would be much easier to reuse grist ids directly *)
 
 let new_id_map () =
   {
-    places = Hashtbl.create 32;
-    task_types = Hashtbl.create 32;
-    volunteers = Hashtbl.create 128;
-    quests = Hashtbl.create 256;
+    places = Int.Map.empty;
+    task_types = Int.Map.empty;
+    volunteers = Int.Map.empty;
+    quests = Int.Map.empty;
   }
 
 let mandatory_of_string = function
@@ -245,16 +246,18 @@ let to_planning ?(id_map = new_id_map ())
         Duration.from_minutes options.inter_quest;
     }
   in
-  let places =
-    let convert_place { Lieu.id; slug; nom; description } =
+  let id_map, places =
+    let convert_place id_map { Lieu.id; slug; nom; description } =
       let place = Rich.Place.make ~slug ~name:nom ~description () in
-      Hashtbl.add id_map.places id place;
-      place
+      ({ id_map with places = Int.Map.add id place id_map.places }, place)
     in
-    CCRAL.of_list_map ~f:convert_place places
+    let id_map, places =
+      List.fold_left_map ~f:convert_place ~init:id_map places
+    in
+    (id_map, CCRAL.of_list places)
   in
-  let task_types =
-    let convert_task_types
+  let id_map, task_types =
+    let convert_task_types id_map
         {
           Task_type.id;
           slug;
@@ -269,10 +272,12 @@ let to_planning ?(id_map = new_id_map ())
         Rich.Task_type.make ~slug ~name ~description ~everyone_should_do_it
           ~specialist_only ~divisible ()
       in
-      Hashtbl.add id_map.task_types id v;
-      v
+      ({ id_map with task_types = Int.Map.add id v id_map.task_types }, v)
     in
-    CCRAL.of_list_map ~f:convert_task_types task_types
+    let id_map, task_types =
+      List.fold_left_map ~f:convert_task_types ~init:id_map task_types
+    in
+    (id_map, CCRAL.of_list task_types)
   in
   let time_specs =
     let convert_spec { Time_spec.recurrence; start; duration_h; days; end_date }
@@ -281,7 +286,7 @@ let to_planning ?(id_map = new_id_map ())
     in
     List.map ~f:convert_spec time_specs |> Array.of_list
   in
-  let volunteers =
+  let id_map, volunteers =
     let gather_time_slots l =
       let tz = Timezone.to_duration infos.timezone in
       let mk start end_ =
@@ -313,7 +318,7 @@ let to_planning ?(id_map = new_id_map ())
             last_day = None;
           })
     in
-    let convert_colunteers
+    let convert_volunteers id_map
         {
           Benevole.id;
           pseudo = public_name;
@@ -338,13 +343,17 @@ let to_planning ?(id_map = new_id_map ())
         Lunar.Duration.from_seconds (Float.to_int seconds)
       in
       let proficiencies =
-        CCRAL.of_list_map ~f:(Hashtbl.find id_map.task_types) specialites
+        CCRAL.of_list_map
+          ~f:(fun i -> Int.Map.find i id_map.task_types)
+          specialites
       in
       let forbidden_tasks =
-        CCRAL.of_list_map ~f:(Hashtbl.find id_map.task_types) taches_interdites
+        CCRAL.of_list_map
+          ~f:(fun i -> Int.Map.find i id_map.task_types)
+          taches_interdites
       in
       let forbidden_places =
-        CCRAL.of_list_map ~f:(Hashtbl.find id_map.places) []
+        CCRAL.of_list_map ~f:(fun i -> Int.Map.find i id_map.places) []
       in
       let availabilities =
         let unavailable =
@@ -375,26 +384,28 @@ let to_planning ?(id_map = new_id_map ())
         Rich.Volunteer.make ?public_name ~name ~daily_workload ~proficiencies
           ~forbidden_tasks ~forbidden_places ~availabilities ()
       in
-      Hashtbl.add id_map.volunteers id v;
-      v
+      ({ id_map with volunteers = Int.Map.add id v id_map.volunteers }, v)
     in
-    CCRAL.of_list_map ~f:convert_colunteers vols
+    let id_map, vols =
+      List.fold_left_map ~f:convert_volunteers ~init:id_map vols
+    in
+    (id_map, CCRAL.of_list vols)
   in
   let () =
     (* We set friends and ennemis in a second pass *)
     List.iter vols ~f:(fun { Benevole.id; amis; ennemis; _ } ->
-        let v = Hashtbl.find id_map.volunteers id in
+        let v = Int.Map.find id id_map.volunteers in
         let friends =
-          List.map ~f:(fun id -> (Hashtbl.find id_map.volunteers id).id) amis
+          List.map ~f:(fun id -> (Int.Map.find id id_map.volunteers).id) amis
         in
         let ennemis =
-          List.map ~f:(fun id -> (Hashtbl.find id_map.volunteers id).id) ennemis
+          List.map ~f:(fun id -> (Int.Map.find id id_map.volunteers).id) ennemis
         in
         Rich.Volunteer.set_friends v friends;
         Rich.Volunteer.set_ennemis v ennemis)
   in
-  let quests =
-    let convert_quests
+  let id_map, quests =
+    let convert_quests id_map
         {
           Quete.id;
           nom = name;
@@ -409,10 +420,12 @@ let to_planning ?(id_map = new_id_map ())
           fin_de_recurrence;
           _;
         } =
-      let task_type = Hashtbl.find id_map.task_types type_ in
-      let place = Hashtbl.find id_map.places lieu in
+      let task_type = Int.Map.find type_ id_map.task_types in
+      let place = Int.Map.find lieu id_map.places in
       let assigned_volunteers =
-        CCRAL.of_list_map ~f:(Hashtbl.find id_map.volunteers) benevoles_assignes
+        CCRAL.of_list_map
+          ~f:(fun i -> Int.Map.find i id_map.volunteers)
+          benevoles_assignes
       in
       let slot =
         make_spec ~rec_flag:recurrence ~days:jours ~start:date_et_heure_de_debut
@@ -422,9 +435,12 @@ let to_planning ?(id_map = new_id_map ())
         Rich.Quest.make ~name ~task_type ~place ~slot ~required_volunteers
           ~assigned_volunteers ()
       in
-      Hashtbl.add id_map.quests id v;
-      v
+      ({ id_map with quests = Int.Map.add id v id_map.quests }, v)
     in
-    CCRAL.of_list_map ~f:convert_quests quests
+    let id_map, quests =
+      List.fold_left_map ~f:convert_quests ~init:id_map quests
+    in
+    (id_map, CCRAL.of_list quests)
   in
-  { Rich.Planning.options; infos; places; task_types; volunteers; quests }
+  ( id_map,
+    { Rich.Planning.options; infos; places; task_types; volunteers; quests } )

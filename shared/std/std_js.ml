@@ -29,3 +29,9 @@ module Set = struct
     let fold ~init ~f t = fold (Fun.flip f) t init
   end
 end
+
+module Int = struct
+  include Int
+  module Set = Set.Make (Int)
+  module Map = Map.Make (Int)
+end
