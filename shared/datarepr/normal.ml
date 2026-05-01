@@ -185,8 +185,8 @@ module Quest = struct
             acc)
     in
     let slots = expand_time_spec event_infos q.slot in
-    List.map slots ~f:(fun (slot : Time_slot.t) ->
-        let id = new_random_uuid_v4 () |> Uuidm.to_string in
+    List.mapi slots ~f:(fun i (slot : Time_slot.t) ->
+        let id = Printf.sprintf "%s_%i" (Rich.id_to_string q.id) i in
         let name =
           Printf.sprintf "%s_%s" q.name (Datetime.to_string slot.start)
         in
