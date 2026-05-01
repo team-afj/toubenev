@@ -211,10 +211,10 @@ let to_planning ?(id_map = new_id_map ())
       timezone;
     }
   in
-  let make_spec ~rec_flag ~days ~start ~duration_h ~end_date =
+  let make_spec ~rec_flag ~days ~start:start' ~duration_h ~end_date =
     let start =
-      Zoned_datetime.from_duration ~tz:infos.timezone
-      @@ Duration.from_seconds start
+      Zoned_datetime.from_duration @@ Duration.from_seconds start'
+      |> Zoned_datetime.change_timezone ~tz:infos.timezone
     in
     let local_date = Zoned_datetime.on_local Datetime.date in
     let recurrence =

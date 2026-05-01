@@ -45,9 +45,7 @@ let expand_time_spec
             Weekday.Set.mem wd weekdays)
   in
   List.map all_dates ~f:(fun date ->
-      let start =
-        Zoned_datetime.(from ~tz date start_time |> to_local_datetime)
-      in
+      let start = Zoned_datetime.(from ~tz date start_time |> to_utc) in
       { Time_slot.start; duration })
 
 module Volunteer = struct
