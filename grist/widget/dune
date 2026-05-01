@@ -3,7 +3,6 @@
  (modes js)
  (js_of_ocaml
   (javascript_files stubs.js))
- (promote (until-clean))
  (flags :standard -open Std_js)
  (libraries std_js brr jsont.brr grist_import))
 
