@@ -186,7 +186,9 @@ module Time_spec = struct
         in
         Printf.sprintf "weekly (%s)" weekdays
     | On dates ->
-        let dates = List.map dates ~f:Date.to_string |> String.concat ~sep:", " in
+        let dates =
+          List.map dates ~f:Date.to_string |> String.concat ~sep:", "
+        in
         Printf.sprintf "on %s" dates
 
   type t = {
@@ -224,8 +226,10 @@ module Time_spec = struct
     let bounds =
       match (t.first_day, t.last_day) with
       | None, None -> ""
-      | Some first_day, None -> Printf.sprintf " from %s" (Date.to_string first_day)
-      | None, Some last_day -> Printf.sprintf " until %s" (Date.to_string last_day)
+      | Some first_day, None ->
+          Printf.sprintf " from %s" (Date.to_string first_day)
+      | None, Some last_day ->
+          Printf.sprintf " until %s" (Date.to_string last_day)
       | Some first_day, Some last_day ->
           Printf.sprintf " from %s to %s" (Date.to_string first_day)
             (Date.to_string last_day)
