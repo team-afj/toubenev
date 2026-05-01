@@ -9,6 +9,7 @@ let task_types_tbl_id = Jstr.v "Types_de_quete"
 let time_slots_tbl_id = Jstr.v "Plages_horaires_ponctuelles"
 let volunteers_tbl_id = Jstr.v "Benevoles"
 let quests_tbl_id = Jstr.v "Quetes"
+let assignations_tbl_id = Jstr.v "Assignations"
 
 let fetch table_id =
   let open Grist in
@@ -47,6 +48,72 @@ let sat =
     | Ok data, _ ->
         let () = Console.debug [ "Data changes" ] in
         let () = last_data := Some data in
+        let _id_map, planning = Grist_import.to_planning data in
+        let normalized_planning = Conv.normalize planning in
+        (* New assignations *)
+        let assignations =
+          let open Lunar in
+          let open Normal in
+          Quests.to_list_map
+            ~f:(fun { Quest.id; name; initial; slot; _ } ->
+              let initial_quest = Rich.id_to_int initial.id in
+              let start =
+                Datetime.to_duration slot.start |> Duration.to_seconds
+              in
+              let end_ =
+                Datetime.(slot.start + slot.duration)
+                |> Datetime.to_duration |> Duration.to_seconds
+              in
+              {
+                Grist_import.Assignation.solution = 0;
+                name;
+                ref = id;
+                initial_quest;
+                start;
+                end_;
+                volunteers = [];
+              })
+            normalized_planning.quests
+        in
+        let assignations_table =
+          Grist.get_table ~table_id:assignations_tbl_id ()
+        in
+        let* _ =
+          (* Remove old assignations for solution 0 *)
+          let+ current_assignations = fetch assignations_tbl_id in
+          let current_assignations =
+            Jv.to_list
+              (fun obj ->
+                ( Jv.get obj "id" |> Jv.to_int,
+                  Jv.get obj "solution" |> Jv.to_int ))
+              current_assignations
+          in
+          let solution_0_assignations =
+            List.filter_map
+              ~f:(function id, 0 -> Some id | _ -> None)
+              current_assignations
+          in
+          let record_ids = solution_0_assignations in
+          Grist.Table_operations.destroy assignations_table ~record_ids
+        in
+        let* () =
+          let open Grist in
+          let records =
+            List.map assignations ~f:(fun (a : Grist_import.Assignation.t) ->
+                let require =
+                  [|
+                    (Jstr.v "ref", Jv.of_string a.ref);
+                    (Jstr.v "solution", Jv.of_int a.solution);
+                    (Jstr.v "initial_quest", Jv.of_int a.initial_quest);
+                    (Jstr.v "start", Jv.of_int a.start);
+                    (Jstr.v "end_", Jv.of_int a.end_);
+                  |]
+                in
+                Console.error [ "DBG"; require ];
+                Add_or_update_record.v ~require ())
+          in
+          Grist.Table_operations.upsert assignations_table ~records ()
+        in
         let+ res =
           let open Brr_io.Fetch in
           let body = Body.of_jstr data_json in
@@ -73,4 +140,6 @@ let sat =
         Console.error [ "Decoding error: "; Jv.Error.message err ];
         Fut.return (Ok ())
 
-let _ = Brr.G.set_interval ~ms:2000 sat
+let _ =
+  sat ();
+  Brr.G.set_interval ~ms:2000 sat
