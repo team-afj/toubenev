@@ -56,3 +56,9 @@ module Datetime = struct
 
   let jsont = Jsont.string |> Jsont.map ~dec:from_string_exn ~enc:to_string
 end
+
+module Zoned_datetime = struct
+  include Lunar.Zoned_datetime
+
+  let jsont = Jsont.string |> Jsont.map ~dec:from_string_exn ~enc:to_string
+end

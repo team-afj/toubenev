@@ -200,36 +200,6 @@ let to_planning ?(id_map = new_id_map ())
        quests;
      } :
       data) =
-  let make_spec ~rec_flag ~days ~start ~duration_h ~end_date =
-    let start =
-      (* TODO TIMEZONE *)
-      Datetime.from_duration @@ Duration.from_seconds start
-    in
-    let recurrence =
-      match rec_flag with
-      | "Ponctuelle" -> Rich.Time_spec.On [ Datetime.date start ]
-      | "Quotidienne" -> Daily
-      | "Hebdomadaire" ->
-          Weekly (Weekday.Set.of_list @@ List.map ~f:day_of_jour days)
-      | s -> raise (Invalid_argument s)
-    in
-    let duration =
-      Duration.from_seconds (Float.to_int (duration_h *. 60. *. 60.))
-    in
-    let first_day = Some (Datetime.date start) in
-    let last_day =
-      Option.map
-        (fun d -> Date.from_duration (Duration.from_seconds d))
-        end_date
-    in
-    {
-      Rich.Time_spec.recurrence;
-      start = Datetime.time start;
-      duration;
-      first_day;
-      last_day;
-    }
-  in
   let infos =
     let infos = List.hd infos in
     let start_date = Date.from_duration (Duration.from_seconds infos.start) in
@@ -239,6 +209,37 @@ let to_planning ?(id_map = new_id_map ())
       Rich.Event_infos.name = infos.name;
       kind = Finite { start_date; end_date };
       timezone;
+    }
+  in
+  let make_spec ~rec_flag ~days ~start ~duration_h ~end_date =
+    let start =
+      Zoned_datetime.from_duration ~tz:infos.timezone
+      @@ Duration.from_seconds start
+    in
+    let local_date = Zoned_datetime.on_local Datetime.date in
+    let recurrence =
+      match rec_flag with
+      | "Ponctuelle" -> Rich.Time_spec.On [ local_date start ]
+      | "Quotidienne" -> Daily
+      | "Hebdomadaire" ->
+          Weekly (Weekday.Set.of_list @@ List.map ~f:day_of_jour days)
+      | s -> raise (Invalid_argument s)
+    in
+    let duration =
+      Duration.from_seconds (Float.to_int (duration_h *. 60. *. 60.))
+    in
+    let first_day = Some (local_date start) in
+    let last_day =
+      Option.map
+        (fun d -> Date.from_duration (Duration.from_seconds d))
+        end_date
+    in
+    {
+      Rich.Time_spec.recurrence;
+      start = Zoned_datetime.on_local Datetime.time start;
+      duration;
+      first_day;
+      last_day;
     }
   in
   let options =

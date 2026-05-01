@@ -114,7 +114,7 @@ module Time_spec : sig
 
   type t = {
     recurrence : recurrence;
-    start : Time.t;
+    start : Time.t;  (** Local time *)
     duration : Duration.t;
     first_day : Date.t option;
     last_day : Date.t option;

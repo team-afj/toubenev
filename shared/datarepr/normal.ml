@@ -2,7 +2,8 @@ open Rich
 open Lunar_jsont
 
 module Time_slot = struct
-  type t = { start : Datetime.t; duration : Duration.t } [@@deriving jsont]
+  type t = { start : Datetime.t;  (** UTC *) duration : Duration.t }
+  [@@deriving jsont]
 
   let dummy = { start = Datetime.epoch; duration = Duration.zero }
   let end_ t = Datetime.(t.start + t.duration)
@@ -13,7 +14,8 @@ module Time_slot = struct
     not Datetime.(t1_end <= t2_start || t1_start >= t2_end)
 end
 
-let expand_time_spec { Event_infos.kind = Finite { start_date; end_date }; _ }
+let expand_time_spec
+    { Event_infos.kind = Finite { start_date; end_date }; timezone = tz; _ }
     (spec : Time_spec.t) =
   let first_day =
     match spec.first_day with
@@ -43,7 +45,9 @@ let expand_time_spec { Event_infos.kind = Finite { start_date; end_date }; _ }
             Weekday.Set.mem wd weekdays)
   in
   List.map all_dates ~f:(fun date ->
-      let start = Datetime.from date start_time in
+      let start =
+        Zoned_datetime.(from ~tz date start_time |> to_local_datetime)
+      in
       { Time_slot.start; duration })
 
 module Volunteer = struct
