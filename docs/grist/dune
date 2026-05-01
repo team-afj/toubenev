@@ -1,0 +1,4 @@
+(copy_files
+ (alias grist-widget)
+ (mode promote)
+ (files ../../grist/widget/index.bc.js))
