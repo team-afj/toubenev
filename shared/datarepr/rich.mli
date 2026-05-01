@@ -130,6 +130,8 @@ module Time_spec : sig
     Time.t ->
     Duration.t ->
     t
+
+  val to_string : t -> string
 end
 
 module Time_specs : sig

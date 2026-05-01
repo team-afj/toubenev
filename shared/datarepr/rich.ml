@@ -176,6 +176,19 @@ module Time_spec = struct
   type recurrence = Daily | Weekly of Weekday.Set.t | On of Date.t list
   [@@deriving jsont]
 
+  let string_of_recurrence = function
+    | Daily -> "daily"
+    | Weekly weekdays ->
+        let weekdays =
+          Weekday.Set.to_list weekdays
+          |> List.map ~f:Weekday.to_string
+          |> String.concat ~sep:", "
+        in
+        Printf.sprintf "weekly (%s)" weekdays
+    | On dates ->
+        let dates = List.map dates ~f:Date.to_string |> String.concat ~sep:", " in
+        Printf.sprintf "on %s" dates
+
   type t = {
     recurrence : recurrence;
     start : Time.t;
@@ -199,6 +212,25 @@ module Time_spec = struct
 
   let make recurrence ?first_day ?last_day start duration =
     { recurrence; first_day; last_day; start; duration }
+
+  let to_string (t : t) =
+    let recurrence = string_of_recurrence t.recurrence in
+    let start = Time.to_string t.start in
+    let duration =
+      let hours, minutes, seconds = Duration.hms t.duration in
+      if seconds = 0 then Printf.sprintf "%02dh%02dm" hours minutes
+      else Printf.sprintf "%02dh%02dm%02ds" hours minutes seconds
+    in
+    let bounds =
+      match (t.first_day, t.last_day) with
+      | None, None -> ""
+      | Some first_day, None -> Printf.sprintf " from %s" (Date.to_string first_day)
+      | None, Some last_day -> Printf.sprintf " until %s" (Date.to_string last_day)
+      | Some first_day, Some last_day ->
+          Printf.sprintf " from %s to %s" (Date.to_string first_day)
+            (Date.to_string last_day)
+    in
+    Printf.sprintf "%s at %s for %s%s" recurrence start duration bounds
 end
 
 module Time_specs = Random_access_list (Time_spec)
