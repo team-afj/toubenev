@@ -35,3 +35,9 @@ module Int = struct
   module Set = Set.Make (Int)
   module Map = Map.Make (Int)
 end
+
+module String = struct
+  include String
+  module Set = Set.Make (String)
+  module Map = Map.Make (String)
+end

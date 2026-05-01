@@ -1,7 +1,6 @@
 open Ortools
 open Datarepr.Rich
 open Datarepr.Normal
-module Uuidm_map = Map.Make (Uuidm)
 
 type t = {
   model : Sat.model;
@@ -23,10 +22,10 @@ let assignations m vs qs =
   let rev_tbl : (int, Sat.Var.t_bool * Volunteer.t * Quest.t) Hashtbl.t =
     Hashtbl.create size
   in
-  let by_uuid : (Sat.Var.t_bool * Sat.interval_var) Uuidm_map.t Uuidm_map.t =
-    Volunteers.fold vs ~init:Uuidm_map.empty ~f:(fun acc (v : Volunteer.t) ->
+  let by_uuid : (Sat.Var.t_bool * Sat.interval_var) String.Map.t String.Map.t =
+    Volunteers.fold vs ~init:String.Map.empty ~f:(fun acc (v : Volunteer.t) ->
         let quests =
-          Quests.fold qs ~init:Uuidm_map.empty ~f:(fun acc (q : Quest.t) ->
+          Quests.fold qs ~init:String.Map.empty ~f:(fun acc (q : Quest.t) ->
               let name =
                 Format.sprintf "%i_%s_is_assigned_to_%s" !c v.initial.name
                   q.name
@@ -50,12 +49,13 @@ let assignations m vs qs =
                 Sat.new_optional_interval_var m ~start ~size ~end_
                   ~is_present:var name
               in
-              Uuidm_map.add q.id (var, interval) acc)
+              String.Map.add q.id (var, interval) acc)
         in
-        Uuidm_map.add v.id quests acc)
+        String.Map.add v.id quests acc)
   in
   let find =
-   fun v q -> Uuidm_map.find v.Volunteer.id by_uuid |> Uuidm_map.find q.Quest.id
+   fun v q ->
+    String.Map.find v.Volunteer.id by_uuid |> String.Map.find q.Quest.id
   in
   let find_assignation v q = fst (find v q) in
   let find_interval v q = snd (find v q) in

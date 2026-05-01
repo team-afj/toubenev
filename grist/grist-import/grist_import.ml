@@ -145,6 +145,8 @@ end
 
 module Assignation = struct
   type t = {
+    solution : int;
+    ref : string;
     name : string;
     initial_quest : int;
     start : int;
@@ -248,7 +250,8 @@ let to_planning ?(id_map = new_id_map ())
   in
   let id_map, places =
     let convert_place id_map { Lieu.id; slug; nom; description } =
-      let place = Rich.Place.make ~slug ~name:nom ~description () in
+      let ids = Rich.id_of_int id in
+      let place = Rich.Place.make ~id:ids ~slug ~name:nom ~description () in
       ({ id_map with places = Int.Map.add id place id_map.places }, place)
     in
     let id_map, places =
@@ -267,10 +270,11 @@ let to_planning ?(id_map = new_id_map ())
           specialiste_requis = specialist_only;
           decoupable = divisible;
         } =
+      let ids = Rich.id_of_int id in
       let everyone_should_do_it = mandatory_of_string impose in
       let v =
-        Rich.Task_type.make ~slug ~name ~description ~everyone_should_do_it
-          ~specialist_only ~divisible ()
+        Rich.Task_type.make ~id:ids ~slug ~name ~description
+          ~everyone_should_do_it ~specialist_only ~divisible ()
       in
       ({ id_map with task_types = Int.Map.add id v id_map.task_types }, v)
     in
@@ -333,6 +337,7 @@ let to_planning ?(id_map = new_id_map ())
           indisponibilites_ponctuelles;
           _;
         } =
+      let ids = Rich.id_of_int id in
       let name =
         match (nom, prenom) with
         | None, s | Some "", s | Some s, "" -> s
@@ -381,8 +386,8 @@ let to_planning ?(id_map = new_id_map ())
           (List.concat [ unavailable; best; worse; ponctually_unavailable ])
       in
       let v =
-        Rich.Volunteer.make ?public_name ~name ~daily_workload ~proficiencies
-          ~forbidden_tasks ~forbidden_places ~availabilities ()
+        Rich.Volunteer.make ~id:ids ?public_name ~name ~daily_workload
+          ~proficiencies ~forbidden_tasks ~forbidden_places ~availabilities ()
       in
       ({ id_map with volunteers = Int.Map.add id v id_map.volunteers }, v)
     in
@@ -420,6 +425,7 @@ let to_planning ?(id_map = new_id_map ())
           fin_de_recurrence;
           _;
         } =
+      let ids = Rich.id_of_int id in
       let task_type = Int.Map.find type_ id_map.task_types in
       let place = Int.Map.find lieu id_map.places in
       let assigned_volunteers =
@@ -432,8 +438,8 @@ let to_planning ?(id_map = new_id_map ())
           ~duration_h:duree_heures ~end_date:fin_de_recurrence
       in
       let v =
-        Rich.Quest.make ~name ~task_type ~place ~slot ~required_volunteers
-          ~assigned_volunteers ()
+        Rich.Quest.make ~id:ids ~name ~task_type ~place ~slot
+          ~required_volunteers ~assigned_volunteers ()
       in
       ({ id_map with quests = Int.Map.add id v id_map.quests }, v)
     in

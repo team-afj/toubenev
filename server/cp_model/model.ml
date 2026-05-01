@@ -206,15 +206,13 @@ let enforce_mandatory_tasks (ctx : Context.t) =
 
 (** Some people refuse to work with other people *)
 let know_your_ennemy (ctx : Context.t) =
-  let processed_pairs : (Uuidm.t * Uuidm.t, unit) Hashtbl.t =
-    Hashtbl.create 32
-  in
+  let processed_pairs : (string * string, unit) Hashtbl.t = Hashtbl.create 32 in
   ctx.for_all_volunteers @@ fun (v : Volunteer.t) ->
   List.iter v.initial.ennemis ~f:(fun ennemy_uuid ->
-      let ennemy_id = uuid_to_uuidm ennemy_uuid in
-      if not (Uuidm.equal v.id ennemy_id) then
+      let ennemy_id = id_to_string ennemy_uuid in
+      if not (String.equal v.id ennemy_id) then
         let a, b =
-          if Uuidm.compare v.id ennemy_id <= 0 then (v.id, ennemy_id)
+          if String.compare v.id ennemy_id <= 0 then (v.id, ennemy_id)
           else (ennemy_id, v.id)
         in
         if not (Hashtbl.mem processed_pairs (a, b)) then

@@ -56,16 +56,14 @@ module Random_access_list (X : S) : S with type t = X.t CCRAL.t = struct
           t (CCRAL.get t i)
 end
 
-type _ uuid = Uuidm.t
+type _ id = string
 
-let uuid_equal u1 u2 = Uuidm.equal u1 u2
-
-let uuid_jsont _ =
-  Jsont.map ~dec:Uuidm.unsafe_of_binary_string ~enc:Uuidm.to_binary_string
-    Jsont.string
-
-let make_uuid () = new_random_uuid_v4 ()
-let uuid_to_uuidm t = t
+let id_equal u1 u2 = String.equal u1 u2
+let id_jsont _ = Jsont.string
+let make_id () = new_random_uuid_v4 () |> Uuidm.to_string
+let id_to_string t = t
+let id_to_int t = Int.of_string_exn t
+let id_of_int t = Int.to_string t
 
 module Options = struct
   type t = { minimum_transfer_time : Duration.t } [@@deriving jsont]
@@ -75,14 +73,14 @@ end
 
 module Place = struct
   type t = {
-    id : t uuid;
+    id : t id;
     slug : string;
     name : string;
     description : string option;
   }
   [@@deriving jsont]
 
-  let dummy = { id = Uuidm.nil; slug = ""; name = ""; description = None }
+  let dummy = { id = ""; slug = ""; name = ""; description = None }
 
   type edit =
     | New_slug of string
@@ -96,8 +94,8 @@ module Place = struct
     | New_name name -> { t with name }
     | New_description description -> { t with description }
 
-  let make ~slug ~name ?description () =
-    let id = make_uuid () in
+  let make ?id ~slug ~name ?description () =
+    let id = Option.get_lazy make_id id in
     { id; slug; name; description }
 end
 
@@ -109,7 +107,7 @@ module Task_type = struct
 
   module T = struct
     type t = {
-      id : t uuid;
+      id : t id;
       slug : string;
       name : string;
       description : string option;
@@ -119,11 +117,11 @@ module Task_type = struct
     }
     [@@deriving jsont]
 
-    let equal t1 t2 = Uuidm.equal (uuid_to_uuidm t1.id) (uuid_to_uuidm t2.id)
+    let equal t1 t2 = String.equal (id_to_string t1.id) (id_to_string t2.id)
 
     let compare t1 t2 =
       let c = String.compare t1.name t2.name in
-      if c = 0 then Uuidm.compare (uuid_to_uuidm t1.id) (uuid_to_uuidm t2.id)
+      if c = 0 then String.compare (id_to_string t1.id) (id_to_string t2.id)
       else c
   end
 
@@ -132,7 +130,7 @@ module Task_type = struct
 
   let dummy =
     {
-      id = Uuidm.nil;
+      id = "";
       slug = "";
       name = "";
       description = None;
@@ -157,9 +155,10 @@ module Task_type = struct
     | New_specialist_only specialist_only -> { t with specialist_only }
     | New_divisible divisible -> { t with divisible }
 
-  let make ~slug ~name ?description ?(everyone_should_do_it = Not_necessarily)
-      ~specialist_only ~divisible () =
-    let id = make_uuid () in
+  let make ?id ~slug ~name ?description
+      ?(everyone_should_do_it = Not_necessarily) ~specialist_only ~divisible ()
+      =
+    let id = Option.get_lazy make_id id in
     {
       id;
       slug;
@@ -225,7 +224,7 @@ module Availabilities = Random_access_list (Availability)
 
 module Volunteer = struct
   type t = {
-    id : t uuid;
+    id : t id;
     public_name : string option;
     name : string;
     daily_workload : Duration.t;
@@ -233,8 +232,8 @@ module Volunteer = struct
     availabilities : Availabilities.t;
     arrival : Datetime.t option;
     departure : Datetime.t option;
-    mutable friends : t uuid list;
-    mutable ennemis : t uuid list;
+    mutable friends : t id list;
+    mutable ennemis : t id list;
     proficiencies : Task_types.t;
     forbidden_tasks : Task_types.t;
     forbidden_places : Places.t;
@@ -243,7 +242,7 @@ module Volunteer = struct
 
   let dummy =
     {
-      id = Uuidm.nil;
+      id = "";
       public_name = None;
       name = "";
       daily_workload = Duration.zero;
@@ -265,8 +264,8 @@ module Volunteer = struct
     | Update_availabilities of Availabilities.edit
     | New_arrival of Datetime.t option
     | New_departure of Datetime.t option
-    | New_friends of t uuid list
-    | New_ennemis of t uuid list
+    | New_friends of t id list
+    | New_ennemis of t id list
   [@@deriving jsont]
 
   let apply_edit (edit : edit) (t : t) : t =
@@ -281,14 +280,14 @@ module Volunteer = struct
         }
     | New_arrival arrival -> { t with arrival }
     | New_departure departure -> { t with departure }
-    | New_friends (friends : t uuid list) -> { t with friends }
-    | New_ennemis (ennemis : t uuid list) -> { t with ennemis }
+    | New_friends (friends : t id list) -> { t with friends }
+    | New_ennemis (ennemis : t id list) -> { t with ennemis }
 
-  let make ?(friends = []) ?(ennemis = []) ?(proficiencies = CCRAL.empty)
+  let make ?id ?(friends = []) ?(ennemis = []) ?(proficiencies = CCRAL.empty)
       ?(forbidden_tasks = CCRAL.empty) ?(forbidden_places = CCRAL.empty)
       ?(availabilities = CCRAL.empty) ?arrival ?departure
       ?(manually_assigned = false) ~daily_workload ~name ?public_name () =
-    let id = make_uuid () in
+    let id = Option.get_lazy make_id id in
     {
       id;
       public_name;
@@ -313,7 +312,7 @@ module Volunteers = Random_access_list (Volunteer)
 
 module Quest = struct
   type t = {
-    id : t uuid;
+    id : t id;
     name : string;
     description : string option;
     task_type : Task_type.t;
@@ -327,7 +326,7 @@ module Quest = struct
 
   let dummy =
     {
-      id = Uuidm.nil;
+      id = "";
       name = "";
       description = None;
       task_type = Task_type.dummy;
@@ -358,9 +357,9 @@ module Quest = struct
     | New_required_volunteers required_volunteers ->
         { t with required_volunteers }
 
-  let make ~name ?description ~task_type ~place ~slot ~required_volunteers
+  let make ?id ~name ?description ~task_type ~place ~slot ~required_volunteers
       ?(assigned_volunteers = CCRAL.empty) () =
-    let id = make_uuid () in
+    let id = Option.get_lazy make_id id in
     {
       id;
       name;

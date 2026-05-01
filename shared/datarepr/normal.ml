@@ -49,7 +49,7 @@ let expand_time_spec { Event_infos.kind = Finite { start_date; end_date }; _ }
 module Volunteer = struct
   module T = struct
     type t = {
-      id : Uuidm.t;
+      id : string;
       name : string;
       initial : Volunteer.t;
       forbidden_tasks : Task_type.Set.t;
@@ -57,20 +57,20 @@ module Volunteer = struct
       preferences : (int * Time_slot.t) list;
     }
 
-    let equal v1 v2 = Uuidm.equal v1.id v2.id
+    let equal v1 v2 = String.equal v1.id v2.id
 
     let compare v1 v2 =
       if equal v1 v2 then 0
       else
         let c = String.compare v1.initial.name v2.initial.name in
-        if c = 0 then Uuidm.compare v1.id v2.id else c
+        if c = 0 then String.compare v1.id v2.id else c
   end
 
   include T
 
   let dummy =
     {
-      id = Uuidm.nil;
+      id = "";
       name = "";
       initial = Volunteer.dummy;
       forbidden_tasks = Task_type.Set.empty;
@@ -109,7 +109,7 @@ module Volunteer = struct
               (u_acc, List.rev_append (List.map slots ~f:(Pair.make pref)) p_acc))
     in
     {
-      id = uuid_to_uuidm v.id;
+      id = id_to_string v.id;
       name;
       initial = v;
       forbidden_tasks;
@@ -123,27 +123,27 @@ module Volunteers = Volunteer.Set
 module Quest = struct
   module T = struct
     type t = {
-      id : Uuidm.t;
+      id : string;
       initial : Quest.t;
       name : string;
       slot : Time_slot.t;
       assigned_volunteers : Volunteers.t;
     }
 
-    let equal q1 q2 = Uuidm.equal q1.id q2.id
+    let equal q1 q2 = String.equal q1.id q2.id
 
     let compare q1 q2 =
       if equal q1 q2 then 0
       else
         let c = String.compare q1.name q2.name in
-        if c = 0 then Uuidm.compare q1.id q2.id else c
+        if c = 0 then String.compare q1.id q2.id else c
   end
 
   include T
 
   let dummy =
     {
-      id = Uuidm.nil;
+      id = "";
       initial = Quest.dummy;
       name = "";
       slot = Time_slot.dummy;
@@ -159,7 +159,7 @@ module Quest = struct
   (** Check if two quests are overlapping. If they are in separate places they
       must be separated by at least [Options.minimum_transfer_time]. *)
   let overlaps { Options.minimum_transfer_time; _ } (q1 : t) (q2 : t) =
-    let same_place = uuid_equal q1.initial.place.id q2.initial.place.id in
+    let same_place = Rich.id_equal q1.initial.place.id q2.initial.place.id in
     let q1_start, q1_end = (q1.slot.start, Time_slot.end_ q1.slot) in
     let q2_start, q2_end = (q2.slot.start, Time_slot.end_ q2.slot) in
     let q2_start, q2_end =
@@ -181,12 +181,12 @@ module Quest = struct
       CCRAL.fold q.assigned_volunteers ~x:Volunteer.Set.empty
         ~f:(fun acc (v : Rich.Volunteer.t) ->
           Volunteer.Set.add
-            (Volunteer.Set.find_by_id (uuid_to_uuidm v.id) vs)
+            (Volunteer.Set.find_by_id (id_to_string v.id) vs)
             acc)
     in
     let slots = expand_time_spec event_infos q.slot in
     List.map slots ~f:(fun (slot : Time_slot.t) ->
-        let id = new_random_uuid_v4 () in
+        let id = new_random_uuid_v4 () |> Uuidm.to_string in
         let name =
           Printf.sprintf "%s_%s" q.name (Datetime.to_string slot.start)
         in

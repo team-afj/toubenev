@@ -23,10 +23,12 @@ module type S = sig
   include Jsontable with type t := t
 end
 
-type _ uuid
+type _ id
 
-val uuid_equal : 'a uuid -> 'a uuid -> bool
-val uuid_to_uuidm : 'a uuid -> Uuidm.t
+val id_equal : 'a id -> 'a id -> bool
+val id_to_string : 'a id -> string
+val id_to_int : 'a id -> int
+val id_of_int : int -> 'a id
 
 module Random_access_list : (X : S) -> sig
   include S with type t = X.t CCRAL.t
@@ -55,7 +57,7 @@ end
 
 module Place : sig
   type t = private {
-    id : t uuid;
+    id : t id;
     slug : string;
     name : string;
     description : string option;
@@ -63,7 +65,8 @@ module Place : sig
 
   include S with type t := t
 
-  val make : slug:string -> name:string -> ?description:string -> unit -> t
+  val make :
+    ?id:t id -> slug:string -> name:string -> ?description:string -> unit -> t
 end
 
 module Places : sig
@@ -75,7 +78,7 @@ module Task_type : sig
   type task_sharing = Not_necessarily | At_least_once | In_equal_proportion
 
   type t = private {
-    id : t uuid;
+    id : t id;
     slug : string;
     name : string;
     description : string option;
@@ -90,6 +93,7 @@ module Task_type : sig
   include S with type t := t
 
   val make :
+    ?id:t id ->
     slug:string ->
     name:string ->
     ?description:string ->
@@ -151,7 +155,7 @@ end
 
 module Volunteer : sig
   type t = private {
-    id : t uuid;
+    id : t id;
     public_name : string option;
     name : string;
     daily_workload : Duration.t;
@@ -159,8 +163,8 @@ module Volunteer : sig
     availabilities : Availabilities.t;
     arrival : Datetime.t option;
     departure : Datetime.t option;
-    mutable friends : t uuid list;
-    mutable ennemis : t uuid list;
+    mutable friends : t id list;
+    mutable ennemis : t id list;
     proficiencies : Task_types.t;
     forbidden_tasks : Task_types.t;
     forbidden_places : Places.t;
@@ -171,8 +175,9 @@ module Volunteer : sig
   val dummy : t
 
   val make :
-    ?friends:t uuid list ->
-    ?ennemis:t uuid list ->
+    ?id:t id ->
+    ?friends:t id list ->
+    ?ennemis:t id list ->
     ?proficiencies:Task_types.t ->
     ?forbidden_tasks:Task_types.t ->
     ?forbidden_places:Places.t ->
@@ -186,8 +191,8 @@ module Volunteer : sig
     unit ->
     t
 
-  val set_friends : t -> t uuid list -> unit
-  val set_ennemis : t -> t uuid list -> unit
+  val set_friends : t -> t id list -> unit
+  val set_ennemis : t -> t id list -> unit
 end
 
 module Volunteers : sig
@@ -196,7 +201,7 @@ end
 
 module Quest : sig
   type t = private {
-    id : t uuid;
+    id : t id;
     name : string;
     description : string option;
     task_type : Task_type.t;
@@ -211,6 +216,7 @@ module Quest : sig
   include S with type t := t
 
   val make :
+    ?id:t id ->
     name:string ->
     ?description:string ->
     task_type:Task_type.t ->
