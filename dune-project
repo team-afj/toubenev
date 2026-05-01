@@ -29,6 +29,7 @@
   flux
   ISO8601
   calendar
+  lunar
   (jsont
    (>= "0.1.1"))
   ppx_deriving_jsont
@@ -43,5 +44,6 @@
   containers-data
   base64
   ; OR Tools
-  ortools
-  ortools_solvers))
+  ; ortools
+  ; ortools_solvers
+  ))

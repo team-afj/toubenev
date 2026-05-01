@@ -20,6 +20,7 @@ depends: [
   "flux"
   "ISO8601"
   "calendar"
+  "lunar"
   "jsont" {>= "0.1.1"}
   "ppx_deriving_jsont"
   "ppxlib"
@@ -30,8 +31,6 @@ depends: [
   "hector"
   "containers-data"
   "base64"
-  "ortools"
-  "ortools_solvers"
   "odoc" {with-doc}
 ]
 build: [
