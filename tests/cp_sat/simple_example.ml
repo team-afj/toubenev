@@ -1,5 +1,5 @@
 open Lunar
-open Datarepr.Rich
+open Data_repr.Rich
 
 let () = Mirage_crypto_rng_unix.use_default ()
 

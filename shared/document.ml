@@ -1,1 +1,1 @@
-type t = { version : int; data : Datarepr.Rich.Planning.t } [@@deriving jsont]
+type t = { version : int; data : Data_repr.Rich.Planning.t } [@@deriving jsont]

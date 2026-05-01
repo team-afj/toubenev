@@ -1,5 +1,5 @@
 open Lunar
-open Datarepr
+open Data_repr
 
 module Infos = struct
   type t = { name : string; start : int; end_ : int; timezone : string }

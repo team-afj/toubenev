@@ -1,5 +1,6 @@
 open Brr
 open Fut.Result_syntax
+open! Data_repr
 
 let infos_tbl_id = Jstr.v "Infos_generales"
 let options_tbl_id = Jstr.v "Options_du_solveur"

@@ -1,6 +1,6 @@
 open Ortools
-open Datarepr.Rich
-open Datarepr.Normal
+open Data_repr.Rich
+open Data_repr.Normal
 
 type t = {
   model : Sat.model;

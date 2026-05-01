@@ -1,5 +1,5 @@
 (library
- (name datarepr)
+ (name data_repr)
  (libraries std_js uuidm jsont containers-data lunar)
  (flags :standard -open Std_js)
  (preprocess
