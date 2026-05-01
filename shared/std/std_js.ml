@@ -8,7 +8,9 @@ let () = Hashtbl.randomize ()
 module Format = struct end
 module Printexc = struct end
 
-let new_random_uuid_v4 () = Uuidm.v4_gen (Random.get_state ()) ()
+let new_random_uuid_v4 =
+  let state = Random.get_state () in
+  fun () -> Uuidm.v4_gen state ()
 
 module Set = struct
   include Set
