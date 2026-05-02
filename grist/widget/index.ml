@@ -35,7 +35,8 @@ module Titles = struct
     Table_operations.update views_section_table ~records ()
 
   (* List all uses the the widget by searching in the section titles in
-     [_grist_Views_section] *)
+     [_grist_Views_section].
+     TODO: this is not very robust. *)
   let all_widget_uses () =
     let+ rows = fetch table_id in
     Jv.to_list
