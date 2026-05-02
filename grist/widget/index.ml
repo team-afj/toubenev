@@ -16,6 +16,47 @@ let fetch table_id =
   let+ result = Doc_API.fetch_table ~table_id in
   Data.Row_records.by_row result
 
+module Titles = struct
+  let table_id = Jstr.v "_grist_Views_section"
+  let widget_base_name = "Solver link"
+  let widget_base_name_j = Jstr.v "Solver link"
+
+  (* This function updates the title of item number [id]
+     in "_grist_Views_section" *)
+  let meta_update_title ~ids new_title =
+    let open Grist in
+    let views_section_table = get_table ~table_id () in
+    let records =
+      let title = Jstr.v "title" in
+      let new_title = Jv.of_string new_title in
+      List.map ids ~f:(fun id ->
+          Record.v ~id ~fields:[| (title, new_title) |] ())
+    in
+    Table_operations.update views_section_table ~records ()
+
+  (* List all uses the the widget by searching in the section titles in
+     [_grist_Views_section] *)
+  let all_widget_uses () =
+    let+ rows = fetch table_id in
+    Jv.to_list
+      (fun row ->
+        let id = Jv.get row "id" |> Jv.to_int in
+        let title_jv = Jv.get row "title" in
+        if Jv.is_null title_jv || Jv.is_undefined title_jv then None
+        else if
+          Jv.call title_jv "includes" [| Jv.of_jstr widget_base_name_j |]
+          |> Jv.to_bool
+        then Some id
+        else None)
+      rows
+    |> List.filter_map ~f:Fun.id
+
+  let update_prefixes prefix =
+    Console.error [ "DBG4"; all_widget_uses () ];
+    let* ids = all_widget_uses () in
+    meta_update_title ~ids @@ prefix ^ " " ^ widget_base_name
+end
+
 let sat =
   let last_data = ref None in
   fun () ->
@@ -131,7 +172,7 @@ let sat =
           Console.error [ "DBG"; "Upsert assignations" ];
           Grist.Table_operations.upsert assignations_table ~records ()
         in
-        let+ res =
+        let* res =
           let open Brr_io.Fetch in
           let body = Body.of_jstr data_json in
           Console.error [ "DBG"; "Querying server  " ];
@@ -142,14 +183,21 @@ let sat =
               [ (Jstr.v "Content-Type", Jstr.v "application/json") ]
           in
           let init = Request.init ~body ~method' ~headers () in
+          let open Fut.Syntax in
           let* response = url ~init uri in
-          Response.as_body response |> Body.json
+          match response with
+          | Error err ->
+              let* _ = Titles.update_prefixes "⛓️‍💥" in
+              Fut.error err
+          | Ok resp -> Response.as_body resp |> Body.json
         in
         let elt = El.find_first_by_selector (Jstr.v "#readout") |> Option.get in
         let j = Jv.get Jv.global "JSON" in
         let str =
           Jv.call j "stringify" [| res; Jv.null; Jv.of_int 2 |] |> Jv.to_jstr
         in
+        (* TODO React to status *)
+        let+ () = Titles.update_prefixes "🟢" in
         El.set_children elt
         @@ List.map ~f:(fun s -> El.pre [ El.txt s ])
         @@ Jstr.cuts ~sep:(Jstr.v "\\n") str
