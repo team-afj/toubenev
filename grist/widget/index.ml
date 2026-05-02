@@ -5,7 +5,7 @@ open! Data_repr
 let infos_tbl_id = Jstr.v "Infos_generales"
 let options_tbl_id = Jstr.v "Options_du_solveur"
 let places_tbl_id = Jstr.v "Lieux"
-let task_types_tbl_id = Jstr.v "Types_de_quete"
+let task_types_tbl_id = Jstr.v "Types_de_quetes"
 let time_slots_tbl_id = Jstr.v "Plages_horaires_ponctuelles"
 let volunteers_tbl_id = Jstr.v "Benevoles"
 let quests_tbl_id = Jstr.v "Quetes"
@@ -42,6 +42,7 @@ let sat =
         |]
       |> Json.encode
     in
+    Console.debug [ "DBG"; "Data fetched"; data_json ];
     match (Jsont_brr.decode Grist_import.data_jsont data_json, !last_data) with
     | Ok data, Some last when Equal.poly last data ->
         Console.debug [ "DBG"; "Nothing to do" ];
