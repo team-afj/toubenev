@@ -19,6 +19,7 @@ let fetch table_id =
 let sat =
   let last_data = ref None in
   fun () ->
+    Console.debug [ "DBG"; "Fetch data" ];
     ignore
     @@
     let* infos = fetch infos_tbl_id in
@@ -133,7 +134,7 @@ let sat =
           let body = Body.of_jstr data_json in
 
           let method' = Jstr.v "PUT" in
-          let uri = Jstr.v "/grist/data" in
+          let uri = Jstr.v "http://localhost:1357/grist/data" in
           let headers =
             Headers.of_assoc
               [ (Jstr.v "Content-Type", Jstr.v "application/json") ]
@@ -151,7 +152,7 @@ let sat =
         @@ List.map ~f:(fun s -> El.pre [ El.txt s ])
         @@ Jstr.cuts ~sep:(Jstr.v "\\n") str
     | Error err, _ ->
-        Console.error [ "Decoding error: "; Jv.Error.message err ];
+        Console.error [ "DBG"; "Decoding error: "; Jv.Error.message err ];
         Fut.return (Ok ())
 
 let _ =
