@@ -53,6 +53,7 @@ let routes =
     get (rel / "grist" /?? any) --> Grist.index;
     get (rel / "grist" / "index.html" /?? nil) --> Grist.index;
     get (rel / "grist" / "index.bc.js" /?? nil) --> Grist.js;
+    options (rel / "grist" / "data" /?? nil) --> Grist.preflight;
     put
       (Type.json_encoding Grist_import.data_jsont)
       (rel / "grist" / "data" /?? nil)
