@@ -5,7 +5,3 @@
   (javascript_files stubs.js))
  (flags :standard -open Std_js)
  (libraries std_js brr jsont.brr grist_import))
-
-(alias
- (name app)
- (deps index.bc.js))

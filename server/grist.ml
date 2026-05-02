@@ -2,11 +2,11 @@ open Vif
 
 let index req _server () =
   Response.with_file ~compression:`DEFLATE req
-    (Fpath.v "./grist/widget/index.html")
+    (Fpath.v "./docs/grist/index.html")
 
 let js req _server () =
   Response.with_file ~compression:`DEFLATE req
-    (Fpath.v "./grist/widget/index.bc.js")
+    (Fpath.v "./docs/grist/index.bc.js")
 
 let handle_put_data (req : (Vif.Type.json, Grist_import.data) Request.t) _server
     () =
