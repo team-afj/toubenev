@@ -118,11 +118,7 @@ module Task_type = struct
     [@@deriving jsont]
 
     let equal t1 t2 = String.equal (id_to_string t1.id) (id_to_string t2.id)
-
-    let compare t1 t2 =
-      let c = String.compare t1.name t2.name in
-      if c = 0 then String.compare (id_to_string t1.id) (id_to_string t2.id)
-      else c
+    let compare t1 t2 = String.compare (id_to_string t1.id) (id_to_string t2.id)
   end
 
   include T

@@ -60,12 +60,7 @@ module Volunteer = struct
     }
 
     let equal v1 v2 = String.equal v1.id v2.id
-
-    let compare v1 v2 =
-      if equal v1 v2 then 0
-      else
-        let c = String.compare v1.initial.name v2.initial.name in
-        if c = 0 then String.compare v1.id v2.id else c
+    let compare v1 v2 = String.compare v1.id v2.id
   end
 
   include T
@@ -118,6 +113,8 @@ module Volunteer = struct
       unavailabilities;
       preferences;
     }
+
+  let to_string t = "V: [" ^ t.id ^ "] " ^ t.name
 end
 
 module Volunteers = Volunteer.Set
@@ -133,12 +130,7 @@ module Quest = struct
     }
 
     let equal q1 q2 = String.equal q1.id q2.id
-
-    let compare q1 q2 =
-      if equal q1 q2 then 0
-      else
-        let c = String.compare q1.name q2.name in
-        if c = 0 then String.compare q1.id q2.id else c
+    let compare q1 q2 = String.compare q1.id q2.id
   end
 
   include T
