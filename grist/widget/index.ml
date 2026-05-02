@@ -128,12 +128,13 @@ let sat =
                 Console.error [ "DBG"; require ];
                 Add_or_update_record.v ~require ~fields ())
           in
+          Console.error [ "DBG"; "Upsert assignations" ];
           Grist.Table_operations.upsert assignations_table ~records ()
         in
         let+ res =
           let open Brr_io.Fetch in
           let body = Body.of_jstr data_json in
-
+          Console.error [ "DBG"; "Querying server  " ];
           let method' = Jstr.v "PUT" in
           let uri = Jstr.v "http://localhost:1357/grist/data" in
           let headers =
