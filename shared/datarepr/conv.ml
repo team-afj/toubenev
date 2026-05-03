@@ -42,6 +42,31 @@ let expand_time_spec
       let start = Zoned_datetime.(from ~tz date start_time |> to_utc) in
       { Time_slot.start; duration })
 
+let split_time_slot { Time_slot.start; duration } =
+  (* Looking for [n] such that [min <= duration / n <= max] *)
+  let min_d = Duration.from_minutes 45 in
+  let max_d = Duration.from_minutes 120 in
+  let max_minutes = 120 in
+  let minutes = Duration.to_minutes duration in
+  let n =
+    let n = minutes / max_minutes in
+    if minutes mod max_minutes = 0 then n else n + 1
+  in
+  let splits_duration = Duration.from_minutes (minutes / n) in
+  let rec aux acc start remaining =
+    if Duration.(remaining <= max_d) then
+      List.rev (Time_slot.{ start; duration = remaining } :: acc)
+    else if Duration.(remaining <= splits_duration + min_d) then
+      let acc = Time_slot.{ start; duration = min_d } :: acc in
+      aux acc Datetime.(start + min_d) Duration.(remaining - min_d)
+    else
+      let acc = Time_slot.{ start; duration = splits_duration } :: acc in
+      aux acc
+        Datetime.(start + splits_duration)
+        Duration.(remaining - splits_duration)
+  in
+  aux [] start duration
+
 let normalize_volunteer event_infos (v : Rich.Volunteer.t) =
   let name =
     match v.public_name with Some public_name -> public_name | None -> v.name
@@ -78,12 +103,18 @@ let normalize_quest event_infos vs (q : Rich.Quest.t) =
           acc)
   in
   let slots = expand_time_spec event_infos q.slot in
-  List.mapi slots ~f:(fun i (slot : Time_slot.t) ->
-      let id = Printf.sprintf "%s_%i" (Rich.id_to_string q.id) i in
-      let name =
-        Printf.sprintf "%s_%s" q.name (Datetime.to_string slot.start)
-      in
-      { Quest.id; initial = q; name; slot; assigned_volunteers })
+  let slots =
+    if not q.task_type.divisible then List.map ~f:List.pure slots
+    else List.map ~f:split_time_slot slots
+  in
+  List.mapi slots ~f:(fun i slots ->
+      List.mapi slots ~f:(fun j (slot : Time_slot.t) ->
+          let id = Printf.sprintf "%s_%i_%i" (Rich.id_to_string q.id) i j in
+          let name =
+            Printf.sprintf "%s_%s" q.name (Datetime.to_string slot.start)
+          in
+          { Quest.id; initial = q; name; slot; assigned_volunteers }))
+  |> List.concat
 
 let normalize (data : Rich.Planning.t) =
   let volunteers =
