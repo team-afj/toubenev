@@ -36,7 +36,7 @@ jobs:
 
       - run: opam pin https://github.com/voodoos/ppx_deriving_jsont.git
       - run: opam pin https://github.com/ocsigen/js_of_ocaml.git
-      - run: opam install ortools --deps-only --with-test
+      - run: opam install ortools_solvers --deps-only --with-test
       - run: opam install . --deps-only --with-test
 
       - run: opam exec -- dune runtest
