@@ -1,25 +1,23 @@
   $ cat >initial <<'EOF'
   > {
   >   "id": 1,
-  >   "Slug": "🧹",
-  >   "Nom": "Clean",
-  >   "Fiche_de_poste": "",
-  >   "Impose": "Non",
-  >   "Specialiste_requis": false,
-  >   "Decoupable": true,
-  >   "Lieu_par_defaut": 1
+  >   "slug": "🧹",
+  >   "nom": "Clean",
+  >   "fiche_de_poste": "",
+  >   "impose": "Non",
+  >   "specialiste_requis": false,
+  >   "decoupable": true
   > }
 
   $ cat initial | ./grist_conv.exe task_type | jq | tee recoded
   {
     "id": 1,
-    "Slug": "🧹",
-    "Nom": "Clean",
-    "Fiche_de_poste": "",
-    "Impose": "Non",
-    "Specialiste_requis": false,
-    "Decoupable": true,
-    "Lieu_par_defaut": 1
+    "slug": "🧹",
+    "nom": "Clean",
+    "fiche_de_poste": "",
+    "impose": "Non",
+    "specialiste_requis": false,
+    "decoupable": true
   }
 
   $ diff initial recoded
@@ -27,17 +25,17 @@
   $ cat >initial <<'EOF'
   > {
   >   "id": 1,
-  >   "Slug": "🌍",
-  >   "Nom": "Site",
-  >   "Description": ""
+  >   "slug": "🌍",
+  >   "nom": "Site",
+  >   "description": ""
   > }
 
   $ cat initial | ./grist_conv.exe lieu | jq | tee recoded
   {
     "id": 1,
-    "Slug": "🌍",
-    "Nom": "Site",
-    "Description": ""
+    "slug": "🌍",
+    "nom": "Site",
+    "description": ""
   }
 
   $ diff initial recoded
@@ -46,36 +44,35 @@
   $ cat >initial <<'EOF'
   > {
   >   "id": 1,
-  >   "Pseudo": "f",
-  >   "Nom": "",
-  >   "Prenom": "Pouet2",
-  >   "Nb_heures": 4,
-  >   "Langues": [
+  >   "pseudo": "f",
+  >   "nom": "",
+  >   "prenom": "Pouet2",
+  >   "nb_heures": 4,
+  >   "langues": [
   >     "L",
   >     "Français",
   >     "Anglais"
   >   ],
-  >   "Telephone": "",
-  >   "Email": "",
-  >   "Specialites": null,
-  >   "Taches_interdites": null,
-  >   "Lieux_interdits": null,
-  >   "Amis": [
+  >   "telephone": "",
+  >   "email": "",
+  >   "specialites": null,
+  >   "taches_interdites": null,
+  >   "amis": [
   >     "L",
   >     1
   >   ],
-  >   "Ennemis": null,
-  >   "Date_d_arrivee": null,
-  >   "Date_de_depart": null,
-  >   "Indisponibilites_quotidiennes": [
+  >   "ennemis": null,
+  >   "date_d_arrivee": null,
+  >   "date_de_depart": null,
+  >   "indisponibilites_quotidiennes": [
   >     "L",
   >     8,
   >     9,
   >     11
   >   ],
-  >   "Horaires_preferes": null,
-  >   "Horaires_contraints": null,
-  >   "Indisponibilites_ponctuelles": null
+  >   "horaires_preferes": null,
+  >   "horaires_contraints": null,
+  >   "indisponibilites_ponctuelles": null
   > }
   > EOF
 
@@ -89,17 +86,18 @@
   > {
   >   "id": 1,
   >   "manualSort": 1,
-  >   "Nom": "Clean 1",
-  >   "Type": 1,
-  >   "Lieu": 1,
-  >   "Recurrence": "Ponctuelle",
-  >   "Jours": null,
-  >   "Date_et_heure_de_debut": 1775752200,
+  >   "nom": "Clean 1",
+  >   "type_": 1,
+  >   "lieu": 1,
+  >   "recurrence": "Ponctuelle",
+  >   "jours": null,
+  >   "date_et_heure_de_debut": 1775752200,
   >   "benevoles": 2,
-  >   "Duree_heures_": 2,
-  >   "Date_et_heure_de_fin": 1775759400,
-  >   "ModCount": 6,
-  >   "Benevoles_assignes": [
+  >   "duree_heures": 2,
+  >   "date_et_heure_de_fin": 1775759400,
+  >   "fin_de_recurrence": 1775759400,
+  >   "modCount": 6,
+  >   "benevoles_assignes": [
   >     "L",
   >     1
   >   ],
@@ -109,7 +107,7 @@
   >     "L",
   >     "jjj"
   >   ],
-  >   "Display": "🧹 Clean"
+  >   "display": "🧹 Clean"
   > }
   > EOF
 
