@@ -27,7 +27,7 @@ jobs:
         uses: Homebrew/actions/setup-homebrew@main
 
       - name: Install wasm toolchain
-        run: brew install bzip2 binaryen
+        run: brew install zlib bzip2 binaryen or-tools
 
       - name: Set-up OCaml
         uses: ocaml/setup-ocaml@v3
