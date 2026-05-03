@@ -1,14 +1,99 @@
+open Lunar
 open Normal
+
+(** Normalization simplifies the representaiton for the solver, notably by
+    unfolding time specifications. Concrete occurrences of quests are genrated
+    for the duration of the event. *)
+
+let expand_time_spec
+    {
+      Rich.Event_infos.kind = Finite { start_date; end_date };
+      timezone = tz;
+      _;
+    } (spec : Rich.Time_spec.t) =
+  let first_day =
+    match spec.first_day with
+    | None -> start_date
+    | Some date -> Date.max start_date date
+  in
+  let last_day =
+    match spec.last_day with
+    | None -> end_date
+    | Some date -> Date.min end_date date
+  in
+  let start_time = spec.start in
+  let duration = spec.duration in
+  let all_dates =
+    let all_days_in_range () =
+      Date.Range.(
+        make ~first:first_day ~last:last_day
+        |> to_list ~include_boundaries:true ~iterator:iterator_day)
+    in
+    match spec.recurrence with
+    | On dates -> dates
+    | Daily -> all_days_in_range ()
+    | Weekly weekdays ->
+        let range = all_days_in_range () in
+        List.filter range ~f:(fun d ->
+            let wd = Date.day_of_week d in
+            Weekday.Set.mem wd weekdays)
+  in
+  List.map all_dates ~f:(fun date ->
+      let start = Zoned_datetime.(from ~tz date start_time |> to_utc) in
+      { Time_slot.start; duration })
+
+let normalize_volunteer event_infos (v : Rich.Volunteer.t) =
+  let name =
+    match v.public_name with Some public_name -> public_name | None -> v.name
+  in
+  let forbidden_tasks =
+    Rich.Task_type.Set.of_list (CCRAL.to_list v.forbidden_tasks)
+  in
+  let unavailabilities, preferences =
+    CCRAL.fold v.availabilities ~x:([], [])
+      ~f:(fun (u_acc, p_acc) { Rich.Availability.status; slot } ->
+        let slots = expand_time_spec event_infos slot in
+        match status with
+        | Unavailable -> (List.rev_append slots u_acc, p_acc)
+        | Available pref ->
+            (u_acc, List.rev_append (List.map slots ~f:(Pair.make pref)) p_acc))
+  in
+  {
+    Volunteer.id = Rich.id_to_string v.id;
+    name;
+    initial = v;
+    forbidden_tasks;
+    unavailabilities;
+    preferences;
+  }
+
+(** Generates sub-quests depending of the recurrence and the task type's
+    divisibility. *)
+let normalize_quest event_infos vs (q : Rich.Quest.t) =
+  let assigned_volunteers =
+    CCRAL.fold q.assigned_volunteers ~x:Volunteer.Set.empty
+      ~f:(fun acc (v : Rich.Volunteer.t) ->
+        Volunteer.Set.add
+          (Volunteer.Set.find_by_id (Rich.id_to_string v.id) vs)
+          acc)
+  in
+  let slots = expand_time_spec event_infos q.slot in
+  List.mapi slots ~f:(fun i (slot : Time_slot.t) ->
+      let id = Printf.sprintf "%s_%i" (Rich.id_to_string q.id) i in
+      let name =
+        Printf.sprintf "%s_%s" q.name (Datetime.to_string slot.start)
+      in
+      { Quest.id; initial = q; name; slot; assigned_volunteers })
 
 let normalize (data : Rich.Planning.t) =
   let volunteers =
     CCRAL.to_list data.volunteers
-    |> List.map ~f:(Volunteer.normalize data.infos)
+    |> List.map ~f:(normalize_volunteer data.infos)
     |> Volunteers.of_list
   in
   let quests =
     CCRAL.to_list data.quests
-    |> List.concat_map ~f:(Quest.normalize data.infos volunteers)
+    |> List.concat_map ~f:(normalize_quest data.infos volunteers)
     |> Quests.of_list
   in
   { Normal.volunteers; quests }
