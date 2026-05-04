@@ -223,6 +223,8 @@ let app =
             [
               El.txt' @@ Ortools.Sat.Response.string_of_status status;
               El.br ();
+              El.txt' "Sufficient assumptions for infeasibility:";
+              El.br ();
               El.txt' sufficient_assumptions_for_infeasibility;
             ])
   in
