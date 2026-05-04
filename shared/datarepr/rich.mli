@@ -63,6 +63,9 @@ module Place : sig
     description : string option;
   }
 
+  val dummy : t
+  val equal : t -> t -> bool
+
   include S with type t := t
 
   val make :
@@ -87,6 +90,7 @@ module Task_type : sig
     divisible : bool;
   }
 
+  val dummy : t
   val equal : t -> t -> bool
 
   module Set : Set.S with type elt = t
@@ -206,8 +210,8 @@ module Quest : sig
     id : t id;
     name : string;
     description : string option;
-    task_type : Task_type.t;
-    place : Place.t;
+    task_type : Task_type.t option;
+    place : Place.t option;
     slot : Time_spec.t;
     required_volunteers : int;
     assigned_volunteers : Volunteers.t;
@@ -221,8 +225,8 @@ module Quest : sig
     ?id:t id ->
     name:string ->
     ?description:string ->
-    task_type:Task_type.t ->
-    place:Place.t ->
+    ?task_type:Task_type.t ->
+    ?place:Place.t ->
     slot:Time_spec.t ->
     required_volunteers:int ->
     ?assigned_volunteers:Volunteers.t ->

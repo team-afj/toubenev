@@ -402,10 +402,20 @@ let to_planning ?(id_map = new_id_map ())
     List.iter vols ~f:(fun { Benevole.id; amis; ennemis; _ } ->
         let v = Int.Map.find id id_map.volunteers in
         let friends =
-          List.map ~f:(fun id -> (Int.Map.find id id_map.volunteers).id) amis
+          List.filter_map
+            ~f:(fun id ->
+              match Int.Map.find_opt id id_map.volunteers with
+              | None -> None
+              | Some v -> Some v.id)
+            amis
         in
         let ennemis =
-          List.map ~f:(fun id -> (Int.Map.find id id_map.volunteers).id) ennemis
+          List.filter_map
+            ~f:(fun id ->
+              match Int.Map.find_opt id id_map.volunteers with
+              | None -> None
+              | Some v -> Some v.id)
+            ennemis
         in
         Rich.Volunteer.set_friends v friends;
         Rich.Volunteer.set_ennemis v ennemis)
@@ -427,19 +437,20 @@ let to_planning ?(id_map = new_id_map ())
           _;
         } =
       let ids = Rich.id_of_int id in
-      let task_type = Int.Map.find type_ id_map.task_types in
-      let place = Int.Map.find lieu id_map.places in
+      let task_type = Int.Map.find_opt type_ id_map.task_types in
+      let place = Int.Map.find_opt lieu id_map.places in
       let assigned_volunteers =
-        CCRAL.of_list_map
-          ~f:(fun i -> Int.Map.find i id_map.volunteers)
+        List.filter_map
+          ~f:(fun i -> Int.Map.find_opt i id_map.volunteers)
           benevoles_assignes
+        |> CCRAL.of_list
       in
       let slot =
         make_spec ~rec_flag:recurrence ~days:jours ~start:date_et_heure_de_debut
           ~duration_h:duree_heures ~end_date:fin_de_recurrence
       in
       let v =
-        Rich.Quest.make ~id:ids ~name ~task_type ~place ~slot
+        Rich.Quest.make ~id:ids ~name ?task_type ?place ~slot
           ~required_volunteers ~assigned_volunteers ()
       in
       ({ id_map with quests = Int.Map.add id v id_map.quests }, v)

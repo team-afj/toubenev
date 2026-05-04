@@ -76,37 +76,43 @@ let check_unavailabilities (ctx : Context.t) =
 (** Some quests require specialists *)
 let required_specialists (ctx : Context.t) =
   ctx.for_all_quests @@ fun q ->
-  if q.initial.task_type.specialist_only then
-    ctx.for_all_volunteers @@ fun v ->
-    let skills = CCRAL.to_list v.initial.proficiencies in
-    if not (List.mem ~eq:Task_type.equal q.initial.task_type skills) then
-      let name =
-        Format.sprintf "%s_does_not_have_the_skill_for_%s" v.name q.name
-      in
-      let only_enforce_if =
-        let name =
-          Format.sprintf "%s does not have the skill to do %s" v.name q.name
-        in
-        assume ctx name
-      in
-      Sat.(
-        add ctx.model ~name ?only_enforce_if (is_false (ctx.assignations v q)))
+  q.initial.task_type
+  |> Option.iter @@ fun task_type ->
+     if task_type.Task_type.specialist_only then
+       ctx.for_all_volunteers @@ fun v ->
+       let skills = CCRAL.to_list v.initial.proficiencies in
+       if not (List.mem ~eq:Task_type.equal task_type skills) then
+         let name =
+           Format.sprintf "%s_does_not_have_the_skill_for_%s" v.name q.name
+         in
+         let only_enforce_if =
+           let name =
+             Format.sprintf "%s does not have the skill to do %s" v.name q.name
+           in
+           assume ctx name
+         in
+         Sat.(
+           add ctx.model ~name ?only_enforce_if
+             (is_false (ctx.assignations v q)))
 
 (** Some volunteers are banned from some quests types *)
 let enforce_bans (ctx : Context.t) =
   ctx.for_all_volunteers @@ fun v ->
   ctx.for_all_quests @@ fun q ->
-  if Task_type.Set.mem q.initial.task_type v.forbidden_tasks then
-    let name =
-      Format.sprintf "%s_does_not_have_the_right_to_do_%s" v.name q.name
-    in
-    let only_enforce_if =
-      let name =
-        Format.sprintf "%s does not have the right to do %s" v.name q.name
-      in
-      assume ctx name
-    in
-    Sat.(add ctx.model ~name ?only_enforce_if (is_false (ctx.assignations v q)))
+  q.initial.task_type
+  |> Option.iter @@ fun task_type ->
+     if Task_type.Set.mem task_type v.forbidden_tasks then
+       let name =
+         Format.sprintf "%s_does_not_have_the_right_to_do_%s" v.name q.name
+       in
+       let only_enforce_if =
+         let name =
+           Format.sprintf "%s does not have the right to do %s" v.name q.name
+         in
+         assume ctx name
+       in
+       Sat.(
+         add ctx.model ~name ?only_enforce_if (is_false (ctx.assignations v q)))
 
 (** Enforces manual assignations of volunteers, and prevents manually assigned
     volunteers from doing anything else. *)
@@ -146,7 +152,9 @@ let everyone_does (ctx : Context.t) ?name requirement (quests : Quests.t) =
       let quests =
         Quests.filter
           (fun q ->
-            not (Task_type.Set.mem q.initial.task_type v.forbidden_tasks))
+            match q.initial.task_type with
+            | None -> true
+            | Some tt -> not (Task_type.Set.mem tt v.forbidden_tasks))
           quests
       in
       match requirement with
@@ -200,7 +208,12 @@ let enforce_mandatory_tasks (ctx : Context.t) =
         | Not_necessarily -> assert false
       in
       let quests =
-        Quests.filter (fun q -> Task_type.equal tt q.initial.task_type) ctx.qs
+        Quests.filter
+          (fun q ->
+            match q.initial.task_type with
+            | None -> true
+            | Some tt' -> Task_type.equal tt tt')
+          ctx.qs
       in
       everyone_does ctx ~name:tt.name requirement quests)
 

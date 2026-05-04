@@ -80,6 +80,7 @@ module Place = struct
   }
   [@@deriving jsont]
 
+  let equal p1 p2 = id_equal p1.id p2.id
   let dummy = { id = ""; slug = ""; name = ""; description = None }
 
   type edit =
@@ -347,9 +348,9 @@ module Quest = struct
     id : t id;
     name : string;
     description : string option;
-    task_type : Task_type.t;
+    task_type : Task_type.t option;
     (* group: Quest_group.t TODO *)
-    place : Place.t;
+    place : Place.t option;
     slot : Time_spec.t;
     required_volunteers : int;
     assigned_volunteers : Volunteers.t;
@@ -361,8 +362,8 @@ module Quest = struct
       id = "";
       name = "";
       description = None;
-      task_type = Task_type.dummy;
-      place = Place.dummy;
+      task_type = None;
+      place = None;
       slot = Time_spec.make Daily Time.noon Duration.zero;
       required_volunteers = 0;
       assigned_volunteers = CCRAL.empty;
@@ -371,8 +372,8 @@ module Quest = struct
   type edit =
     | New_name of string
     | New_description of string option
-    | New_task_type of Task_type.t
-    | New_place of Place.t
+    | New_task_type of Task_type.t option
+    | New_place of Place.t option
     | New_slot of Time_spec.t
     | Update_slot of Time_spec.edit
     | New_required_volunteers of int
@@ -389,7 +390,7 @@ module Quest = struct
     | New_required_volunteers required_volunteers ->
         { t with required_volunteers }
 
-  let make ?id ~name ?description ~task_type ~place ~slot ~required_volunteers
+  let make ?id ~name ?description ?task_type ?place ~slot ~required_volunteers
       ?(assigned_volunteers = CCRAL.empty) () =
     let id = Option.get_lazy make_id id in
     {

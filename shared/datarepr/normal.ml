@@ -92,7 +92,11 @@ module Quest = struct
   (** Check if two quests are overlapping. If they are in separate places they
       must be separated by at least [Options.minimum_transfer_time]. *)
   let overlaps { Options.minimum_transfer_time; _ } (q1 : t) (q2 : t) =
-    let same_place = Rich.id_equal q1.initial.place.id q2.initial.place.id in
+    let same_place =
+      match (q1.initial.place, q2.initial.place) with
+      | Some p1, Some p2 -> Rich.Place.equal p1 p2
+      | _, _ -> false
+    in
     let q1_start, q1_end = (q1.slot.start, Time_slot.end_ q1.slot) in
     let q2_start, q2_end = (q2.slot.start, Time_slot.end_ q2.slot) in
     let q2_start, q2_end =

@@ -104,7 +104,10 @@ let normalize_quest event_infos vs (q : Rich.Quest.t) =
   in
   let slots = expand_time_spec event_infos q.slot in
   let slots =
-    if not q.task_type.divisible then List.map ~f:List.pure slots
+    let divisible =
+      match q.task_type with None -> false | Some tt -> tt.divisible
+    in
+    if not divisible then List.map ~f:List.pure slots
     else List.map ~f:split_time_slot slots
   in
   List.mapi slots ~f:(fun i slots ->
