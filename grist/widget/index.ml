@@ -1,7 +1,9 @@
 open Brr
+open Brr_lwd
 open Fut.Result_syntax
 open! Data_repr
 
+let last_answer : Api.answer option Lwd.var = Lwd.var None
 let infos_tbl_id = Jstr.v "Infos_generales"
 let options_tbl_id = Jstr.v "Options_du_solveur"
 let places_tbl_id = Jstr.v "Lieux"
@@ -89,7 +91,7 @@ let sat =
     | Ok data, Some last when Equal.poly last data ->
         Console.debug [ "DBG"; "Nothing to do" ];
         Fut.return (Ok ())
-    | Ok data, _ ->
+    | Ok data, _ -> begin
         let () = Console.debug [ "DBG"; "Data changes" ] in
         let () = last_data := Some data in
         let _id_map, planning = Grist_import.to_planning data in
@@ -192,16 +194,17 @@ let sat =
               Fut.error err
           | Ok resp -> Response.as_body resp |> Body.json
         in
-        let elt = El.find_first_by_selector (Jstr.v "#readout") |> Option.get in
-        let j = Jv.get Jv.global "JSON" in
-        let str =
-          Jv.call j "stringify" [| res; Jv.null; Jv.of_int 2 |] |> Jv.to_jstr
-        in
-        (* TODO React to status *)
-        let+ () = Titles.update_prefixes "🟢" in
-        El.set_children elt
-        @@ List.map ~f:(fun s -> El.pre [ El.txt s ])
-        @@ Jstr.cuts ~sep:(Jstr.v "\\n") str
+        match Jsont_brr.decode_jv Data_repr.Api.answer_jsont res with
+        | Error jv -> Fut.ok (Console.error [ jv ])
+        | Ok answer ->
+            let* () =
+              match answer.status with
+              | Feasible | Optimal -> Titles.update_prefixes "🟢"
+              | Unknown | ModelInvalid | Infeasible ->
+                  Titles.update_prefixes "🔴"
+            in
+            Fut.ok @@ Lwd.set last_answer (Some answer)
+      end
     | Error err, _ ->
         Console.error [ "DBG"; "Decoding error: "; Jv.Error.message err ];
         Fut.return (Ok ())
@@ -209,3 +212,28 @@ let sat =
 let _ =
   sat ();
   Brr.G.set_interval ~ms:2000 sat
+
+let app =
+  let status = Lwd.get last_answer in
+  let txt =
+    Lwd.map status ~f:(function
+      | None -> El.txt' "En attente des premiers résultats."
+      | Some { status; sufficient_assumptions_for_infeasibility; _ } ->
+          El.div
+            [
+              El.txt' @@ Ortools.Sat.Response.string_of_status status;
+              El.br ();
+              El.txt' sufficient_assumptions_for_infeasibility;
+            ])
+  in
+  Elwd.div [ `R txt ]
+
+let _ =
+  let on_load _ =
+    let app = Lwd.observe app in
+    let f _ = ignore @@ Lwd.quick_sample app in
+    let on_invalidate _ = ignore @@ G.request_animation_frame f in
+    El.append_children (Document.body G.document) [ Lwd.quick_sample app ];
+    Lwd.set_on_invalidate app on_invalidate
+  in
+  Ev.listen Ev.dom_content_loaded on_load (Window.as_target G.window)

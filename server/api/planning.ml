@@ -1,11 +1,3 @@
-type answer = {
-  status : string;
-  solution : string;
-  sufficient_assumptions_for_infeasibility : string;
-  log : string;
-}
-[@@deriving jsont]
-
 (** Run the model without the optimizer to check feasibility *)
 let sat_check planning =
   let context = Cp_model.Model.make ~with_assumptions:false planning in
@@ -43,7 +35,8 @@ let solve planning =
   Logs.debug (fun m ->
       m "Solution:@ @[%a@]\n" Cp_model.Model.pp_solution solution);
   {
-    status = string_of_status response.status;
+    Data_repr.Api.status = response.status;
+    diagnostics = [];
     solution = s;
     sufficient_assumptions_for_infeasibility;
     log = response.solve_log;

@@ -45,7 +45,8 @@ let handle_put_data (req : (Vif.Type.json, Grist_import.data) Request.t) _server
     match r with
     | Error (`Msg err) ->
         {
-          Api.Planning.status = Format.asprintf "ERROR %s" err;
+          Data_repr.Api.status = Unknown;
+          diagnostics = [ Error (Format.asprintf "ERROR %s" err) ];
           solution = "";
           sufficient_assumptions_for_infeasibility = "";
           log = "";
@@ -53,5 +54,5 @@ let handle_put_data (req : (Vif.Type.json, Grist_import.data) Request.t) _server
     | Ok s -> s
   in
   let* () = allow_origin () in
-  let* () = Response.with_json req Api.Planning.answer_jsont status in
+  let* () = Response.with_json req Data_repr.Api.answer_jsont status in
   Response.respond `OK
