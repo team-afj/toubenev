@@ -4,4 +4,4 @@
  (js_of_ocaml
   (javascript_files stubs.js))
  (flags :standard -open Std_js)
- (libraries std_js brr jsont.brr grist_import))
+ (libraries std_js brr jsont.brr grist_import lwd brr-lwd))
