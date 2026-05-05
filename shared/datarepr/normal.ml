@@ -114,4 +114,16 @@ end
 
 module Quests = Quest.Set
 
+let quests_by_day (infos : Event_infos.t) quests =
+  Quests.fold quests ~init:Date.Map.empty ~f:(fun acc q ->
+      let offseted =
+        (* The day is often offseted in a festival *)
+        Datetime.(q.slot.start - Time.to_duration infos.day_start_utc)
+      in
+      Date.Map.update (Datetime.date offseted)
+        (function
+          | None -> Some Quests.empty
+          | Some quests -> Some (Quests.add q quests))
+        acc)
+
 type data = { volunteers : Volunteers.t; quests : Quests.t }

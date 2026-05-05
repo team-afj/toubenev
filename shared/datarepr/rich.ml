@@ -413,7 +413,12 @@ module Event_infos = struct
     | Finite of { start_date : Date.t; end_date : Date.t }
   [@@deriving jsont]
 
-  type t = { name : string; kind : kind; timezone : Timezone.t }
+  type t = {
+    name : string;
+    kind : kind;
+    timezone : Timezone.t;
+    day_start_utc : Time.t;
+  }
   [@@deriving jsont]
 end
 

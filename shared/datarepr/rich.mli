@@ -4,6 +4,11 @@ module Timezones = Timezones
 (** Utilities *)
 module type Editable = sig
   type t
+  (** TODO: Right now this is useless noise. The initial idea was to have a
+      custom UI and use something like OT for collaborative editing. This will
+      not happen soon, as Grist seems like a good middle ground until we find
+      the time to write a greater custom UI. *)
+
   type edit
 
   val edit_jsont : edit Jsont.t
@@ -40,7 +45,12 @@ module Event_infos : sig
   type kind = Finite of { start_date : Date.t; end_date : Date.t }
   [@@deriving jsont]
 
-  type t = { name : string; kind : kind; timezone : Timezone.t }
+  type t = {
+    name : string;
+    kind : kind;
+    timezone : Timezone.t;
+    day_start_utc : Time.t;
+  }
   [@@deriving jsont]
 end
 

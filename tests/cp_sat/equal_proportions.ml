@@ -16,6 +16,7 @@ let example_planning : Planning.t =
       Event_infos.name = "Event 1";
       kind = Finite { start_date; end_date };
       timezone = Timezones.europe_paris;
+      day_start_utc = Time.make_exn ~hour:3 ~min:0 ~sec:0 ();
     }
   in
   let p1 = Place.make ~slug:"🍺" ~name:"Bar" () in
