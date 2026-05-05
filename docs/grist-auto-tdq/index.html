@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Grist Auto TDQ</title>
+  <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+  <script src="http://localhost:7531/grist-plugin-api.js"></script>
+</head>
+
+<body>
+  <p>Circulez, y'a rien à voir. 🤖</p>
+  <div id="readout"></div>
+  <script>
+    grist.ready({
+      requiredAccess: 'full',
+      columns: []
+    });
+    filtered_types = grist.getTable("Types_de_quetes_pour_formulaire")
+    grist.onRecords(function (records) {
+      // document.getElementById('readout').innerHTML = JSON.stringify(records, null, 2);
+      // Empty the table (TODO that's a bit rough):
+      grist.docApi.fetchTable("Types_de_quetes_pour_formulaire").then(
+        rs => filtered_types.destroy(rs.id)
+      )
+      // Fill it again:
+      records.forEach(record => {
+        if (!record.tags || !(record.tags.some(tag => tag === "Caché")))
+          filtered_types.create({ fields: { "quest_type": record.id } })
+      });
+    });
+  </script>
+
+</body>
+
+</html>
