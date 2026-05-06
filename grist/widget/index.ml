@@ -1,9 +1,12 @@
 open Brr
 open Brr_lwd
 open Fut.Result_syntax
+open Lunar
+open Shared
 open! Data_repr
 
 let last_answer : Api.answer option Lwd.var = Lwd.var None
+let analyses : Shared.Analysis.t option Lwd.var = Lwd.var None
 let infos_tbl_id = Jstr.v "Infos_generales"
 let options_tbl_id = Jstr.v "Options_du_solveur"
 let places_tbl_id = Jstr.v "Lieux"
@@ -97,7 +100,15 @@ let sat =
         let _id_map, planning = Grist_import.to_planning data in
         let () = Console.debug [ "DBG"; "Normalize" ] in
         let normalized_planning = Conv.normalize planning in
-        (* New assignations *)
+        (* Analysis *)
+        let () =
+          let result =
+            Shared.Analysis.of_planning planning normalized_planning
+          in
+          Lwd.set analyses (Some result)
+        in
+
+        (* New assignations (unfolded quests) *)
         let () = Console.debug [ "DBG"; "Prepare empty assignations" ] in
         let assignations =
           let open Lunar in
@@ -214,7 +225,92 @@ let _ =
   Brr.G.set_interval ~ms:2000 sat
 
 let app =
+  let open Lwd_infix in
   let status = Lwd.get last_answer in
+  let analyses =
+    let$ results = Lwd.get analyses in
+    match results with
+    | None -> El.nbsp ()
+    | Some { daily } ->
+        let th ?tooltip v =
+          let el =
+            let txt = El.txt' v in
+            match tooltip with
+            | None -> txt
+            | Some tip -> El.abbr ~at:[ At.title (Jstr.v tip) ] [ txt ]
+            (* El.em ~at:[ At.v (Jstr.v "data-tooltip") (Jstr.v tip) ] [ txt ] *)
+          in
+          El.th [ el ]
+        in
+        let td ?at v = El.td ?at [ El.txt' v ] in
+        let d_to_string d = Time.from_duration d |> Time.to_string in
+        let jours =
+          List.rev
+          @@ Date.Map.fold
+               (fun d
+                    {
+                      Analysis.total_quest_time;
+                      total_volunteer_time;
+                      max_concurrent_volunteers;
+                      available_volunteers;
+                    } acc ->
+                 let at =
+                   if Duration.(total_volunteer_time < total_quest_time) then
+                     Some [ At.class' (Jstr.v "warn") ]
+                   else None
+                 in
+                 let at_av =
+                   if available_volunteers < max_concurrent_volunteers then
+                     Some [ At.class' (Jstr.v "error") ]
+                   else None
+                 in
+                 El.tr
+                   [
+                     td (Date.to_string d);
+                     td (d_to_string total_quest_time);
+                     td ?at (d_to_string total_volunteer_time);
+                     td (Int.to_string max_concurrent_volunteers);
+                     td ?at:at_av (Int.to_string available_volunteers);
+                   ]
+                 :: acc)
+               daily []
+        in
+        let totals =
+          let total_q, total_v =
+            Date.Map.fold
+              (fun _d { Analysis.total_quest_time; total_volunteer_time; _ }
+                   (acc_q, acc_v) ->
+                Duration.(acc_q + total_quest_time, acc_v + total_volunteer_time))
+              daily
+              (Duration.zero, Duration.zero)
+          in
+          [ td "Total"; td (d_to_string total_q); td (d_to_string total_v) ]
+        in
+        El.section
+          [
+            El.thead
+              [
+                El.tr
+                  [
+                    th "Jour";
+                    th ~tooltip:"Durée totale des quêtes à accomplir" "⏱️ quêtes";
+                    th ~tooltip:"Temps de bénévolat disponible" "⏱️👷‍♀️";
+                    th
+                      ~tooltip:
+                        "Nombre maximum de bénévoles devant effecter une tâche \
+                         au même moment."
+                      "Max 👷‍♀️";
+                    th
+                      ~tooltip:
+                        "Nombre de bénévoles disponibles. Si < à \"Max 👷‍♀️\",\n\
+                         le planning est impossible à résoudre."
+                      "#👷‍♀️";
+                  ];
+              ];
+            El.tbody jours;
+            El.tfoot totals;
+          ]
+  in
   let txt =
     Lwd.map status ~f:(function
       | None -> El.txt' "En attente des premiers résultats."
@@ -228,14 +324,28 @@ let app =
               El.txt' sufficient_assumptions_for_infeasibility;
             ])
   in
-  Elwd.div [ `R txt ]
+  Elwd.div
+    [
+      `P (El.h3 [ El.txt' "Analyses" ]);
+      `P
+        (El.blockquote
+           [
+             El.txt'
+               "Ces données sont approximatives et d'autre contraintes peuvent \
+                empêcher de trouver un planning.";
+           ]);
+      `R analyses;
+      `P (El.h3 [ El.txt' "Résultats" ]);
+      `R txt;
+    ]
 
 let _ =
   let on_load _ =
+    let root = El.find_first_by_selector (Jstr.v "main") |> Option.get in
     let app = Lwd.observe app in
     let f _ = ignore @@ Lwd.quick_sample app in
     let on_invalidate _ = ignore @@ G.request_animation_frame f in
-    El.append_children (Document.body G.document) [ Lwd.quick_sample app ];
+    El.append_children root [ Lwd.quick_sample app ];
     Lwd.set_on_invalidate app on_invalidate
   in
   Ev.listen Ev.dom_content_loaded on_load (Window.as_target G.window)

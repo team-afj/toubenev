@@ -5,10 +5,34 @@
   <title>Page Title</title>
   <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
   <script src="http://localhost:7531/grist-plugin-api.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.classless.amber.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.colors.min.css">
+  <style>
+    .error {
+      color: var(--pico-color-red-400);
+      font-weight: 700;
+    }
+
+    .error::after {
+      content: "⚠";
+      position: absolute;
+    }
+
+    .warn {
+      color: var(--pico-color-pumpkin-300);
+    }
+
+    .warn::after {
+      content: "🔥";
+      position: absolute;
+    }
+  </style>
 </head>
 
 <body>
-
+  <main>
+    <h1>Solveur feedback</h1>
+  </main>
   <script>
     grist.ready({
       requiredAccess: 'full',
