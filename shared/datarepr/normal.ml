@@ -122,7 +122,7 @@ let quests_by_day (infos : Event_infos.t) quests =
       in
       Date.Map.update (Datetime.date offseted)
         (function
-          | None -> Some Quests.empty
+          | None -> Some (Quests.singleton q)
           | Some quests -> Some (Quests.add q quests))
         acc)
 
