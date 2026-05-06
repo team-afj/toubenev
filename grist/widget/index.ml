@@ -243,7 +243,10 @@ let app =
           El.th [ el ]
         in
         let td ?at v = El.td ?at [ El.txt' v ] in
-        let d_to_string d = Time.from_duration d |> Time.to_string in
+        let d_to_string d =
+          let h, m, s = Duration.hms d in
+          Printf.sprintf "%02d:%02d:%02d" h m s
+        in
         let jours =
           List.rev
           @@ Date.Map.fold
