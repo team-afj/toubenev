@@ -20,13 +20,15 @@
       // document.getElementById('readout').innerHTML = JSON.stringify(records, null, 2);
       // Empty the table (TODO that's a bit rough):
       grist.docApi.fetchTable("Types_de_quetes_pour_formulaire").then(
-        rs => filtered_types.destroy(rs.id)
+        rs => {
+          filtered_types.destroy(rs.id)
+          // Fill it again:
+          records.forEach(record => {
+            if (!record.tags || !(record.tags.some(tag => tag === "Caché")))
+              filtered_types.create({ fields: { "quest_type": record.id } })
+          })
+        }
       )
-      // Fill it again:
-      records.forEach(record => {
-        if (!record.tags || !(record.tags.some(tag => tag === "Caché")))
-          filtered_types.create({ fields: { "quest_type": record.id } })
-      });
     });
   </script>
 
