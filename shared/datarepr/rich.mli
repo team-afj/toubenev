@@ -98,6 +98,9 @@ module Task_type : sig
     everyone_should_do_it : task_sharing;
     specialist_only : bool;
     divisible : bool;
+    free : bool;
+        (** Free means that doing that task does not count in a volunteer
+            workload *)
   }
 
   val dummy : t
@@ -114,6 +117,7 @@ module Task_type : sig
     ?everyone_should_do_it:task_sharing ->
     specialist_only:bool ->
     divisible:bool ->
+    free:bool ->
     unit ->
     t
 end

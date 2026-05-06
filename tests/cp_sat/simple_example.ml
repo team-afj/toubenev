@@ -23,11 +23,11 @@ let example_planning : Planning.t =
   let places = CCRAL.of_list [ p1 ] in
   let t1 =
     Task_type.make ~slug:"🍻" ~name:"Service bar" ~specialist_only:false
-      ~divisible:true ()
+      ~divisible:true ~free:false ()
   in
   let t2 =
     Task_type.make ~slug:"👋" ~name:"Accueil" ~specialist_only:false
-      ~divisible:true ()
+      ~divisible:true ~free:false ()
   in
   let task_types = CCRAL.of_list [ t1; t2 ] in
   let daily_workload = Duration.from_hours 4 in

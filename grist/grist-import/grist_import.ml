@@ -25,6 +25,7 @@ module Task_type = struct
     impose : string;
     specialiste_requis : bool;
     decoupable : bool;
+    free : bool;
   }
   [@@deriving jsont]
 end
@@ -282,12 +283,13 @@ let to_planning ?(id_map = new_id_map ())
           impose;
           specialiste_requis = specialist_only;
           decoupable = divisible;
+          free;
         } =
       let ids = Rich.id_of_int id in
       let everyone_should_do_it = mandatory_of_string impose in
       let v =
         Rich.Task_type.make ~id:ids ~slug ~name ~description
-          ~everyone_should_do_it ~specialist_only ~divisible ()
+          ~everyone_should_do_it ~specialist_only ~divisible ~free ()
       in
       ({ id_map with task_types = Int.Map.add id v id_map.task_types }, v)
     in

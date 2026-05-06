@@ -115,6 +115,7 @@ module Task_type = struct
       everyone_should_do_it : task_sharing;
       specialist_only : bool;
       divisible : bool;
+      free : bool;
     }
     [@@deriving jsont]
 
@@ -134,6 +135,7 @@ module Task_type = struct
       everyone_should_do_it = Not_necessarily;
       specialist_only = false;
       divisible = false;
+      free = false;
     }
 
   type edit =
@@ -153,8 +155,8 @@ module Task_type = struct
     | New_divisible divisible -> { t with divisible }
 
   let make ?id ~slug ~name ?description
-      ?(everyone_should_do_it = Not_necessarily) ~specialist_only ~divisible ()
-      =
+      ?(everyone_should_do_it = Not_necessarily) ~specialist_only ~divisible
+      ~free () =
     let id = Option.get_lazy make_id id in
     {
       id;
@@ -164,6 +166,7 @@ module Task_type = struct
       everyone_should_do_it;
       specialist_only;
       divisible;
+      free;
     }
 end
 
