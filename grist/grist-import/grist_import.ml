@@ -350,6 +350,8 @@ let to_planning ?(id_map = new_id_map ())
           horaires_preferes;
           horaires_contraints;
           indisponibilites_ponctuelles;
+          date_d_arrivee;
+          date_de_depart;
           _;
         } =
       let ids = Rich.id_of_int id in
@@ -374,6 +376,18 @@ let to_planning ?(id_map = new_id_map ())
       in
       let forbidden_places =
         CCRAL.of_list_map ~f:(fun i -> Int.Map.find i id_map.places) []
+      in
+      let arrival =
+        Option.map
+          (fun arrival ->
+            Datetime.from_duration @@ Duration.from_seconds arrival)
+          date_d_arrivee
+      in
+      let departure =
+        Option.map
+          (fun departure ->
+            Datetime.from_duration @@ Duration.from_seconds departure)
+          date_de_depart
       in
       let availabilities =
         let unavailable =
@@ -402,7 +416,8 @@ let to_planning ?(id_map = new_id_map ())
       in
       let v =
         Rich.Volunteer.make ~id:ids ?public_name ~name ~daily_workload
-          ~proficiencies ~forbidden_tasks ~forbidden_places ~availabilities ()
+          ~proficiencies ~forbidden_tasks ~forbidden_places ~availabilities
+          ?arrival ?departure ()
       in
       ({ id_map with volunteers = Int.Map.add id v id_map.volunteers }, v)
     in
