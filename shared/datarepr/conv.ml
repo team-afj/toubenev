@@ -111,7 +111,7 @@ let normalize_quest event_infos vs diags (q : Rich.Quest.t) =
       let msg =
         let (Finite { start_date; end_date }) = event_infos.kind in
         Printf.sprintf
-          "La quête %s n'a jamais lieu pendant l'évènement (du %s au %s)."
+          "La quête \"%s\" n'a pas lieu pendant l'évènement (du %s au %s)."
           q.name
           (Date.to_string start_date)
           (Date.to_string end_date)
