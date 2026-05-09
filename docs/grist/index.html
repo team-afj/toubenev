@@ -26,12 +26,57 @@
       content: "🔥";
       position: absolute;
     }
+
+    .diag-card {
+      border: 1px solid;
+
+      &::before {
+        float: left;
+        font-size: 1.5rem;
+        line-height: 1.5rem;
+        margin-right: 1rem;
+        margin-bottom: 0.5rem;
+      }
+
+      &.diag-error {
+        border-color: var(--pico-color-red-450);
+
+        &::before {
+          content: '❌';
+        }
+      }
+
+      &.diag-warn {
+        border-color: var(--pico-color-pumpkin-300);
+
+        &::before {
+          content: '⚠️';
+        }
+      }
+
+      &.diag-info {
+        border-color: var(--pico-color-azure-200);
+
+        &::before {
+          content: 'ⓘ';
+        }
+      }
+    }
+
+    details summary {
+      font-size: 125%;
+      font-weight: bold;
+
+      &::after {
+        width: 1.5rem;
+        background-size: 1.5rem auto;
+      }
+    }
   </style>
 </head>
 
 <body>
   <main>
-    <h1>Solveur feedback</h1>
   </main>
   <script>
     grist.ready({
