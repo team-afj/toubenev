@@ -64,7 +64,9 @@ let assignations m vs qs =
 
 let prepare ~with_assumptions model (data : Planning.t) =
   (* TODO: split quests, group friends and quests groups, etc *)
-  let { volunteers = vs; quests = qs } = Data_repr.Conv.normalize data in
+  let { volunteers = vs; quests = qs; diagnostics = _ } =
+    Data_repr.Conv.normalize data
+  in
   let task_types = CCRAL.to_list data.task_types |> Task_type.Set.of_list in
   let assignations, intervals, assignations_rev = assignations model vs qs in
   let for_all_quests f = Quests.iter qs ~f in

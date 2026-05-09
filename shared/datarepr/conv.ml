@@ -24,19 +24,21 @@ let expand_time_spec
   let start_time = spec.start in
   let duration = spec.duration in
   let all_dates =
-    let all_days_in_range () =
-      Date.Range.(
-        make ~first:first_day ~last:last_day
-        |> to_list ~include_boundaries:true ~iterator:iterator_day)
-    in
-    match spec.recurrence with
-    | On dates -> dates
-    | Daily -> all_days_in_range ()
-    | Weekly weekdays ->
-        let range = all_days_in_range () in
-        List.filter range ~f:(fun d ->
-            let wd = Date.day_of_week d in
-            Weekday.Set.mem wd weekdays)
+    if Date.(last_day < first_day) then []
+    else
+      let range = Date.Range.make ~first:first_day ~last:last_day in
+      let all_days_in_range () =
+        Date.Range.(
+          to_list ~include_boundaries:true ~iterator:iterator_day range)
+      in
+      match spec.recurrence with
+      | On dates -> List.filter ~f:(Fun.flip Date.Range.contains range) dates
+      | Daily -> all_days_in_range ()
+      | Weekly weekdays ->
+          let range = all_days_in_range () in
+          List.filter range ~f:(fun d ->
+              let wd = Date.day_of_week d in
+              Weekday.Set.mem wd weekdays)
   in
   List.map all_dates ~f:(fun date ->
       let start = Zoned_datetime.(from ~tz date start_time |> to_utc) in
@@ -94,7 +96,7 @@ let normalize_volunteer event_infos (v : Rich.Volunteer.t) =
 
 (** Generates sub-quests depending of the recurrence and the task type's
     divisibility. *)
-let normalize_quest event_infos vs (q : Rich.Quest.t) =
+let normalize_quest event_infos vs diags (q : Rich.Quest.t) =
   let assigned_volunteers =
     CCRAL.fold q.assigned_volunteers ~x:Volunteer.Set.empty
       ~f:(fun acc (v : Rich.Volunteer.t) ->
@@ -103,6 +105,19 @@ let normalize_quest event_infos vs (q : Rich.Quest.t) =
           acc)
   in
   let slots = expand_time_spec event_infos q.slot in
+  let diagnostics =
+    if not (List.is_empty slots) then diags
+    else
+      let msg =
+        let (Finite { start_date; end_date }) = event_infos.kind in
+        Printf.sprintf
+          "La quête %s n'a jamais lieu pendant l'évènement (du %s au %s)."
+          q.name
+          (Date.to_string start_date)
+          (Date.to_string end_date)
+      in
+      (Api.Warning, msg) :: diags
+  in
   let slots =
     let divisible =
       match q.task_type with None -> false | Some tt -> tt.divisible
@@ -110,14 +125,17 @@ let normalize_quest event_infos vs (q : Rich.Quest.t) =
     if not divisible then List.map ~f:List.pure slots
     else List.map ~f:split_time_slot slots
   in
-  List.mapi slots ~f:(fun i slots ->
-      List.mapi slots ~f:(fun j (slot : Time_slot.t) ->
-          let id = Printf.sprintf "%s_%i_%i" (Rich.id_to_string q.id) i j in
-          let name =
-            Printf.sprintf "%s_%s" q.name (Datetime.to_string slot.start)
-          in
-          { Quest.id; initial = q; name; slot; assigned_volunteers }))
-  |> List.concat
+  let quests =
+    List.mapi slots ~f:(fun i slots ->
+        List.mapi slots ~f:(fun j (slot : Time_slot.t) ->
+            let id = Printf.sprintf "%s_%i_%i" (Rich.id_to_string q.id) i j in
+            let name =
+              Printf.sprintf "%s_%s" q.name (Datetime.to_string slot.start)
+            in
+            { Quest.id; initial = q; name; slot; assigned_volunteers }))
+    |> List.concat
+  in
+  (diagnostics, quests)
 
 let normalize (data : Rich.Planning.t) =
   let volunteers =
@@ -125,9 +143,11 @@ let normalize (data : Rich.Planning.t) =
     |> List.map ~f:(normalize_volunteer data.infos)
     |> Volunteers.of_list
   in
-  let quests =
-    CCRAL.to_list data.quests
-    |> List.concat_map ~f:(normalize_quest data.infos volunteers)
-    |> Quests.of_list
+  let quests, diagnostics =
+    let diags, quests =
+      CCRAL.to_list data.quests
+      |> List.fold_flat_map ~init:[] ~f:(normalize_quest data.infos volunteers)
+    in
+    (Quests.of_list quests, diags)
   in
-  { Normal.volunteers; quests }
+  { Normal.volunteers; quests; diagnostics }

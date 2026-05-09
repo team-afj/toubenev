@@ -126,4 +126,8 @@ let quests_by_day (infos : Event_infos.t) quests =
           | Some quests -> Some (Quests.add q quests))
         acc)
 
-type data = { volunteers : Volunteers.t; quests : Quests.t }
+type data = {
+  volunteers : Volunteers.t;
+  quests : Quests.t;
+  diagnostics : Api.diagnostic list;
+}

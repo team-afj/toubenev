@@ -5,8 +5,12 @@ open Lunar
 open Shared
 open! Data_repr
 
-let last_answer : Api.answer option Lwd.var = Lwd.var None
-let analyses : Shared.Analysis.t option Lwd.var = Lwd.var None
+module App = struct
+  let diagnostics : Api.diagnostic list Lwd.var = Lwd.var []
+  let last_answer : Api.answer option Lwd.var = Lwd.var None
+  let analyses : Shared.Analysis.t option Lwd.var = Lwd.var None
+end
+
 let infos_tbl_id = Jstr.v "Infos_generales"
 let options_tbl_id = Jstr.v "Options_du_solveur"
 let places_tbl_id = Jstr.v "Lieux"
@@ -100,12 +104,13 @@ let sat =
         let _id_map, planning = Grist_import.to_planning data in
         let () = Console.debug [ "DBG"; "Normalize" ] in
         let normalized_planning = Conv.normalize planning in
+        let () = Lwd.set App.diagnostics normalized_planning.diagnostics in
         (* Analysis *)
         let () =
           let result =
             Shared.Analysis.of_planning planning normalized_planning
           in
-          Lwd.set analyses (Some result)
+          Lwd.set App.analyses (Some result)
         in
 
         (* New assignations (unfolded quests) *)
@@ -214,7 +219,7 @@ let sat =
               | Unknown | ModelInvalid | Infeasible ->
                   Titles.update_prefixes "🔴"
             in
-            Fut.ok @@ Lwd.set last_answer (Some answer)
+            Fut.ok @@ Lwd.set App.last_answer (Some answer)
       end
     | Error err, _ ->
         Console.error [ "DBG"; "Decoding error: "; Jv.Error.message err ];
@@ -224,11 +229,49 @@ let _ =
   sat ();
   Brr.G.set_interval ~ms:2000 sat
 
+module Ui = struct
+  let accordion ~name ?(closed = false) ~title content =
+    (* TODO there might a bug in lwd, with the pure version of this function the
+    open attribute disapears *)
+    let at =
+      let at = [ `P (At.name (Jstr.v name)) ] in
+      match closed with
+      | true -> at
+      | false -> `P (At.v (Jstr.v "open") (Jstr.v "open")) :: at
+    in
+    Elwd.details ~at
+      (`R (Elwd.summary [ `R title ]) :: [ `R (Elwd.section content) ])
+
+  let diag_card ((lvl, msg) : Api.diagnostic) =
+    let at =
+      [
+        At.class' (Jstr.v "diag-card");
+        At.class' (Jstr.v (Api.diagnostic_level_to_string lvl));
+      ]
+    in
+    El.article ~at [ El.txt' msg ]
+end
+
 let app =
   let open Lwd_infix in
-  let status = Lwd.get last_answer in
+  let status = Lwd.get App.last_answer in
+  let diagnostics =
+    let diags =
+      let$ diags = Lwd.get App.diagnostics in
+      El.div
+      @@
+      if List.is_empty diags then
+        [ Ui.diag_card (Info, "Jusqu'ici tout va bien.") ]
+      else List.map diags ~f:Ui.diag_card
+    in
+    let section =
+      let title = Lwd.return @@ El.txt' "Diagnostiques" in
+      Ui.accordion ~name:"diags" ~title [ `R diags ]
+    in
+    section
+  in
   let analyses =
-    let$ results = Lwd.get analyses in
+    let$ results = Lwd.get App.analyses in
     match results with
     | None -> El.nbsp ()
     | Some { daily } ->
@@ -314,6 +357,20 @@ let app =
             El.tfoot totals;
           ]
   in
+  let analyses =
+    Ui.accordion ~name:"analyses"
+      ~title:(Lwd.return (El.txt' "Analyses"))
+      [
+        `P
+          (El.blockquote
+             [
+               El.txt'
+                 "Ces données sont approximatives et d'autre contraintes \
+                  peuvent empêcher de trouver un planning.";
+             ]);
+        `R analyses;
+      ]
+  in
   let txt =
     Lwd.map status ~f:(function
       | None -> El.txt' "En attente des premiers résultats."
@@ -328,19 +385,7 @@ let app =
             ])
   in
   Elwd.div
-    [
-      `P (El.h3 [ El.txt' "Analyses" ]);
-      `P
-        (El.blockquote
-           [
-             El.txt'
-               "Ces données sont approximatives et d'autre contraintes peuvent \
-                empêcher de trouver un planning.";
-           ]);
-      `R analyses;
-      `P (El.h3 [ El.txt' "Résultats" ]);
-      `R txt;
-    ]
+    [ `R diagnostics; `R analyses; `P (El.h3 [ El.txt' "Résultats" ]); `R txt ]
 
 let _ =
   let on_load _ =
