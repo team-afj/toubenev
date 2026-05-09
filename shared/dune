@@ -1,3 +1,4 @@
 (library
  (name shared)
+ (flags :standard -open Std_js)
  (libraries std data_repr))

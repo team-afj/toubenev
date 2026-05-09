@@ -13,6 +13,18 @@ module Weekday = struct
         ("Sun", Sun);
       ]
 
+  let to_fr_short_string = function
+    | Mon -> "Lun"
+    | Tue -> "Mar"
+    | Wed -> "Mer"
+    | Thu -> "Jeu"
+    | Fri -> "Ven"
+    | Sat -> "Sam"
+    | Sun -> "Dim"
+
+  let to_intl_short_string lang t =
+    match lang with `Fr -> to_fr_short_string t
+
   module Set = struct
     include Set
 

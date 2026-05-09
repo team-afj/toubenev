@@ -1,4 +1,4 @@
-open Lunar
+open Lunar_jsont
 open Data_repr
 open Rich
 open Normal
@@ -58,3 +58,18 @@ let daily (planning : Planning.t) (normalized : data) =
   Date.Map.mapi (day_stats planning normalized) by_day
 
 let of_planning infos n = { daily = daily infos n }
+
+let diags { daily } =
+  Date.Map.fold
+    (fun d { max_concurrent_volunteers; available_volunteers; _ } acc ->
+      if available_volunteers >= max_concurrent_volunteers then acc
+      else
+        let msg =
+          Printf.sprintf
+            "Pas assez de bénévoles %s %i pour assurer toutes les quêtes lors \
+             du coup de feu."
+            (Date.weekday d |> Weekday.to_intl_short_string `Fr)
+            (Date.day_of_month d)
+        in
+        (Api.Error, msg) :: acc)
+    daily []

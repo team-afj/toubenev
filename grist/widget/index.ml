@@ -104,15 +104,19 @@ let sat =
         let _id_map, planning = Grist_import.to_planning data in
         let () = Console.debug [ "DBG"; "Normalize" ] in
         let normalized_planning = Conv.normalize planning in
-        let () = Lwd.set App.diagnostics normalized_planning.diagnostics in
         (* Analysis *)
-        let () =
+        let analysis_diagnostics =
           let result =
             Shared.Analysis.of_planning planning normalized_planning
           in
-          Lwd.set App.analyses (Some result)
+          Lwd.set App.analyses (Some result);
+          Analysis.diags result
         in
-
+        let () =
+          Lwd.set App.diagnostics
+            (List.rev_append analysis_diagnostics
+               normalized_planning.diagnostics)
+        in
         (* New assignations (unfolded quests) *)
         let () = Console.debug [ "DBG"; "Prepare empty assignations" ] in
         let assignations =
