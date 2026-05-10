@@ -9,6 +9,12 @@ module App = struct
   let diagnostics : Api.diagnostic list Lwd.var = Lwd.var []
   let last_answer : Api.answer option Lwd.var = Lwd.var None
   let analyses : Shared.Analysis.t option Lwd.var = Lwd.var None
+
+  type server_status = Offline | Working | Done
+
+  let to_fr_slug = function Offline -> "⛓️‍💥" | Working -> "🤖" | Done -> "🔗"
+
+  let server_status : server_status Lwd.var = Lwd.var Offline
 end
 
 let infos_tbl_id = Jstr.v "Infos_generales"
@@ -207,12 +213,16 @@ let sat =
           in
           let init = Request.init ~body ~method' ~headers () in
           let open Fut.Syntax in
+          let () = Lwd.set App.server_status Working in
           let* response = url ~init uri in
           match response with
           | Error err ->
               let* _ = Titles.update_prefixes "⛓️‍💥" in
+              let () = Lwd.set App.server_status Offline in
               Fut.error err
-          | Ok resp -> Response.as_body resp |> Body.json
+          | Ok resp ->
+              let () = Lwd.set App.server_status Done in
+              Response.as_body resp |> Body.json
         in
         match Jsont_brr.decode_jv Data_repr.Api.answer_jsont res with
         | Error jv -> Fut.ok (Console.error [ jv ])
@@ -258,7 +268,31 @@ end
 
 let app =
   let open Lwd_infix in
-  let status = Lwd.get App.last_answer in
+  let last_answer = Lwd.get App.last_answer in
+  let results =
+    let txt =
+      Lwd.map last_answer ~f:(function
+        | None -> El.txt' "En attente des premiers résultats."
+        | Some { status; sufficient_assumptions_for_infeasibility; _ } ->
+            El.div
+              [
+                El.txt' @@ Ortools.Sat.Response.string_of_status status;
+                El.br ();
+                El.txt' "Sufficient assumptions for infeasibility:";
+                El.br ();
+                El.txt' sufficient_assumptions_for_infeasibility;
+              ])
+    in
+    Elwd.section [ `R txt ]
+  in
+  let results =
+    let title =
+      let$ status = Lwd.get App.server_status in
+      let slug = App.to_fr_slug status in
+      El.txt' ("Résultats " ^ slug)
+    in
+    Ui.accordion ~name:"results" ~title [ `R results ]
+  in
   let diagnostics =
     let diags =
       let$ diags = Lwd.get App.diagnostics in
@@ -375,21 +409,7 @@ let app =
         `R analyses;
       ]
   in
-  let txt =
-    Lwd.map status ~f:(function
-      | None -> El.txt' "En attente des premiers résultats."
-      | Some { status; sufficient_assumptions_for_infeasibility; _ } ->
-          El.div
-            [
-              El.txt' @@ Ortools.Sat.Response.string_of_status status;
-              El.br ();
-              El.txt' "Sufficient assumptions for infeasibility:";
-              El.br ();
-              El.txt' sufficient_assumptions_for_infeasibility;
-            ])
-  in
-  Elwd.div
-    [ `R diagnostics; `R analyses; `P (El.h3 [ El.txt' "Résultats" ]); `R txt ]
+  Elwd.div [ `R results; `R diagnostics; `R analyses ]
 
 let _ =
   let on_load _ =
