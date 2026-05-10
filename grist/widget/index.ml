@@ -17,19 +17,44 @@ module App = struct
   let server_status : server_status Lwd.var = Lwd.var Offline
 end
 
-let infos_tbl_id = Jstr.v "Infos_generales"
-let options_tbl_id = Jstr.v "Options_du_solveur"
-let places_tbl_id = Jstr.v "Lieux"
-let task_types_tbl_id = Jstr.v "Types_de_quetes"
-let time_slots_tbl_id = Jstr.v "Plages_horaires_ponctuelles"
-let volunteers_tbl_id = Jstr.v "Benevoles"
-let quests_tbl_id = Jstr.v "Quetes"
-let assignations_tbl_id = Jstr.v "Assignations"
+module Data = struct
+  let infos_tbl_id = Jstr.v "Infos_generales"
+  let options_tbl_id = Jstr.v "Options_du_solveur"
+  let places_tbl_id = Jstr.v "Lieux"
+  let task_types_tbl_id = Jstr.v "Types_de_quetes"
+  let time_slots_tbl_id = Jstr.v "Plages_horaires_ponctuelles"
+  let volunteers_tbl_id = Jstr.v "Benevoles"
+  let quests_tbl_id = Jstr.v "Quetes"
+  let assignations_tbl_id = Jstr.v "Assignations"
 
-let fetch table_id =
-  let open Grist in
-  let+ result = Doc_API.fetch_table ~table_id in
-  Data.Row_records.by_row result
+  let fetch table_id =
+    let open Grist in
+    let+ result = Doc_API.fetch_table ~table_id in
+    Data.Row_records.by_row result
+
+  let fetch_all () =
+    let* infos = fetch infos_tbl_id in
+    let* options = fetch options_tbl_id in
+    let* places = fetch places_tbl_id in
+    let* task_types = fetch task_types_tbl_id in
+    let* time_specs = fetch time_slots_tbl_id in
+    let* volunteers = fetch volunteers_tbl_id in
+    let* quests = fetch quests_tbl_id in
+    let data_json =
+      Jv.obj
+        [|
+          ("infos", infos);
+          ("options", options);
+          ("places", places);
+          ("task_types", task_types);
+          ("time_specs", time_specs);
+          ("volunteers", volunteers);
+          ("quests", quests);
+        |]
+      |> Json.encode
+    in
+    Fut.return @@ Jsont_brr.decode Grist_import.data_jsont data_json
+end
 
 module Titles = struct
   let table_id = Jstr.v "_grist_Views_section"
@@ -53,7 +78,7 @@ module Titles = struct
      [_grist_Views_section].
      TODO: this is not very robust. *)
   let all_widget_uses () =
-    let+ rows = fetch table_id in
+    let+ rows = Data.fetch table_id in
     Jv.to_list
       (fun row ->
         let id = Jv.get row "id" |> Jv.to_int in
@@ -75,10 +100,10 @@ end
 
 module Assignations = struct
   let assignations_table () =
-    Lazy.force (lazy (Grist.get_table ~table_id:assignations_tbl_id ()))
+    Lazy.force (lazy (Grist.get_table ~table_id:Data.assignations_tbl_id ()))
 
   let remove_assignations ~solution =
-    let* current_assignations = fetch assignations_tbl_id in
+    let* current_assignations = Data.(fetch assignations_tbl_id) in
     let current_assignations =
       Jv.to_list
         (fun obj ->
@@ -123,30 +148,11 @@ end
 let sat =
   let last_data = ref None in
   fun () ->
-    Console.debug [ "DBG"; "Fetch data" ];
-    ignore
-    @@
-    let* infos = fetch infos_tbl_id in
-    let* options = fetch options_tbl_id in
-    let* places = fetch places_tbl_id in
-    let* task_types = fetch task_types_tbl_id in
-    let* time_specs = fetch time_slots_tbl_id in
-    let* volunteers = fetch volunteers_tbl_id in
-    let* quests = fetch quests_tbl_id in
-    let data_json =
-      Jv.obj
-        [|
-          ("infos", infos);
-          ("options", options);
-          ("places", places);
-          ("task_types", task_types);
-          ("time_specs", time_specs);
-          ("volunteers", volunteers);
-          ("quests", quests);
-        |]
-      |> Json.encode
-    in
-    match (Jsont_brr.decode Grist_import.data_jsont data_json, !last_data) with
+    Fut.bind (Data.fetch_all ()) @@ fun data ->
+    match (data, !last_data) with
+    | Error err, _ ->
+        Console.error [ "DBG"; "Decoding error: "; Jv.Error.message err ];
+        Fut.return (Ok ())
     | Ok data, Some last when Equal.poly last data -> Fut.return (Ok ())
     | Ok data, _ -> begin
         let () = Console.debug [ "DBG"; "Data changes" ] in
@@ -200,7 +206,10 @@ let sat =
         let* () = Assignations.insert_assignations assignations in
         let* res =
           let open Brr_io.Fetch in
-          let body = Body.of_jstr data_json in
+          let* data =
+            Fut.return @@ Jsont_brr.encode Grist_import.data_jsont data
+          in
+          let body = Body.of_jstr data in
           Console.error [ "DBG"; "Querying server  " ];
           let method' = Jstr.v "PUT" in
           let uri = Jstr.v "http://localhost:1357/grist/data" in
@@ -237,13 +246,10 @@ let sat =
             in
             Fut.ok @@ Lwd.set App.last_answer (Some answer)
       end
-    | Error err, _ ->
-        Console.error [ "DBG"; "Decoding error: "; Jv.Error.message err ];
-        Fut.return (Ok ())
 
 let _ =
-  sat ();
-  Brr.G.set_interval ~ms:2000 sat
+  let _ = sat () in
+  Brr.G.set_interval ~ms:2000 (fun () -> ignore @@ sat ())
 
 module Ui = struct
   let accordion ~name ?(closed = false) ~title content =
