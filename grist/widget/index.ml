@@ -115,10 +115,8 @@ module Assignations = struct
               (Jstr.v "initial_quest", Jv.of_int a.initial_quest);
             |]
           in
-          Console.error [ "DBG"; require ];
           Add_or_update_record.v ~require ~fields ())
     in
-    Console.error [ "DBG"; "Upsert assignations" ];
     Grist.Table_operations.upsert (assignations_table ()) ~records ()
 end
 
@@ -148,11 +146,8 @@ let sat =
         |]
       |> Json.encode
     in
-    Console.debug [ "DBG"; "Data fetched"; data_json ];
     match (Jsont_brr.decode Grist_import.data_jsont data_json, !last_data) with
-    | Ok data, Some last when Equal.poly last data ->
-        Console.debug [ "DBG"; "Nothing to do" ];
-        Fut.return (Ok ())
+    | Ok data, Some last when Equal.poly last data -> Fut.return (Ok ())
     | Ok data, _ -> begin
         let () = Console.debug [ "DBG"; "Data changes" ] in
         let () = last_data := Some data in
