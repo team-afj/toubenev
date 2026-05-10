@@ -12,7 +12,7 @@ type daily = {
 
 type t = { daily : daily Date.Map.t }
 
-let day_stats (planning : Planning.t) (normalized : data) day quests =
+let day_stats (_planning : Planning.t) (normalized : data) day quests =
   let total_quest_time =
     Quests.fold quests ~init:Duration.zero ~f:(fun acc q ->
         let is_free =
@@ -22,11 +22,28 @@ let day_stats (planning : Planning.t) (normalized : data) day quests =
         else Duration.(acc + (q.slot.duration * q.initial.required_volunteers)))
   in
   let max_concurrent_volunteers =
-    Quests.fold quests ~init:0 ~f:(fun acc q ->
-        let overlapping = Quest.overlaps_with planning.options q quests in
-        max acc
-        @@ Quests.fold overlapping ~init:0 ~f:(fun acc q ->
-            acc + q.initial.required_volunteers))
+    (* Classical two-steps algorithm for max interval overlap. Sort the list by
+       start time and with additional weights. Then sweep the list to accumulate
+       the weight and remember the maximum. *)
+    let events =
+      Quests.fold quests ~init:Datetime.Map.empty ~f:(fun acc q ->
+          let required_volunteers = q.initial.required_volunteers in
+          let add_delta acc time delta =
+            Datetime.Map.update time
+              (function
+                | None -> Some delta
+                | Some existing_delta -> Some (existing_delta + delta))
+              acc
+          in
+          let acc = add_delta acc q.slot.start required_volunteers in
+          add_delta acc (Time_slot.end_ q.slot) (-required_volunteers))
+    in
+    Datetime.Map.fold
+      (fun _time delta (current_active, current_peak) ->
+        let current_active = current_active + delta in
+        (current_active, max current_peak current_active))
+      events (0, 0)
+    |> snd
   in
   let volunteers =
     let day' = day in
