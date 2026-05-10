@@ -27,11 +27,13 @@ let all_staffed (ctx : Context.t) =
       @@ Volunteers.to_list_map ctx.vs ~f:(fun v -> ctx.assignations v q)
     in
     let only_enforce_if =
-      let name =
+      (* TODO: these probably add more noise than useful information *)
+      (* let name =
         Format.sprintf "%i people do %s"
           q.initial.Rich.Quest.required_volunteers q.name
       in
-      assume ctx name
+      assume ctx name *)
+      None
     in
     sum
     == of_int q.initial.required_volunteers
@@ -52,9 +54,11 @@ let non_ubiquity_of_normal_humans (ctx : Context.t) =
             q'.name
         in
         let only_enforce_if =
-          assume ctx
+          (* TODO: these probably add more noise than useful information *)
+          (* assume ctx
           @@ Format.sprintf "%s cannot do both %s and %s" v.initial.name q.name
-               q'.name
+               q'.name *)
+          None
         in
         Sat.Constraint.at_most_one [ assig_v q; assig_v q' ]
         |> Sat.add ctx.model ?only_enforce_if ~name)
@@ -166,9 +170,12 @@ let enforce_assignations (ctx : Context.t) =
     proportion" mode.
 
     Exceptions: manually assigned volunteers or with forbidden places *)
-let everyone_does (ctx : Context.t) ?name requirement (quests : Quests.t) =
+let everyone_does (ctx : Context.t) ~name requirement (quests : Quests.t) =
   let available_volunteers =
     Volunteers.filter (fun v -> not v.initial.manually_assigned) ctx.vs
+  in
+  let only_enforce_if =
+    assume ctx @@ Format.sprintf "Tout le monde fait %s au moins une fois." name
   in
   Volunteers.iter available_volunteers ~f:(fun v ->
       let quests =
@@ -181,11 +188,10 @@ let everyone_does (ctx : Context.t) ?name requirement (quests : Quests.t) =
       in
       match requirement with
       | `Once ->
-          let name =
-            Option.map (Format.sprintf "%s_do_one_%s" v.initial.name) name
-          in
+          let name = Format.sprintf "%s_do_one_%s" v.initial.name name in
           let vars = Quests.to_list_map ~f:(ctx.assignations v) quests in
-          Sat.add ctx.model ?name @@ Sat.Constraint.at_least_one vars
+          Sat.add ctx.model ~name ?only_enforce_if
+          @@ Sat.Constraint.at_least_one vars
       | `Equal_proportion ->
           let n_volunteers = Volunteers.cardinal available_volunteers in
           let longuest_quest, total_time =
@@ -205,11 +211,9 @@ let everyone_does (ctx : Context.t) ?name requirement (quests : Quests.t) =
           in
           let sum = Sat.LinearExpr.weighted_sum vars in
           let name =
-            Option.map
-              (Format.sprintf "%s_do_as_much_%s_as_everyone" v.initial.name)
-              name
+            Format.sprintf "%s_do_as_much_%s_as_everyone" v.initial.name name
           in
-          Sat.(add ctx.model ?name (sum >= of_int time_per_v)))
+          Sat.(add ctx.model ~name ?only_enforce_if (sum >= of_int time_per_v)))
 
 (** Force every volunteer to participate at least once to a mandatory task.
     Warning, this constraint can easily make the problem UNFEASIBLE, especially
