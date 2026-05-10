@@ -150,4 +150,4 @@ let normalize (data : Rich.Planning.t) =
     in
     (Quests.of_list quests, diags)
   in
-  { Normal.volunteers; quests; diagnostics }
+  { Api.volunteers; quests; diagnostics }

@@ -161,6 +161,26 @@ module Assignation = struct
     volunteers : int list;
   }
   [@@deriving jsont]
+
+  let v ~solution (assignation : Api.assignation) =
+    let slot = assignation.quest.slot in
+    let start = Datetime.to_duration slot.start |> Duration.to_seconds in
+    let end_ =
+      Datetime.(slot.start + slot.duration)
+      |> Datetime.to_duration |> Duration.to_seconds
+    in
+    {
+      solution;
+      name = assignation.quest.name;
+      ref = assignation.quest.id;
+      initial_quest = Rich.id_to_int assignation.quest.initial.id;
+      start;
+      end_;
+      volunteers =
+        List.map
+          ~f:(fun { Rich.Volunteer.id; _ } -> Rich.id_to_int id)
+          assignation.volunteers;
+    }
 end
 
 type data = {

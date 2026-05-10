@@ -14,10 +14,23 @@ let diagnostic_level_to_string = function
   | Warning -> "diag-warn"
   | Info -> "diag-info"
 
+type data = {
+  volunteers : Normal.Volunteers.t;
+  quests : Normal.Quests.t;
+  diagnostics : diagnostic list;
+}
+[@@deriving jsont]
+
+type assignation = {
+  quest : Normal.Quest.t;
+  volunteers : Rich.Volunteer.t list;
+}
+[@@deriving jsont]
+
 type answer = {
   status : status;
   diagnostics : diagnostic list;
-  solution : string;
+  solution : assignation list;
   sufficient_assumptions_for_infeasibility : string;
   log : string;
 }

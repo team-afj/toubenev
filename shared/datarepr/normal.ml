@@ -24,6 +24,7 @@ module Volunteer = struct
       unavailabilities : Time_slot.t list;
       preferences : (int * Time_slot.t) list;
     }
+    [@@deriving jsont]
 
     let equal v1 v2 = String.equal v1.id v2.id
     let compare v1 v2 = String.compare v1.id v2.id
@@ -42,7 +43,7 @@ module Volunteer = struct
     }
 
   module Set = struct
-    include Set.Make (T)
+    include Set.Make_jsont (T)
 
     let find_by_id id t = find { dummy with id } t
   end
@@ -67,6 +68,7 @@ module Quest = struct
       slot : Time_slot.t;
       assigned_volunteers : Volunteers.t;
     }
+    [@@deriving jsont]
 
     let equal q1 q2 = String.equal q1.id q2.id
     let compare q1 q2 = String.compare q1.id q2.id
@@ -84,7 +86,13 @@ module Quest = struct
     }
 
   module Set = struct
-    include Set.Make (T)
+    include Set.Make_jsont (T)
+
+    let find_by_id id t = find { dummy with id } t
+  end
+
+  module Map = struct
+    include Map.Make_jsont (T)
 
     let find_by_id id t = find { dummy with id } t
   end
@@ -125,9 +133,3 @@ let quests_by_day (infos : Event_infos.t) quests =
           | None -> Some (Quests.singleton q)
           | Some quests -> Some (Quests.add q quests))
         acc)
-
-type data = {
-  volunteers : Volunteers.t;
-  quests : Quests.t;
-  diagnostics : Api.diagnostic list;
-}

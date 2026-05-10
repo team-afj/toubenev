@@ -308,3 +308,14 @@ let pp_solution (fmt : Format.formatter) arr =
   in
   let pp_sep fmt () = fprintf fmt ";@ " in
   fprintf fmt "%a" (pp_print_array ~pp_sep pp_var) arr
+
+let resolve_assignations (ctx : Context.t) arr =
+  Array.foldi arr ~init:Quest.Map.empty ~f:(fun acc i b ->
+      if b = 0 then acc
+      else
+        let _name, v, q = ctx.assignations_rev i in
+        Quest.Map.update q
+          (function
+            | None -> Some (Volunteers.singleton v)
+            | Some vs -> Some (Volunteers.add v vs))
+          acc)

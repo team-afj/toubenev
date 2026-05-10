@@ -124,7 +124,7 @@ module Task_type = struct
   end
 
   include T
-  module Set = Set.Make (T)
+  module Set = Set.Make_jsont (T)
 
   let dummy =
     {

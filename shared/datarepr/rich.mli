@@ -106,7 +106,7 @@ module Task_type : sig
   val dummy : t
   val equal : t -> t -> bool
 
-  module Set : Set.S with type elt = t
+  module Set : Set.S_jsont with type elt = t
   include S with type t := t
 
   val make :

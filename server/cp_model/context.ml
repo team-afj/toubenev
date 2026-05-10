@@ -1,6 +1,7 @@
 open Ortools
-open Data_repr.Rich
-open Data_repr.Normal
+open Data_repr
+open Rich
+open Normal
 
 type t = {
   model : Sat.model;
@@ -64,7 +65,7 @@ let assignations m vs qs =
 
 let prepare ~with_assumptions model (data : Planning.t) =
   (* TODO: split quests, group friends and quests groups, etc *)
-  let { volunteers = vs; quests = qs; diagnostics = _ } =
+  let { Api.volunteers = vs; quests = qs; diagnostics = _ } =
     Data_repr.Conv.normalize data
   in
   let task_types = CCRAL.to_list data.task_types |> Task_type.Set.of_list in

@@ -224,6 +224,11 @@ let sat =
         match Jsont_brr.decode_jv Data_repr.Api.answer_jsont res with
         | Error jv -> Fut.ok (Console.error [ jv ])
         | Ok answer ->
+            let assignations =
+              List.map answer.solution
+                ~f:(Grist_import.Assignation.v ~solution:1)
+            in
+            let* () = Assignations.insert_assignations assignations in
             let* () =
               match answer.status with
               | Feasible | Optimal -> Titles.update_prefixes "🟢"

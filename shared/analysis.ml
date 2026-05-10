@@ -12,7 +12,7 @@ type daily = {
 
 type t = { daily : daily Date.Map.t }
 
-let day_stats (_planning : Planning.t) (normalized : data) day quests =
+let day_stats (_planning : Planning.t) (normalized : Api.data) day quests =
   let total_quest_time =
     Quests.fold quests ~init:Duration.zero ~f:(fun acc q ->
         let is_free =
@@ -70,7 +70,7 @@ let day_stats (_planning : Planning.t) (normalized : data) day quests =
     available_volunteers;
   }
 
-let daily (planning : Planning.t) (normalized : data) =
+let daily (planning : Planning.t) (normalized : Api.data) =
   let by_day = quests_by_day planning.infos normalized.quests in
   Date.Map.mapi (day_stats planning normalized) by_day
 
