@@ -25,6 +25,7 @@ module Data = struct
   let time_slots_tbl_id = Jstr.v "Plages_horaires_ponctuelles"
   let volunteers_tbl_id = Jstr.v "Benevoles"
   let quests_tbl_id = Jstr.v "Quetes"
+  let solutions_tbl_id = Jstr.v "Solutions"
   let assignations_tbl_id = Jstr.v "Assignations"
 
   let fetch table_id =
@@ -96,6 +97,22 @@ module Titles = struct
     Console.error [ "DBG4"; all_widget_uses () ];
     let* ids = all_widget_uses () in
     meta_update_title ~ids @@ prefix ^ " " ^ widget_base_name
+end
+
+module Solutions = struct
+  let table () =
+    Lazy.force (lazy (Grist.get_table ~table_id:Data.solutions_tbl_id ()))
+
+  let upsert_solution_1 answer =
+    let* json = Fut.return @@ Jsont_brr.encode Api.answer_jsont answer in
+    let records =
+      [
+        Grist.Record.v ~id:1
+          ~fields:[| (Jstr.v "last_answer", Jv.of_jstr json) |]
+          ();
+      ]
+    in
+    Grist.Table_operations.update (table ()) ~records ()
 end
 
 module Assignations = struct
@@ -233,6 +250,7 @@ let sat =
         match Jsont_brr.decode_jv Data_repr.Api.answer_jsont res with
         | Error jv -> Fut.ok (Console.error [ jv ])
         | Ok answer ->
+            let* () = Solutions.upsert_solution_1 answer in
             let assignations =
               List.map answer.solution
                 ~f:(Grist_import.Assignation.v ~solution:1)
