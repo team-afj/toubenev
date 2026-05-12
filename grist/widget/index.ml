@@ -314,10 +314,14 @@ let app =
     let txt =
       Lwd.map last_answer ~f:(function
         | None -> El.txt' "En attente des premiers résultats."
-        | Some { status; sufficient_assumptions_for_infeasibility; _ } ->
+        | Some { status; sufficient_assumptions_for_infeasibility; date; _ } ->
+            let date =
+              Zoned_datetime.to_local_datetime date |> Datetime.to_string
+            in
             El.div
               [
                 El.txt' @@ Ortools.Sat.Response.string_of_status status;
+                El.txt' (" (fait à " ^ date ^ ")");
                 El.br ();
                 El.txt' "Sufficient assumptions for infeasibility:";
                 El.br ();

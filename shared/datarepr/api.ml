@@ -33,5 +33,6 @@ type answer = {
   solution : assignation list;
   sufficient_assumptions_for_infeasibility : string;
   log : string;
+  date : Lunar_jsont.Zoned_datetime.t;
 }
 [@@deriving jsont]

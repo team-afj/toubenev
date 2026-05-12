@@ -42,10 +42,12 @@ let solve planning =
     |> String.concat ~sep:"; "
   in
   Logs.debug (fun m -> m "Status: %s" (string_of_status response.status));
+  let date = now ~tz:planning.infos.timezone () in
   {
     Data_repr.Api.status = response.status;
     diagnostics = [];
     solution;
     sufficient_assumptions_for_infeasibility;
     log = response.solve_log;
+    date;
   }

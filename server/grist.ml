@@ -50,6 +50,7 @@ let handle_put_data (req : (Vif.Type.json, Grist_import.data) Request.t) _server
           solution = [];
           sufficient_assumptions_for_infeasibility = "";
           log = "";
+          date = now ();
         }
     | Ok s -> s
   in
