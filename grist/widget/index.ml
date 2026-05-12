@@ -444,7 +444,7 @@ let app =
           (El.blockquote
              [
                El.txt'
-                 "Ces données sont approximatives et d'autre contraintes \
+                 "Ces données sont approximatives et d'autres contraintes \
                   peuvent empêcher de trouver un planning.";
              ]);
         `R analyses;
