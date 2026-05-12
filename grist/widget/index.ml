@@ -5,6 +5,9 @@ open Lunar
 open Shared
 open! Data_repr
 
+(* TODO: There might be more efficient way to do some tthings by using the REST
+API with short-live tokens. *)
+
 module App = struct
   let diagnostics : Api.diagnostic list Lwd.var = Lwd.var []
   let last_answer : Api.answer option Lwd.var = Lwd.var None
@@ -58,6 +61,8 @@ module Data = struct
 end
 
 module Titles = struct
+  (* TODO: This is kinda hackish since we modify a internal, undocumented,
+     table. It can break anytime. *)
   let table_id = Jstr.v "_grist_Views_section"
   let widget_base_name = "Solver link"
   let widget_base_name_j = Jstr.v "Solver link"
@@ -113,6 +118,12 @@ module Solutions = struct
       ]
     in
     Grist.Table_operations.update (table ()) ~records ()
+
+  let get_solution_1 () =
+    let* solutions = Data.fetch Data.solutions_tbl_id in
+    let first = Jv.call solutions "at" [| Jv.of_int 0 |] in
+    let answer = Jv.get first "last_answer" in
+    Fut.return @@ Jsont_brr.decode Api.answer_jsont (Jv.to_jstr answer)
 end
 
 module Assignations = struct
@@ -265,7 +276,11 @@ let sat =
             Fut.ok @@ Lwd.set App.last_answer (Some answer)
       end
 
-let _ =
+let fetch_last () =
+  let+ last_answer = Solutions.get_solution_1 () in
+  Lwd.set App.last_answer (Some last_answer)
+
+let auto_sat () =
   let _ = sat () in
   Brr.G.set_interval ~ms:2000 (fun () -> ignore @@ sat ())
 
@@ -439,6 +454,8 @@ let app =
 
 let _ =
   let on_load _ =
+    let _ = fetch_last () in
+    let _ = auto_sat () in
     let root = El.find_first_by_selector (Jstr.v "main") |> Option.get in
     let app = Lwd.observe app in
     let f _ = ignore @@ Lwd.quick_sample app in
