@@ -15,8 +15,9 @@ let sat_check planning =
        second pass because it requires running in single thread mode. *)
     let context = Cp_model.Model.make ~with_assumptions:true planning in
     let parameters =
-      Ortools.Sat_parameters.make_sat_parameters ~log_search_progress:true
-        ~log_to_stdout:false ~log_to_response:true ~num_workers:1l ()
+      Ortools.Sat_parameters.make_sat_parameters ~stop_after_first_solution:true
+        ~log_search_progress:true ~log_to_stdout:false ~log_to_response:true
+        ~num_workers:1l ()
     in
     (context, Ortools_solvers.Sat.solve ~parameters context.model)
   else (context, response)
