@@ -5,8 +5,8 @@ open Normal
 let sat_check planning =
   let context = Cp_model.Model.make ~with_assumptions:false planning in
   let parameters =
-    Ortools.Sat_parameters.make_sat_parameters ~log_search_progress:false
-      ~num_workers:8l ()
+    Ortools.Sat_parameters.make_sat_parameters ~stop_after_first_solution:true
+      ~log_search_progress:false ~num_workers:8l ()
   in
   let response = Ortools_solvers.Sat.solve ~parameters context.model in
   if Equal.poly response.status Ortools.Sat.Response.Infeasible then
