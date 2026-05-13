@@ -1,4 +1,5 @@
 open Ortools
+open Lunar
 open Data_repr
 open Rich
 open Normal
@@ -12,6 +13,7 @@ type t = {
   assignations_rev : int -> Sat.Var.t_bool * Volunteer.t * Quest.t;
   vs : Volunteers.t;
   qs : Quests.t;
+  by_day : Quests.t Date.Map.t;
   task_types : Task_type.Set.t;
   for_all_quests : (Quest.t -> unit) -> unit;
   for_all_volunteers : (Volunteer.t -> unit) -> unit;
@@ -72,6 +74,7 @@ let prepare ~with_assumptions model (data : Planning.t) =
   let assignations, intervals, assignations_rev = assignations model vs qs in
   let for_all_quests f = Quests.iter qs ~f in
   let for_all_volunteers f = Volunteers.iter ~f vs in
+  let by_day = quests_by_day data.infos qs in
   {
     model;
     with_assumptions;
@@ -81,6 +84,7 @@ let prepare ~with_assumptions model (data : Planning.t) =
     assignations_rev;
     vs;
     qs;
+    by_day;
     task_types;
     for_all_quests;
     for_all_volunteers;

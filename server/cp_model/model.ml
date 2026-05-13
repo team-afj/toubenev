@@ -282,6 +282,15 @@ let know_your_ennemy (ctx : Context.t) =
    - or most volunteers stay the same
    - prevent volunteers to participate in the same recurring group more than
      once *)
+
+let minimize_f (ctx : Context.t) =
+  Sat.minimize ctx.model
+  @@ Sat.LinearExpr.sum
+       [
+         Sat.scale (10 * 2) @@ Workload_balance.event_bounds ctx;
+         Sat.scale (10 * 2) @@ Workload_balance.sum_of_all_daily_bounds ctx;
+       ]
+
 let make ~with_assumptions (data : Planning.t) =
   let model = Sat.make ~name:"Toubenev" () in
   let context = Context.prepare ~with_assumptions model data in
@@ -294,6 +303,8 @@ let make ~with_assumptions (data : Planning.t) =
   let () = required_specialists context in
   let () = enforce_bans context in
   let () = know_your_ennemy context in
+
+  let () = minimize_f context in
 
   context
 
@@ -317,9 +328,15 @@ let resolve_assignations (ctx : Context.t) arr =
   Array.foldi arr ~init:Quest.Map.empty ~f:(fun acc i b ->
       if b = 0 then acc
       else
-        let _name, v, q = ctx.assignations_rev i in
-        Quest.Map.update q
-          (function
-            | None -> Some (Volunteers.singleton v)
-            | Some vs -> Some (Volunteers.add v vs))
-          acc)
+        (* There are more variables than assignations so it is expected that the
+           last ones are missing. We could just loop on the number of
+           assignations.
+        *)
+        match ctx.assignations_rev i with
+        | exception Not_found -> acc
+        | _name, v, q ->
+            Quest.Map.update q
+              (function
+                | None -> Some (Volunteers.singleton v)
+                | Some vs -> Some (Volunteers.add v vs))
+              acc)
