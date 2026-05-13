@@ -21,15 +21,6 @@ let time_spent (ctx : Context.t) ~by:volunteer ~on:quests =
       let assigned = ctx.assignations volunteer q in
       (Duration.to_minutes q.slot.duration, assigned))
 
-(** [daily_time_spent (ctx : Context.t) ~by:volunteer] returns the time spent
-    everyday on quests assigned to [volunteer]. *)
-let daily_time_spent (ctx : Context.t) ~by =
-  Date.Map.map (fun quests -> time_spent ctx ~by ~on:quests) ctx.by_day
-
-let daily_volunteers_time_spent (ctx : Context.t) =
-  Volunteers.fold ctx.vs ~init:Volunteer.Map.empty ~f:(fun acc v ->
-      Volunteer.Map.add v (daily_time_spent ctx ~by:v) acc)
-
 (** Theoretical targets *)
 
 let theoretical_load (_ctx : Context.t) ~of_:volunteer ~on:_ =
@@ -45,44 +36,27 @@ let theoretical_coef (ctx : Context.t) ~of_ ~on =
     of_int (theoretical_load ctx ~of_ ~on)
     / of_int (total_theoretical_load ctx ~on))
 
-let daily_adjusted_load (ctx : Context.t) ~of_ =
-  Date.Map.mapi
-    (fun date quests ->
-      let open Float in
-      let quests_time = total_quests_time quests in
-      let adjusted_load =
-        theoretical_coef ctx ~of_ ~on:date * of_int quests_time
-      in
-      to_int adjusted_load)
-    ctx.by_day
+let adjusted_load (ctx : Context.t) volunteer day day_quests =
+  let quests_time = total_quests_time day_quests in
+  let adjustement_coef = theoretical_coef ctx ~of_:volunteer ~on:day in
+  Float.(to_int (adjustement_coef * of_int quests_time))
 
-let daily_volunteers_adjusted_load (ctx : Context.t) =
-  Volunteers.fold ctx.vs ~init:Volunteer.Map.empty ~f:(fun acc v ->
-      Volunteer.Map.add v (daily_adjusted_load ctx ~of_:v) acc)
+(** Diffs *)
+
+let load_diff (ctx : Context.t) volunteer day day_quests =
+  let time_spent = time_spent ctx ~by:volunteer ~on:day_quests in
+  let adjusted_load = adjusted_load ctx volunteer day day_quests in
+  Sat.(time_spent - of_int adjusted_load)
 
 (** Lower and upper bounds *)
-
-let daily_volunteers_diff (ctx : Context.t) =
-  (* TODO we could be more direct here instead of pre-calculating everything *)
-  let daily_volunteers_time_spent = daily_volunteers_time_spent ctx in
-  let daily_volunteers_adjusted_load = daily_volunteers_adjusted_load ctx in
-  Volunteer.Map.mapi
-    (fun v ->
-      Date.Map.mapi (fun d time_spent ->
-          let adjusted_load =
-            Volunteer.Map.find v daily_volunteers_adjusted_load
-            |> Date.Map.find d
-          in
-          Sat.(time_spent - of_int adjusted_load)))
-    daily_volunteers_time_spent
 
 let max_daily_load (ctx : Context.t) =
   60
   * Volunteers.fold ctx.vs ~init:0 ~f:(fun max_so_far v ->
       max max_so_far (Duration.to_seconds v.initial.daily_workload))
 
-let bounds (ctx : Context.t) daily_volunteers_diff ~on =
-  let s_date = Date.to_string on in
+let bounds (ctx : Context.t) day day_quests =
+  let s_date = Date.to_string day in
   let max_daily_load = max_daily_load ctx in
   let lb = -2 * max_daily_load in
   let ub = 2 * max_daily_load in
@@ -96,15 +70,14 @@ let bounds (ctx : Context.t) daily_volunteers_diff ~on =
   in
   let () =
     ctx.for_all_volunteers @@ fun v ->
-    let diff = Volunteer.Map.find v daily_volunteers_diff |> Date.Map.find on in
+    let diff = load_diff ctx v day day_quests in
     Sat.(add ctx.model (diff <= var upper_bound));
     Sat.(add ctx.model (diff >= var lower_bound))
   in
   Sat.(var upper_bound - var lower_bound)
 
 let sum_of_all_daily_bounds (ctx : Context.t) =
-  let daily_volunteers_diff = daily_volunteers_diff ctx in
   Date.Map.fold
-    (fun d _ acc -> bounds ctx daily_volunteers_diff ~on:d :: acc)
+    (fun day day_quests acc -> bounds ctx day day_quests :: acc)
     ctx.by_day []
   |> Sat.LinearExpr.sum
