@@ -1,3 +1,4 @@
 (library
  (name ortools_device)
- (libraries std vif flux))
+ (flags :standard -open Std)
+ (libraries std vif ortools_solvers flux data_repr cp_model))
