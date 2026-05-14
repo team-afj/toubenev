@@ -30,11 +30,14 @@ let new_optim t (p : Data_repr.Rich.Planning.t) =
   Hashtbl.add t.tasks handle (queue, promise);
   handle
 
+let rec clean_up orphans =
+  match Miou.care orphans with
+  | None | Some None -> ()
+  | Some (Some prm) ->
+      Miou.await_exn prm;
+      clean_up orphans
+
 let v =
-  let finally (t : t) =
-    match Miou.care t.orphans with
-    | Some (Some promise) -> Miou.await_exn promise
-    | _ -> ()
-  in
+  let finally (t : t) = clean_up t.orphans in
   Vif.Device.v ~name:"ortools" ~finally [] @@ fun () ->
   { tasks = Hashtbl.create 16; orphans = Miou.orphans () }
