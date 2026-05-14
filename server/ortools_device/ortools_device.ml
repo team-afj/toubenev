@@ -1,9 +1,17 @@
-type response_queue =
-  (Ortools.Sat.Response.t, Ortools.Sat.Response.t option) Flux.Bqueue.t
+module Bqueue = Flux.Bqueue
 
+type response_queue =
+  (Ortools.Sat.Response.t, Ortools.Sat.Response.t option) Bqueue.t
+
+type task = unit -> unit
+
+(* We need to have all the actual tasks created by the device's promise, not
+   the request promises, which are short-lived. *)
+(* TODO Handle cancellation ! *)
 type t = {
-  tasks : (string, response_queue * unit Miou.t) Hashtbl.t;
-  orphans : unit Miou.orphans;
+  tasks : (string, response_queue) Hashtbl.t;
+  task_queue : (task, task option) Bqueue.t;
+  task_launcher : unit Miou.t;
 }
 
 let new_optim t (p : Data_repr.Rich.Planning.t) =
@@ -11,23 +19,28 @@ let new_optim t (p : Data_repr.Rich.Planning.t) =
   let queue =
     (* TODO This can block if there is not enogh readers... an unbounded queue
        would be a better fit. *)
-    Flux.Bqueue.(create with_close 1000)
+    Bqueue.(create with_close 1000)
   in
-  let promise =
-    Miou.call ~orphans:t.orphans @@ fun () ->
+  let task =
+   fun () ->
     let context = Cp_model.Model.make ~with_assumptions:false p in
     let parameters =
       Ortools.Sat_parameters.make_sat_parameters ~log_search_progress:false
         ~num_workers:8l ()
     in
-    let observer response = Flux.Bqueue.put queue response in
+    let observer response =
+      Format.eprintf "NEW RESP: %f\n%!"
+        response.Ortools.Sat.Response.best_objective_bound;
+      Bqueue.put queue response
+    in
     let response =
       Ortools_solvers.Sat.solve ~observer ~parameters context.model
     in
-    Flux.Bqueue.put queue response;
-    Flux.Bqueue.close queue
+    Bqueue.put queue response;
+    Bqueue.close queue
   in
-  Hashtbl.add t.tasks handle (queue, promise);
+  Bqueue.put t.task_queue task;
+  Hashtbl.add t.tasks handle queue;
   handle
 
 let rec clean_up orphans =
@@ -38,6 +51,16 @@ let rec clean_up orphans =
       clean_up orphans
 
 let v =
-  let finally (t : t) = clean_up t.orphans in
+  let finally (t : t) = Miou.await_exn t.task_launcher in
   Vif.Device.v ~name:"ortools" ~finally [] @@ fun () ->
-  { tasks = Hashtbl.create 16; orphans = Miou.orphans () }
+  let task_queue : (task, task option) Bqueue.t =
+    Bqueue.(create with_close 256)
+  in
+  let task_source = Flux.Source.bqueue task_queue in
+  let task_launcher =
+    Miou.async (fun () ->
+        let orphans = Miou.orphans () in
+        Flux.Source.each (fun f -> ignore (Miou.call ~orphans f)) task_source;
+        clean_up orphans)
+  in
+  { tasks = Hashtbl.create 16; task_queue; task_launcher }
