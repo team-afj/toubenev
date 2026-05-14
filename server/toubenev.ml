@@ -53,7 +53,7 @@ let routes =
     get (rel / "grist" /?? any) --> Grist.index;
     get (rel / "grist" / "index.html" /?? nil) --> Grist.index;
     get (rel / "grist" / "index.bc.js" /?? nil) --> Grist.js;
-    options (rel / "grist" / "data" /?? nil) --> Grist.preflight;
+    options (rel / "grist" / "data" /?? nil) --> Api.Cors.preflight;
     put
       (Type.json_encoding Grist_import.data_jsont)
       (rel / "grist" / "data" /?? nil)
@@ -92,7 +92,9 @@ let cfg =
   let sockaddr = Unix.(ADDR_INET (Unix.inet_addr_loopback, 1357)) in
   Vif.config sockaddr
 
+let devices = Devices.[ Ortools_device.v ]
+
 let () =
   Fmt_tty.setup_std_outputs ~utf_8:true ();
   Logs.set_reporter (Log_config.reporter Fmt.stderr);
-  Miou_unix.run @@ fun () -> Vif.run ~cfg routes ()
+  Miou_unix.run @@ fun () -> Vif.run ~cfg ~devices routes ()

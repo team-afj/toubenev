@@ -4,7 +4,16 @@
  (promote
   (until-clean)
   (into ..))
- (libraries std vif flux logs.fmt fmt.tty views api grist_import)
+ (libraries
+  std
+  vif
+  ortools_device
+  flux
+  logs.fmt
+  fmt.tty
+  views
+  api
+  grist_import)
  (flags :standard -open Std))
 
 (alias
