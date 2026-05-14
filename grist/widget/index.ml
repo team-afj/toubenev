@@ -13,6 +13,10 @@ module App = struct
   let last_answer : Api.answer option Lwd.var = Lwd.var None
   let analyses : Shared.Analysis.t option Lwd.var = Lwd.var None
 
+  type optimize_state = Not_ready | Ready of Grist_import.data | Running
+
+  let optimize_state : optimize_state Lwd.var = Lwd.var Not_ready
+
   type server_status = Offline | Working | Done
 
   let to_fr_slug = function Offline -> "⛓️‍💥" | Working -> "🤖" | Done -> "🔗"
@@ -183,6 +187,7 @@ let sat =
         Fut.return (Ok ())
     | Ok data, Some last when Equal.poly last data -> Fut.return (Ok ())
     | Ok data, _ -> begin
+        let () = Lwd.set App.optimize_state Not_ready in
         let () = Console.debug [ "DBG"; "Data changes" ] in
         let () = last_data := Some data in
         let _id_map, planning = Grist_import.to_planning data in
@@ -269,8 +274,11 @@ let sat =
             let* () = Assignations.insert_assignations assignations in
             let* () =
               match answer.status with
-              | Feasible | Optimal -> Titles.update_prefixes "🟢"
+              | Feasible | Optimal ->
+                  let () = Lwd.set App.optimize_state (Ready data) in
+                  Titles.update_prefixes "🟢"
               | Unknown | ModelInvalid | Infeasible ->
+                  let () = Lwd.set App.optimize_state Not_ready in
                   Titles.update_prefixes "🔴"
             in
             Fut.ok @@ Lwd.set App.last_answer (Some answer)
@@ -283,6 +291,21 @@ let fetch_last () =
 let auto_sat () =
   let _ = sat () in
   Brr.G.set_interval ~ms:2000 (fun () -> ignore @@ sat ())
+
+let optimize (data : Grist_import.data) =
+  let open Brr_io.Fetch in
+  let* json = Fut.return @@ Jsont_brr.encode Grist_import.data_jsont data in
+  let body = Body.of_jstr json in
+  let method' = Jstr.v "PUT" in
+  let uri = Jstr.v "http://localhost:1357/grist/optim" in
+  let headers =
+    Headers.of_assoc [ (Jstr.v "Content-Type", Jstr.v "application/json") ]
+  in
+  let init = Request.init ~body ~method' ~headers () in
+  let () = Lwd.set App.optimize_state Running in
+  let* response = url ~init uri in
+  let+ handle = Response.as_body response |> Body.text in
+  Console.error [ "DBG"; "HANDLE"; handle ]
 
 module Ui = struct
   let accordion ~name ?(closed = false) ~title content =
@@ -311,6 +334,21 @@ let app =
   let open Lwd_infix in
   let last_answer = Lwd.get App.last_answer in
   let results =
+    let optimize_btn =
+      let disabled =
+        let$ state = Lwd.get App.optimize_state in
+        match state with
+        | Not_ready | Running -> At.disabled
+        | Ready _ -> At.void
+      in
+      let ev =
+        let$ state = Lwd.get App.optimize_state in
+        match state with
+        | Not_ready | Running -> Elwd.handler Ev.click (fun _ -> ())
+        | Ready data -> Elwd.handler Ev.click (fun _ -> ignore (optimize data))
+      in
+      Elwd.button ~at:[ `R disabled ] ~ev:[ `R ev ] [ `P (El.txt' "Optimize") ]
+    in
     let txt =
       Lwd.map last_answer ~f:(function
         | None -> El.txt' "En attente des premiers résultats."
@@ -328,7 +366,7 @@ let app =
                 El.txt' sufficient_assumptions_for_infeasibility;
               ])
     in
-    Elwd.section [ `R txt ]
+    Elwd.section [ `R optimize_btn; `R txt ]
   in
   let results =
     let title =
