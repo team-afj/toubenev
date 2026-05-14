@@ -43,3 +43,25 @@ let handle_put_data (req : (Vif.Type.json, Grist_import.data) Request.t) _server
   let* () = Api.Cors.allow_origin () in
   let* () = Response.with_json req Data_repr.Api.answer_jsont status in
   Response.respond `OK
+
+let or_error = function
+  | Ok response -> response
+  | Error (`Msg msg) ->
+      let () = Logs.err (fun m -> m "%s" msg) in
+      let open Response.Syntax in
+      let* () = Response.empty in
+      Response.respond `Internal_server_error
+
+let handle_optimize (req : (Vif.Type.json, Grist_import.data) Request.t) server
+    () =
+  let open Result in
+  or_error
+  @@
+  let ortools = Server.device Ortools_device.v server in
+  let+ v = Request.of_json req in
+  let _, planning = Grist_import.to_planning v in
+  let handle = Ortools_device.new_optim ortools planning in
+  let open Response.Syntax in
+  let* () = Api.Cors.allow_origin () in
+  let* () = Response.with_text req handle in
+  Response.respond `OK
