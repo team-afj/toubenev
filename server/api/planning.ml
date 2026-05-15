@@ -38,13 +38,12 @@ let optim_stream req handle server () =
       let src = Flux.Source.bqueue queue in
       let src =
         Flux.Source.map
-          (fun response ->
-            let txt =
-              Printf.sprintf "data: ping %f\n\n"
-                response.Ortools.Sat.Response.best_objective_bound
+          (fun answer ->
+            let json =
+              Jsont_bytesrw.encode_string Data_repr.Api.answer_jsont answer
+              |> Result.get_ok
             in
-            Format.eprintf "SSE %s\n%!" txt;
-            txt)
+            Printf.sprintf "data: %s\n\n" json)
           src
       in
       let* () =

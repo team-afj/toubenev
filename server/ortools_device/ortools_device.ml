@@ -1,7 +1,7 @@
 module Bqueue = Flux.Bqueue
 
 type response_queue =
-  (Ortools.Sat.Response.t, Ortools.Sat.Response.t option) Bqueue.t
+  (Data_repr.Api.answer, Data_repr.Api.answer option) Bqueue.t
 
 type task = unit -> unit
 
@@ -30,14 +30,16 @@ let new_optim t (p : Data_repr.Rich.Planning.t) =
         ~num_workers:8l ()
     in
     let observer response =
-      Format.eprintf "NEW RESP: %f\n%!"
-        response.Ortools.Sat.Response.best_objective_bound;
-      Bqueue.put queue response
+      let date = now ~tz:p.infos.timezone () in
+      let answer = Cp_model.Context.prepare_answer date context response in
+      Bqueue.put queue answer
     in
     let response =
       Ortools_solvers.Sat.solve ~observer ~parameters context.model
     in
-    Bqueue.put queue response;
+    let date = now ~tz:p.infos.timezone () in
+    let answer = Cp_model.Context.prepare_answer date context response in
+    Bqueue.put queue answer;
     Bqueue.close queue
   in
   Bqueue.put t.task_queue task;

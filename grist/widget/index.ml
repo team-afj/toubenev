@@ -294,24 +294,27 @@ let auto_sat () =
   Brr.G.set_interval ~ms:2000 (fun () -> ignore @@ sat ())
 
 let optimize (data : Grist_import.data) =
-  let open Brr_io.Fetch in
-  let* json = Fut.return @@ Jsont_brr.encode Grist_import.data_jsont data in
-  let body = Body.of_jstr json in
-  let method' = Jstr.v "PUT" in
-  let uri = Jstr.v "http://localhost:1357/grist/optim" in
-  let headers =
-    Headers.of_assoc [ (Jstr.v "Content-Type", Jstr.v "application/json") ]
+  let+ handle =
+    let open Brr_io.Fetch in
+    let* json = Fut.return @@ Jsont_brr.encode Grist_import.data_jsont data in
+    let body = Body.of_jstr json in
+    let method' = Jstr.v "PUT" in
+    let uri = Jstr.v "http://localhost:1357/grist/optim" in
+    let headers =
+      Headers.of_assoc [ (Jstr.v "Content-Type", Jstr.v "application/json") ]
+    in
+    let init = Request.init ~body ~method' ~headers () in
+    let () = Lwd.set App.optimize_state Running in
+    let* response = url ~init uri in
+    Response.as_body response |> Body.text
   in
-  let init = Request.init ~body ~method' ~headers () in
-  let () = Lwd.set App.optimize_state Running in
-  let* response = url ~init uri in
-  let+ handle = Response.as_body response |> Body.text in
   let module Event_source = Brr_io.Event_source in
   let url = Jstr.(append (v "http://localhost:1357/optim-stream/") handle) in
   let event_source = Event_source.create ~url () in
   let _ =
-    Brr.Ev.listen Brr_io.Message.Ev.message
-      (fun ev -> Console.error [ "DBG"; ev ])
+    Ev.listen Brr_io.Message.Ev.message
+      (fun ev ->
+        Console.error [ "DBG"; Brr_io.Message.Ev.data (Ev.as_type ev) ])
       (Event_source.as_target event_source)
   in
   Console.error [ "DBG"; "HANDLE"; handle; event_source ]
