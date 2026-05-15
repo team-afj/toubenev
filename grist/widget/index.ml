@@ -356,15 +356,17 @@ let app =
             let date =
               Zoned_datetime.to_local_datetime date |> Datetime.to_string
             in
+            let sufass =
+              match sufficient_assumptions_for_infeasibility with
+              | [] -> []
+              | ass ->
+                  El.h4 [ El.txt' "Sufficient assumptions for infeasibility:" ]
+                  :: [ El.ul (List.map ~f:(fun s -> El.li [ El.txt' s ]) ass) ]
+            in
             El.div
-              [
-                El.txt' @@ Ortools.Sat.Response.string_of_status status;
-                El.txt' (" (fait à " ^ date ^ ")");
-                El.br ();
-                El.txt' "Sufficient assumptions for infeasibility:";
-                El.br ();
-                El.txt' sufficient_assumptions_for_infeasibility;
-              ])
+              (El.txt' (Ortools.Sat.Response.string_of_status status)
+              :: El.txt' (" (fait à " ^ date ^ ")")
+              :: sufass))
     in
     Elwd.section [ `R optimize_btn; `R txt ]
   in

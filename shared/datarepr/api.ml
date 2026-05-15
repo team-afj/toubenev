@@ -31,7 +31,7 @@ type answer = {
   status : status;
   diagnostics : diagnostic list;
   solution : assignation list;
-  sufficient_assumptions_for_infeasibility : string;
+  sufficient_assumptions_for_infeasibility : string list;
   log : string;
   date : Lunar_jsont.Zoned_datetime.t;
 }

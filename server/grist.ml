@@ -34,7 +34,7 @@ let handle_put_data (req : (Vif.Type.json, Grist_import.data) Request.t) _server
           Data_repr.Api.status = Unknown;
           diagnostics = [ (Error, Format.asprintf "ERROR %s" err) ];
           solution = [];
-          sufficient_assumptions_for_infeasibility = "";
+          sufficient_assumptions_for_infeasibility = [];
           log = "";
           date = now ();
         }

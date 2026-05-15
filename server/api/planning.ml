@@ -22,8 +22,7 @@ let sat_check planning =
     (context, Ortools_solvers.Sat.solve ~parameters context.model)
   else (context, response)
 
-let solve planning =
-  let context, response = sat_check planning in
+let prepare_answer date context (response : Ortools.Sat.Response.t) =
   let open Ortools.Sat.Response in
   let solution =
     Cp_model.Model.resolve_assignations context response.solution
@@ -40,10 +39,7 @@ let solve planning =
     List.map
       ~f:(fun v -> Ortools.Sat.Var.to_string v)
       response.sufficient_assumptions_for_infeasibility
-    |> String.concat ~sep:"; "
   in
-  Logs.debug (fun m -> m "Status: %s" (string_of_status response.status));
-  let date = now ~tz:planning.infos.timezone () in
   {
     Data_repr.Api.status = response.status;
     diagnostics = [];
@@ -52,3 +48,8 @@ let solve planning =
     log = response.solve_log;
     date;
   }
+
+let solve planning =
+  let context, response = sat_check planning in
+  let date = now ~tz:planning.infos.timezone () in
+  prepare_answer date context response
