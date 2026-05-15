@@ -293,7 +293,25 @@ let auto_sat () =
   let _ = sat () in
   Brr.G.set_interval ~ms:2000 (fun () -> ignore @@ sat ())
 
-let optimize (data : Grist_import.data) =
+let init_optimization_chart canvas =
+  let open Chartjs in
+  let options =
+    Chartjs.Options.create ~responsive:true ~maintainAspectRatio:false ()
+  in
+  let d_objective =
+    Dataset.create ~label:(Jstr.v "Score") ~border_color:(rgb 75 192 192)
+      ~background_color:(rgba 75 192 192 0.2) ~tension:0.1 ~data:[] ()
+  in
+  let d_bound =
+    Dataset.create ~label:(Jstr.v "Objectif") ~border_dash:[ 5.; 15. ]
+      ~tension:0.1 ~point_radius:0 ~data:[] ()
+  in
+  let data = Data.create ~labels:[] ~datasets:[ d_objective; d_bound ] () in
+  ( Chart.create ~canvas ~chart_type:(Jstr.v "line") ~data ~options,
+    d_objective,
+    d_bound )
+
+let optimize ~(chart_canvas : El.t) (data : Grist_import.data) =
   let+ handle =
     let open Brr_io.Fetch in
     let* json = Fut.return @@ Jsont_brr.encode Grist_import.data_jsont data in
@@ -311,6 +329,8 @@ let optimize (data : Grist_import.data) =
   let module Event_source = Brr_io.Event_source in
   let url = Jstr.(append (v "http://localhost:1357/optim-stream/") handle) in
   let event_source = Event_source.create ~url () in
+  let chart, d_objective, d_bound = init_optimization_chart chart_canvas in
+  let chart_data = Chartjs.Chart.get_data chart in
   let _ =
     Ev.listen Brr_io.Message.Ev.message
       (fun ev ->
@@ -318,6 +338,11 @@ let optimize (data : Grist_import.data) =
         let answer =
           Jsont_brr.decode Data_repr.Api.answer_jsont json |> Result.get_ok
         in
+        let time = Float.to_string answer.deterministic_time |> Jstr.v in
+        Chartjs.Data.push_label chart_data time;
+        Chartjs.Dataset.push_data d_objective answer.objective_value;
+        Chartjs.Dataset.push_data d_bound answer.best_objective_bound;
+        Chartjs.Chart.update chart;
         Console.error [ "DBG"; answer ])
       (Event_source.as_target event_source)
   in
@@ -350,6 +375,22 @@ let app =
   let open Lwd_infix in
   let last_answer = Lwd.get App.last_answer in
   let results =
+    let chart_canvas, optimize_chart =
+      let chart_canvas = El.canvas [] in
+      let display =
+        let$ state = Lwd.get App.optimize_state in
+        match state with
+        | Running -> At.void
+        | _ -> At.style (Jstr.v "display: none")
+      in
+      ( chart_canvas,
+        Elwd.section
+          ~at:[ `R display ]
+          [
+            `P
+              (El.div ~at:[ At.style (Jstr.v "height:10rem") ] [ chart_canvas ]);
+          ] )
+    in
     let optimize_btn =
       let disabled =
         let$ state = Lwd.get App.optimize_state in
@@ -361,7 +402,9 @@ let app =
         let$ state = Lwd.get App.optimize_state in
         match state with
         | Not_ready | Running -> Elwd.handler Ev.click (fun _ -> ())
-        | Ready data -> Elwd.handler Ev.click (fun _ -> ignore (optimize data))
+        | Ready data ->
+            Elwd.handler Ev.click (fun _ ->
+                ignore (optimize ~chart_canvas data))
       in
       Elwd.button ~at:[ `R disabled ] ~ev:[ `R ev ] [ `P (El.txt' "Optimize") ]
     in
@@ -384,7 +427,7 @@ let app =
               :: El.txt' (" (fait à " ^ date ^ ")")
               :: sufass))
     in
-    Elwd.section [ `R optimize_btn; `R txt ]
+    Elwd.section [ `R txt; `R optimize_btn; `R optimize_chart ]
   in
   let results =
     let title =

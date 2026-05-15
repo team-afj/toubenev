@@ -31,11 +31,8 @@ let handle_put_data (req : (Vif.Type.json, Grist_import.data) Request.t) _server
     match r with
     | Error (`Msg err) ->
         {
-          Data_repr.Api.status = Unknown;
+          Data_repr.Api.dummy_answer with
           diagnostics = [ (Error, Format.asprintf "ERROR %s" err) ];
-          solution = [];
-          sufficient_assumptions_for_infeasibility = [];
-          log = "";
           date = now ();
         }
     | Ok s -> s
