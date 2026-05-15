@@ -1,6 +1,3 @@
-open Data_repr
-open Normal
-
 (** Run the model without the optimizer to check feasibility *)
 let sat_check planning =
   let context = Cp_model.Model.make ~with_assumptions:false planning in
@@ -22,37 +19,10 @@ let sat_check planning =
     (context, Ortools_solvers.Sat.solve ~parameters context.model)
   else (context, response)
 
-let prepare_answer date context (response : Ortools.Sat.Response.t) =
-  let open Ortools.Sat.Response in
-  let solution =
-    Cp_model.Model.resolve_assignations context response.solution
-  in
-  let solution =
-    Quest.Map.to_list solution
-    |> List.map ~f:(fun (quest, volunteers) ->
-        let volunteers =
-          Volunteers.to_list_map ~f:(fun v -> v.initial) volunteers
-        in
-        { Data_repr.Api.quest; volunteers })
-  in
-  let sufficient_assumptions_for_infeasibility =
-    List.map
-      ~f:(fun v -> Ortools.Sat.Var.to_string v)
-      response.sufficient_assumptions_for_infeasibility
-  in
-  {
-    Data_repr.Api.status = response.status;
-    diagnostics = [];
-    solution;
-    sufficient_assumptions_for_infeasibility;
-    log = response.solve_log;
-    date;
-  }
-
 let solve planning =
   let context, response = sat_check planning in
   let date = now ~tz:planning.infos.timezone () in
-  prepare_answer date context response
+  Cp_model.Context.prepare_answer date context response
 
 open Vif
 

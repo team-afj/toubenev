@@ -323,20 +323,3 @@ let pp_solution (fmt : Format.formatter) arr =
   in
   let pp_sep fmt () = fprintf fmt ";@ " in
   fprintf fmt "%a" (pp_print_array ~pp_sep pp_var) arr
-
-let resolve_assignations (ctx : Context.t) arr =
-  Array.foldi arr ~init:Quest.Map.empty ~f:(fun acc i b ->
-      if b = 0 then acc
-      else
-        (* There are more variables than assignations so it is expected that the
-           last ones are missing. We could just loop on the number of
-           assignations.
-        *)
-        match ctx.assignations_rev i with
-        | exception Not_found -> acc
-        | _name, v, q ->
-            Quest.Map.update q
-              (function
-                | None -> Some (Volunteers.singleton v)
-                | Some vs -> Some (Volunteers.add v vs))
-              acc)

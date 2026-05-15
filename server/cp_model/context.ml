@@ -89,3 +89,45 @@ let prepare ~with_assumptions model (data : Planning.t) =
     for_all_quests;
     for_all_volunteers;
   }
+
+let resolve_assignations (ctx : t) arr =
+  Array.foldi arr ~init:Quest.Map.empty ~f:(fun acc i b ->
+      if b = 0 then acc
+      else
+        (* There are more variables than assignations so it is expected that the
+           last ones are missing. We could just loop on the number of
+           assignations.
+        *)
+        match ctx.assignations_rev i with
+        | exception Not_found -> acc
+        | _name, v, q ->
+            Quest.Map.update q
+              (function
+                | None -> Some (Volunteers.singleton v)
+                | Some vs -> Some (Volunteers.add v vs))
+              acc)
+
+let prepare_answer date context (response : Ortools.Sat.Response.t) =
+  let open Ortools.Sat.Response in
+  let solution = resolve_assignations context response.solution in
+  let solution =
+    Quest.Map.to_list solution
+    |> List.map ~f:(fun (quest, volunteers) ->
+        let volunteers =
+          Volunteers.to_list_map ~f:(fun v -> v.initial) volunteers
+        in
+        { Data_repr.Api.quest; volunteers })
+  in
+  let sufficient_assumptions_for_infeasibility =
+    List.map
+      ~f:(fun v -> Ortools.Sat.Var.to_string v)
+      response.sufficient_assumptions_for_infeasibility
+  in
+  {
+    Data_repr.Api.status = response.status;
+    diagnostics = [];
+    solution;
+    sufficient_assumptions_for_infeasibility;
+    log = response.solve_log;
+    date;
+  }
