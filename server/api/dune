@@ -1,6 +1,6 @@
 (library
  (name api)
  (flags :standard -open Std)
- (libraries logs vif ortools ortools_solvers cp_model)
+ (libraries logs vif ortools_device ortools ortools_solvers cp_model)
  (preprocess
   (pps ppx_deriving_jsont)))

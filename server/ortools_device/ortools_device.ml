@@ -5,8 +5,9 @@ type response_queue =
 
 type task = unit -> unit
 
-(* We need to have all the actual tasks created by the device's promise, not
-   the request promises, which are short-lived. *)
+(* We need to have all the actual tasks created by the device's promise, not the
+   request promises, which are short-lived. Request promises fill the
+   [task_queue], and the [task_laucher] runs them from the device's promise. *)
 (* TODO Handle cancellation ! *)
 type t = {
   tasks : (string, response_queue) Hashtbl.t;
@@ -42,6 +43,12 @@ let new_optim t (p : Data_repr.Rich.Planning.t) =
   Bqueue.put t.task_queue task;
   Hashtbl.add t.tasks handle queue;
   handle
+
+let get_queue t handle = Hashtbl.find_opt t.tasks handle
+
+let cancel t handle =
+  (* TODO: actually cancel the promise ! *)
+  Hashtbl.remove t.tasks handle
 
 let rec clean_up orphans =
   match Miou.care orphans with

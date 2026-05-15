@@ -1,3 +1,4 @@
+open Brrer
 open Brr
 open Brr_lwd
 open Fut.Result_syntax
@@ -305,7 +306,15 @@ let optimize (data : Grist_import.data) =
   let () = Lwd.set App.optimize_state Running in
   let* response = url ~init uri in
   let+ handle = Response.as_body response |> Body.text in
-  Console.error [ "DBG"; "HANDLE"; handle ]
+  let module Event_source = Brr_io.Event_source in
+  let url = Jstr.(append (v "http://localhost:1357/optim-stream/") handle) in
+  let event_source = Event_source.create ~url () in
+  let _ =
+    Brr.Ev.listen Brr_io.Message.Ev.message
+      (fun ev -> Console.error [ "DBG"; ev ])
+      (Event_source.as_target event_source)
+  in
+  Console.error [ "DBG"; "HANDLE"; handle; event_source ]
 
 module Ui = struct
   let accordion ~name ?(closed = false) ~title content =

@@ -53,3 +53,37 @@ let solve planning =
   let context, response = sat_check planning in
   let date = now ~tz:planning.infos.timezone () in
   prepare_answer date context response
+
+open Vif
+
+let optim_stream req handle server () =
+  let open Response.Syntax in
+  let ortools = Server.device Ortools_device.v server in
+  match Ortools_device.get_queue ortools handle with
+  | None ->
+      let* () = Response.empty in
+      Response.respond `Not_found
+  | Some queue ->
+      let open Response.Syntax in
+      let src = Flux.Source.bqueue queue in
+      let src =
+        Flux.Source.map
+          (fun response ->
+            let txt =
+              Printf.sprintf "data: ping %f\n\n"
+                response.Ortools.Sat.Response.best_objective_bound
+            in
+            Format.eprintf "SSE %s\n%!" txt;
+            txt)
+          src
+      in
+      let* () =
+        let field = "content-type" in
+        Response.add ~field "text/event-stream"
+      in
+      let* () = Cors.allow_origin () in
+      let* () = Response.with_source req src in
+      let* () = Response.respond `OK in
+      Logs.debug (fun fmt -> fmt "SSE connection closed");
+      Ortools_device.cancel ortools handle;
+      Response.return ()

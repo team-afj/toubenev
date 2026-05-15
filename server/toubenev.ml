@@ -63,6 +63,9 @@ let routes =
       (Type.json_encoding Grist_import.data_jsont)
       (rel / "grist" / "optim" /?? nil)
     --> Grist.handle_optimize;
+    options (rel / "optim-stream" /?? nil) --> Api.Cors.preflight;
+    get (rel / "optim-stream" /% string `Path /?? nil)
+    --> Api.Planning.optim_stream;
   ]
 
 let () = Logs.set_level ~all:true (Some Debug)
