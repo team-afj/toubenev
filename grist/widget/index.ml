@@ -314,7 +314,11 @@ let optimize (data : Grist_import.data) =
   let _ =
     Ev.listen Brr_io.Message.Ev.message
       (fun ev ->
-        Console.error [ "DBG"; Brr_io.Message.Ev.data (Ev.as_type ev) ])
+        let json : Jstr.t = Brr_io.Message.Ev.data (Ev.as_type ev) in
+        let answer =
+          Jsont_brr.decode Data_repr.Api.answer_jsont json |> Result.get_ok
+        in
+        Console.error [ "DBG"; answer ])
       (Event_source.as_target event_source)
   in
   Console.error [ "DBG"; "HANDLE"; handle; event_source ]
