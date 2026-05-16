@@ -388,7 +388,7 @@ let app =
           ~at:[ `R display ]
           [
             `P
-              (El.div ~at:[ At.style (Jstr.v "height:10rem") ] [ chart_canvas ]);
+              (El.div ~at:[ At.style (Jstr.v "height:20rem") ] [ chart_canvas ]);
           ] )
     in
     let optimize_btn =
