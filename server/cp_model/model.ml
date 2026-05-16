@@ -304,7 +304,7 @@ let make ~with_assumptions (data : Planning.t) =
   let () = enforce_bans context in
   let () = know_your_ennemy context in
 
-  let () = minimize_f context in
+  let () = if not with_assumptions then minimize_f context in
 
   context
 
