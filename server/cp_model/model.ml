@@ -283,12 +283,46 @@ let know_your_ennemy (ctx : Context.t) =
    - prevent volunteers to participate in the same recurring group more than
      once *)
 
+(** Objective *)
+
+let friendship_bonus (ctx : Context.t) =
+  let processed_pairs : (string * string, unit) Hashtbl.t = Hashtbl.create 32 in
+  Volunteers.fold ctx.vs ~init:[] ~f:(fun acc v ->
+      List.fold_left v.initial.friends ~init:acc ~f:(fun acc friend_uuid ->
+          let friend_id = id_to_string friend_uuid in
+          if String.equal v.id friend_id then acc
+          else
+            let oredered_pair =
+              if String.compare v.id friend_id <= 0 then (v.id, friend_id)
+              else (friend_id, v.id)
+            in
+            if Hashtbl.mem processed_pairs oredered_pair then acc
+            else begin
+              Hashtbl.add processed_pairs oredered_pair ();
+              let friend = Volunteers.find_by_id friend_id ctx.vs in
+              Quests.fold ctx.qs ~init:acc ~f:(fun acc q ->
+                  let together_name =
+                    Format.sprintf "%s_and_%s_together_on_%s" v.name friend.name
+                      q.name
+                  in
+                  let together = Sat.Var.new_bool ctx.model together_name in
+                  Sat.add ctx.model
+                    (Sat.Constraint.min_equality together
+                       [
+                         Sat.LinearExpr.var (ctx.assignations v q);
+                         Sat.LinearExpr.var (ctx.assignations friend q);
+                       ]);
+                  together :: acc)
+            end))
+  |> Sat.LinearExpr.sum_vars
+
 let minimize_f (ctx : Context.t) =
   Sat.minimize ctx.model
   @@ Sat.LinearExpr.sum
        [
          Sat.scale (10 * 2) @@ Workload_balance.event_bounds ctx;
          Sat.scale (10 * 2) @@ Workload_balance.sum_of_all_daily_bounds ctx;
+         Sat.scale (-1) @@ friendship_bonus ctx;
        ]
 
 let make ~with_assumptions (data : Planning.t) =
