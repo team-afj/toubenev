@@ -293,23 +293,34 @@ let auto_sat () =
   let _ = sat () in
   Brr.G.set_interval ~ms:2000 (fun () -> ignore @@ sat ())
 
-let init_optimization_chart canvas =
-  let open Chartjs in
-  let options =
-    Chartjs.Options.create ~responsive:true ~maintainAspectRatio:false ()
-  in
-  let d_objective =
-    Dataset.create ~label:(Jstr.v "Score") ~border_color:(rgb 75 192 192)
-      ~background_color:(rgba 75 192 192 0.2) ~tension:0.1 ~data:[] ()
-  in
-  let d_bound =
-    Dataset.create ~label:(Jstr.v "Objectif") ~border_dash:[ 5.; 15. ]
-      ~tension:0.1 ~point_radius:0 ~data:[] ()
-  in
-  let data = Data.create ~labels:[] ~datasets:[ d_objective; d_bound ] () in
-  ( Chart.create ~canvas ~chart_type:(Jstr.v "line") ~data ~options,
-    d_objective,
-    d_bound )
+let init_optimization_chart =
+  let chart = ref None in
+  fun canvas ->
+    let open Chartjs in
+    let options =
+      Chartjs.Options.create ~responsive:true ~maintainAspectRatio:false ()
+    in
+    let d_objective =
+      Dataset.create ~label:(Jstr.v "Score") ~border_color:(rgb 75 192 192)
+        ~background_color:(rgba 75 192 192 0.2) ~tension:0.1 ~data:[] ()
+    in
+    let d_bound =
+      Dataset.create ~label:(Jstr.v "Objectif") ~border_dash:[ 5.; 15. ]
+        ~tension:0.1 ~point_radius:0 ~data:[] ()
+    in
+    let data = Data.create ~labels:[] ~datasets:[ d_objective; d_bound ] () in
+    let chart =
+      match !chart with
+      | None ->
+          let c =
+            Chart.create ~canvas ~chart_type:(Jstr.v "line") ~options ()
+          in
+          chart := Some c;
+          c
+      | Some c -> c
+    in
+    let () = Chart.set_data chart data in
+    (chart, d_objective, d_bound)
 
 let optimize ~(chart_canvas : El.t) (data : Grist_import.data) =
   let+ handle =
