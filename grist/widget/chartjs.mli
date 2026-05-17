@@ -130,8 +130,13 @@ module Chart : sig
   (**/**)
 
   val create :
-    canvas:El.t -> chart_type:Jstr.t -> data:Data.t -> options:Options.t -> t
-  (** [create ~canvas ~chart_type ~data ~options] creates a new Chart.
+    canvas:El.t ->
+    chart_type:Jstr.t ->
+    ?data:Data.t ->
+    options:Options.t ->
+    unit ->
+    t
+  (** [create ~canvas ~chart_type ?data ~options] creates a new Chart.
       [chart_type] should be "line" for line charts. *)
 
   val destroy : t -> unit
@@ -139,6 +144,8 @@ module Chart : sig
 
   val update : t -> unit
   (** [update c] refreshes the chart display. *)
+
+  val set_data : t -> Data.t -> unit
 
   val get_data : t -> Data.t
   (** [get_data c] returns the chart's data object. *)

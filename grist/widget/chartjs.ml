@@ -109,13 +109,13 @@ module Chart = struct
 
   include (Jv.Id : Jv.CONV with type t := t)
 
-  let create ~canvas ~chart_type ~data ~options =
+  let create ~canvas ~chart_type ?data ~options () =
     let ctx =
       Jv.call (El.to_jv canvas) "getContext" [| Jv.of_jstr (Jstr.v "2d") |]
     in
     let config = Jv.obj [||] in
     Jv.Jstr.set config "type" chart_type;
-    Jv.set config "data" (Data.to_jv data);
+    Jv.set_if_some config "data" (Option.map Data.to_jv data);
     Jv.set config "options" (Options.to_jv options);
     Jv.new' chart_ctor [| ctx; config |]
 
@@ -126,5 +126,6 @@ module Chart = struct
     let data_obj = Jv.get c "data" in
     Data.of_jv data_obj
 
+  let set_data t d = Jv.set t "data" @@ Data.to_jv d
   let to_jv t = t
 end
