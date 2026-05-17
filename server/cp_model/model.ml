@@ -287,20 +287,20 @@ let know_your_ennemy (ctx : Context.t) =
 
 let friendship_bonus (ctx : Context.t) =
   let processed_pairs : (string * string, unit) Hashtbl.t = Hashtbl.create 32 in
-  Volunteers.fold ctx.vs ~init:[] ~f:(fun acc v ->
-      List.fold_left v.initial.friends ~init:acc ~f:(fun acc friend_uuid ->
-          let friend_id = id_to_string friend_uuid in
-          if String.equal v.id friend_id then acc
-          else
-            let oredered_pair =
-              if String.compare v.id friend_id <= 0 then (v.id, friend_id)
-              else (friend_id, v.id)
-            in
-            if Hashtbl.mem processed_pairs oredered_pair then acc
-            else begin
-              Hashtbl.add processed_pairs oredered_pair ();
-              let friend = Volunteers.find_by_id friend_id ctx.vs in
-              Quests.fold ctx.qs ~init:acc ~f:(fun acc q ->
+  Quests.fold ctx.qs ~init:[] ~f:(fun acc q ->
+      Volunteers.fold ctx.vs ~init:acc ~f:(fun acc v ->
+          List.fold_left v.initial.friends ~init:acc ~f:(fun acc friend_uuid ->
+              let friend_id = id_to_string friend_uuid in
+              if String.equal v.id friend_id then acc
+              else
+                let oredered_pair =
+                  if String.compare v.id friend_id <= 0 then (v.id, friend_id)
+                  else (friend_id, v.id)
+                in
+                if Hashtbl.mem processed_pairs oredered_pair then acc
+                else begin
+                  Hashtbl.add processed_pairs oredered_pair ();
+                  let friend = Volunteers.find_by_id friend_id ctx.vs in
                   let together_name =
                     Format.sprintf "%s_and_%s_together_on_%s" v.name friend.name
                       q.name
@@ -312,8 +312,8 @@ let friendship_bonus (ctx : Context.t) =
                          Sat.LinearExpr.var (ctx.assignations v q);
                          Sat.LinearExpr.var (ctx.assignations friend q);
                        ]);
-                  together :: acc)
-            end))
+                  together :: acc
+                end)))
   |> Sat.LinearExpr.sum_vars
 
 (** Appreciation score for a volunteer doing a specific quest based on time
