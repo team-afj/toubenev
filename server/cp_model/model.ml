@@ -316,6 +316,42 @@ let friendship_bonus (ctx : Context.t) =
             end))
   |> Sat.LinearExpr.sum_vars
 
+(** Appreciation score for a volunteer doing a specific quest based on time
+    preferences. Breaks down the quest into 15-minute blocks and sums preference
+    scores for each block where a volunteer's preferred time slot overlaps. *)
+let appreciation_of_quest (v : Volunteer.t) (q : Quest.t) =
+  let quest_end = Time_slot.end_ q.slot in
+  let fifteen_minutes = Duration.from_minutes 15 in
+  let rec loop acc current =
+    if Datetime.(current >= quest_end) then acc
+    else
+      let next_time = Datetime.(min (current + fifteen_minutes) quest_end) in
+      let block_duration =
+        Duration.(Datetime.to_duration next_time - Datetime.to_duration current)
+      in
+      let current_block =
+        { Time_slot.start = current; duration = block_duration }
+      in
+      let score =
+        List.fold_left v.preferences ~init:0
+          ~f:(fun sum (pref_score, pref_slot) ->
+            if Time_slot.overlaps current_block pref_slot then sum + pref_score
+            else sum)
+      in
+      loop (acc + score) next_time
+  in
+  loop 0 q.slot.start
+
+(** Total appreciation of a planning for a volunteer. Sums the appreciation of
+    each quest, weighted by whether the volunteer is assigned. *)
+let appreciation_of_planning (ctx : Context.t) =
+  Volunteers.fold ctx.vs ~init:[] ~f:(fun acc v ->
+      Quests.fold ctx.qs ~init:acc ~f:(fun acc q ->
+          let appreciation = appreciation_of_quest v q in
+          Sat.scale appreciation (Sat.LinearExpr.var (ctx.assignations v q))
+          :: acc))
+  |> Sat.LinearExpr.sum
+
 let minimize_f (ctx : Context.t) =
   Sat.minimize ctx.model
   @@ Sat.LinearExpr.sum
@@ -323,6 +359,7 @@ let minimize_f (ctx : Context.t) =
          Sat.scale (10 * 2) @@ Workload_balance.event_bounds ctx;
          Sat.scale (10 * 2) @@ Workload_balance.sum_of_all_daily_bounds ctx;
          Sat.scale (-1) @@ friendship_bonus ctx;
+         Sat.scale (-1) @@ appreciation_of_planning ctx;
        ]
 
 let make ~with_assumptions (data : Planning.t) =
