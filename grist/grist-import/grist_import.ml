@@ -327,12 +327,11 @@ let to_planning ?(id_map = new_id_map ())
   in
   let id_map, volunteers =
     let gather_time_slots l =
-      let tz = Timezone.to_duration infos.timezone in
       let mk start end_ =
         let start_time =
           Time.make ~hour:(start - 1) ~min:0 ~sec:0 () |> Result.get_ok
         in
-        (Time.(start_time - tz), Duration.from_hours (end_ - start))
+        (start_time, Duration.from_hours (end_ - start))
       in
       let rec aux (groups, current) l =
         match (current, l) with
