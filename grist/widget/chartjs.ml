@@ -22,8 +22,7 @@ module Dataset = struct
       ?(border_dash = []) ?tension ?fill ?point_radius ~data () =
     let obj = Jv.obj [||] in
     Jv.Jstr.set_if_some obj "label" label;
-    let data_arr = Jv.of_list Jv.of_float data in
-    Jv.set obj "data" data_arr;
+    Jv.set obj "data" data;
     Jv.set obj "borderDash" @@ Jv.of_list Jv.of_float border_dash;
     Jv.Jstr.set_if_some obj "borderColor" border_color;
     Jv.Jstr.set_if_some obj "backgroundColor" background_color;
@@ -33,13 +32,11 @@ module Dataset = struct
     Jv.Int.set_if_some obj "pointRadius" point_radius;
     obj
 
-  let set_data t data =
-    let data_arr = Jv.of_list Jv.of_float data in
-    Jv.set t "data" data_arr
+  let set_data t data = Jv.set t "data" data
 
   let push_data t data =
     let data' = Jv.get t "data" in
-    ignore @@ Jv.call data' "push" [| Jv.of_float data |]
+    ignore @@ Jv.call data' "push" [| data |]
 
   let set_border_color d c = Jv.Jstr.set d "borderColor" c
   let set_background_color d c = Jv.Jstr.set d "backgroundColor" c

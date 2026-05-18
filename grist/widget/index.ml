@@ -298,17 +298,27 @@ let init_optimization_chart =
   fun canvas ->
     let open Chartjs in
     let options =
-      Chartjs.Options.create ~responsive:true ~maintainAspectRatio:false ()
+      let scales =
+        [
+          ( Jstr.v "x",
+            Options.Scale.create ~title:(Jstr.v "Temps (s)")
+              ~typ:(Jstr.v "logarithmic") () );
+        ]
+      in
+      Options.create ~responsive:true ~maintainAspectRatio:false
+        ~animation:false ~scales ()
     in
     let d_objective =
+      let data = Jv.of_jv_list [] in
       Dataset.create ~label:(Jstr.v "Score") ~border_color:(rgb 75 192 192)
-        ~background_color:(rgba 75 192 192 0.2) ~tension:0.1 ~data:[] ()
+        ~background_color:(rgba 75 192 192 0.2) ~tension:0.1 ~data ()
     in
     let d_bound =
+      let data = Jv.of_jv_list [] in
       Dataset.create ~label:(Jstr.v "Objectif") ~border_dash:[ 5.; 15. ]
-        ~tension:0.1 ~point_radius:0 ~data:[] ()
+        ~tension:0.1 ~point_radius:0 ~data ()
     in
-    let data = Data.create ~labels:[] ~datasets:[ d_objective; d_bound ] () in
+    let data = Data.create ~datasets:[ d_objective; d_bound ] () in
     let chart =
       match !chart with
       | None ->
@@ -341,7 +351,10 @@ let optimize ~(chart_canvas : El.t) (data : Grist_import.data) =
   let url = Jstr.(append (v "http://localhost:1357/optim-stream/") handle) in
   let event_source = Event_source.create ~url () in
   let chart, d_objective, d_bound = init_optimization_chart chart_canvas in
-  let chart_data = Chartjs.Chart.get_data chart in
+  let mk_point time value =
+    Jv.obj
+      [| ("x", Jv.of_string (Float.to_string time)); ("y", Jv.of_float value) |]
+  in
   let _ =
     Ev.listen Brr_io.Message.Ev.message
       (fun ev ->
@@ -349,10 +362,11 @@ let optimize ~(chart_canvas : El.t) (data : Grist_import.data) =
         let answer =
           Jsont_brr.decode Data_repr.Api.answer_jsont json |> Result.get_ok
         in
-        let time = Float.to_string answer.deterministic_time |> Jstr.v in
-        Chartjs.Data.push_label chart_data time;
-        Chartjs.Dataset.push_data d_objective answer.objective_value;
-        Chartjs.Dataset.push_data d_bound answer.best_objective_bound;
+        let time = answer.deterministic_time in
+        Chartjs.Dataset.push_data d_objective
+          (mk_point time answer.objective_value);
+        Chartjs.Dataset.push_data d_bound
+          (mk_point time answer.best_objective_bound);
         Chartjs.Chart.update chart;
         Console.error [ "DBG"; answer ])
       (Event_source.as_target event_source)

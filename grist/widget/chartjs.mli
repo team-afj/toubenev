@@ -38,14 +38,14 @@ module Dataset : sig
     ?tension:float ->
     ?fill:bool ->
     ?point_radius:int ->
-    data:float list ->
+    data:Jv.t ->
     unit ->
     t
   (** [create ~label ~data ()] creates a dataset with the given label and data
       points. *)
 
-  val set_data : t -> float list -> unit
-  val push_data : t -> float -> unit
+  val set_data : t -> Jv.t -> unit
+  val push_data : t -> Jv.t -> unit
 
   val set_border_color : t -> color -> unit
   (** [set_border_color d c] sets the line color. *)
