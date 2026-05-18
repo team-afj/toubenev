@@ -107,12 +107,74 @@ module Options : sig
 
   (**/**)
 
-  val create : ?responsive:bool -> ?maintainAspectRatio:bool -> unit -> t
+  module Scale : sig
+    type t
+
+    include Jv.CONV with type t := t
+
+    val create :
+      ?display:bool ->
+      ?typ:Jstr.t ->
+      ?min:float ->
+      ?max:float ->
+      ?title:Jstr.t ->
+      ?stacked:bool ->
+      ?begin_at_zero:bool ->
+      ?grid_display:bool ->
+      ?ticks_callback:(Jv.t -> int -> Jv.t -> Jv.t) ->
+      ?ticks_color:color ->
+      ?ticks_max_ticks_limit:int ->
+      ?ticks_step_size:float ->
+      ?ticks_auto_skip:bool ->
+      unit ->
+      t
+  end
+
+  module Plugins : sig
+    type t
+
+    include Jv.CONV with type t := t
+
+    val create :
+      ?legend_display:bool ->
+      ?legend_position:Jstr.t ->
+      ?legend_align:Jstr.t ->
+      ?legend_reverse:bool ->
+      ?title_display:bool ->
+      ?title_text:Jstr.t ->
+      ?title_color:color ->
+      ?title_position:Jstr.t ->
+      ?title_align:Jstr.t ->
+      ?tooltip_enabled:bool ->
+      ?tooltip_mode:Jstr.t ->
+      ?tooltip_intersect:bool ->
+      unit ->
+      t
+  end
+
+  module Interaction : sig
+    type t
+
+    include Jv.CONV with type t := t
+
+    val create : ?mode:Jstr.t -> ?intersect:bool -> ?axis:Jstr.t -> unit -> t
+  end
+
+  val create :
+    ?responsive:bool ->
+    ?maintainAspectRatio:bool ->
+    ?aspect_ratio:float ->
+    ?resize_delay:int ->
+    ?animation:bool ->
+    ?index_axis:Jstr.t ->
+    ?layout_padding:int ->
+    ?scales:(Jstr.t * Scale.t) list ->
+    ?plugins:Plugins.t ->
+    ?interaction:Interaction.t ->
+    unit ->
+    t
   (** [create ~responsive ~maintainAspectRatio ()] creates options with
       defaults. [responsive] defaults to true, [maintainAspectRatio] to true. *)
-
-  val set_responsive : t -> bool -> unit
-  val set_maintain_aspect_ratio : t -> bool -> unit
 
   val to_jv : t -> Jv.t
   (** [to_jv o] converts to a JavaScript object. *)

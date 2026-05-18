@@ -91,14 +91,118 @@ module Options = struct
 
   include (Jv.Id : Jv.CONV with type t := t)
 
-  let create ?(responsive = true) ?(maintainAspectRatio = true) () =
+  module Scale = struct
+    type t = Jv.t
+
+    include (Jv.Id : Jv.CONV with type t := t)
+
+    let create ?display ?typ ?min ?max ?title ?stacked ?begin_at_zero
+        ?grid_display ?ticks_callback ?ticks_color ?ticks_max_ticks_limit
+        ?ticks_step_size ?ticks_auto_skip () =
+      let obj = Jv.obj [||] in
+      Jv.Bool.set_if_some obj "display" display;
+      Jv.Jstr.set_if_some obj "type" typ;
+      Jv.Float.set_if_some obj "min" min;
+      Jv.Float.set_if_some obj "max" max;
+      Jv.Bool.set_if_some obj "stacked" stacked;
+      Jv.Bool.set_if_some obj "beginAtZero" begin_at_zero;
+      let grid = Jv.obj [||] in
+      Jv.Bool.set_if_some grid "display" grid_display;
+      Jv.set obj "grid" grid;
+      let ticks = Jv.obj [||] in
+      let cb =
+        Option.map
+          (fun f -> Jv.callback ~arity:3 (fun v i t -> f v (Jv.to_int i) t))
+          ticks_callback
+      in
+      Jv.set_if_some ticks "callback" cb;
+      Jv.Jstr.set_if_some ticks "color" ticks_color;
+      Jv.Int.set_if_some ticks "maxTicksLimit" ticks_max_ticks_limit;
+      Jv.Float.set_if_some ticks "stepSize" ticks_step_size;
+      Jv.Bool.set_if_some ticks "autoSkip" ticks_auto_skip;
+      Jv.set obj "ticks" ticks;
+      let title_obj = Jv.obj [||] in
+      (match title with
+      | Some text ->
+          Jv.Bool.set title_obj "display" true;
+          Jv.Jstr.set title_obj "text" text
+      | None -> ());
+      Jv.set obj "title" title_obj;
+      obj
+  end
+
+  module Plugins = struct
+    type t = Jv.t
+
+    include (Jv.Id : Jv.CONV with type t := t)
+
+    let create ?legend_display ?legend_position ?legend_align ?legend_reverse
+        ?title_display ?title_text ?title_color ?title_position ?title_align
+        ?tooltip_enabled ?tooltip_mode ?tooltip_intersect () =
+      let obj = Jv.obj [||] in
+      let legend = Jv.obj [||] in
+      Jv.Bool.set_if_some legend "display" legend_display;
+      Jv.Jstr.set_if_some legend "position" legend_position;
+      Jv.Jstr.set_if_some legend "align" legend_align;
+      Jv.Bool.set_if_some legend "reverse" legend_reverse;
+      Jv.set obj "legend" legend;
+      let title = Jv.obj [||] in
+      Jv.Bool.set_if_some title "display" title_display;
+      Jv.Jstr.set_if_some title "text" title_text;
+      Jv.Jstr.set_if_some title "color" title_color;
+      Jv.Jstr.set_if_some title "position" title_position;
+      Jv.Jstr.set_if_some title "align" title_align;
+      Jv.set obj "title" title;
+      let tooltip = Jv.obj [||] in
+      Jv.Bool.set_if_some tooltip "enabled" tooltip_enabled;
+      Jv.Jstr.set_if_some tooltip "mode" tooltip_mode;
+      Jv.Bool.set_if_some tooltip "intersect" tooltip_intersect;
+      Jv.set obj "tooltip" tooltip;
+      obj
+  end
+
+  module Interaction = struct
+    type t = Jv.t
+
+    include (Jv.Id : Jv.CONV with type t := t)
+
+    let create ?mode ?intersect ?axis () =
+      let obj = Jv.obj [||] in
+      Jv.Jstr.set_if_some obj "mode" mode;
+      Jv.Bool.set_if_some obj "intersect" intersect;
+      Jv.Jstr.set_if_some obj "axis" axis;
+      obj
+  end
+
+  let create ?(responsive = true) ?(maintainAspectRatio = true) ?aspect_ratio
+      ?resize_delay ?animation ?index_axis ?layout_padding ?(scales = [])
+      ?plugins ?interaction () =
     let obj = Jv.obj [||] in
     Jv.Bool.set obj "responsive" responsive;
     Jv.Bool.set obj "maintainAspectRatio" maintainAspectRatio;
+    Jv.Float.set_if_some obj "aspectRatio" aspect_ratio;
+    Jv.Int.set_if_some obj "resizeDelay" resize_delay;
+    Jv.Bool.set_if_some obj "animation" animation;
+    Jv.Jstr.set_if_some obj "indexAxis" index_axis;
+    (match layout_padding with
+    | Some p ->
+        let layout = Jv.obj [||] in
+        Jv.Int.set layout "padding" p;
+        Jv.set obj "layout" layout
+    | None -> ());
+    (match scales with
+    | [] -> ()
+    | xs ->
+        let scales_obj = Jv.obj [||] in
+        Stdlib.List.iter
+          (fun (id, scale) ->
+            Jv.set scales_obj (Jstr.to_string id) (Scale.to_jv scale))
+          xs;
+        Jv.set obj "scales" scales_obj);
+    Jv.set_if_some obj "plugins" (Option.map Plugins.to_jv plugins);
+    Jv.set_if_some obj "interaction" (Option.map Interaction.to_jv interaction);
     obj
 
-  let set_responsive o b = Jv.Bool.set o "responsive" b
-  let set_maintain_aspect_ratio o b = Jv.Bool.set o "maintainAspectRatio" b
   let to_jv t = t
 end
 
