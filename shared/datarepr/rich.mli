@@ -59,6 +59,21 @@ module Options : sig
     minimum_transfer_time : Duration.t;
         (** The free time volunteers should have to move between two quests that
             are in different places. *)
+    min_quest_duration : Duration.t;  (** Used when dividing quests. *)
+    max_quest_duration : Duration.t;  (** Used when dividing quests. *)
+    daily_break_duration : Duration.t;
+        (** Each day, volunteer will have [daily_break_duration] consecutive
+            free time. *)
+    friendship_bonus : int;  (** Working with friends bonus coefficient. *)
+    desired_time_bonus : int;
+        (** Applied for each 15 minutes done at a desired time. *)
+    undesired_time_malus : int;
+        (** Applied for each 15 minutes done at an undesired time. *)
+    desired_quest_bonus : int;
+    undesired_quest_bonus : int;
+    large_amplitude_malus : int;
+    daily_equilibrium_malus : int;
+    event_equilibrium_malus : int;
   }
   [@@deriving jsont]
 

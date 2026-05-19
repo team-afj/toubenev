@@ -35,6 +35,10 @@ end
 module Duration = struct
   include Lunar.Duration
 
+  let from_hours_f f =
+    let minutes = f *. 60. in
+    from_minutes (Float.to_int minutes)
+
   let to_minutes t =
     let hours, minutes, seconds = hms t in
     Stdlib.((hours * 60) + minutes + (seconds / 60))

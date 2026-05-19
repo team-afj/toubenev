@@ -1,4 +1,4 @@
-open Lunar
+open Lunar_jsont
 open Data_repr
 
 module Infos = struct
@@ -13,7 +13,21 @@ module Infos = struct
 end
 
 module Options = struct
-  type t = { inter_quest : int } [@@deriving jsont]
+  type t = {
+    inter_quest : int;  (** minutes *)
+    min_quest_duration : int;  (** minutes *)
+    max_quest_duration : int;  (** minutes *)
+    break_duration : float;  (** hours *)
+    coef_friend : int;
+    coef_bad_time : int;
+    coef_good_time : int;
+    coef_amplitude : int;
+    coef_daily_eq : int;
+    coef_event_eq : int;
+    coef_preferred_quest : int;
+    coef_constrained_quest : int;
+  }
+  [@@deriving jsont]
 end
 
 module Task_type = struct
@@ -177,8 +191,8 @@ module Assignation = struct
       start;
       end_;
       volunteers =
-        List.map
-          ~f:(fun { Rich.Volunteer.id; _ } -> Rich.id_to_int id)
+        Normal.Volunteers.to_list_map
+          ~f:(fun v -> Rich.id_to_int v.Normal.Volunteer.initial.id)
           assignation.volunteers;
     }
 end
@@ -277,10 +291,21 @@ let to_planning ?(id_map = new_id_map ())
   in
   let options =
     let options = List.hd options in
-    {
-      Rich.Options.minimum_transfer_time =
-        Duration.from_minutes options.inter_quest;
-    }
+    Rich.Options.
+      {
+        minimum_transfer_time = Duration.from_minutes options.inter_quest;
+        min_quest_duration = Duration.from_minutes options.min_quest_duration;
+        max_quest_duration = Duration.from_minutes options.max_quest_duration;
+        daily_break_duration = Duration.from_hours_f options.break_duration;
+        friendship_bonus = options.coef_friend;
+        desired_time_bonus = options.coef_good_time;
+        undesired_time_malus = options.coef_bad_time;
+        desired_quest_bonus = options.coef_preferred_quest;
+        undesired_quest_bonus = options.coef_constrained_quest;
+        large_amplitude_malus = options.coef_amplitude;
+        daily_equilibrium_malus = options.coef_daily_eq;
+        event_equilibrium_malus = options.coef_event_eq;
+      }
   in
   let id_map, places =
     let convert_place id_map { Lieu.id; slug; nom; description } =

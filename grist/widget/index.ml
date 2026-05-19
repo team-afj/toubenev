@@ -267,6 +267,10 @@ let sat =
         match Jsont_brr.decode_jv Data_repr.Api.answer_jsont res with
         | Error jv -> Fut.ok (Console.error [ jv ])
         | Ok answer ->
+            let () =
+              Lwd.set App.diagnostics
+                (List.rev_append answer.diagnostics @@ Lwd.peek App.diagnostics)
+            in
             let* () = Solutions.upsert_solution_1 answer in
             let assignations =
               List.map answer.solution

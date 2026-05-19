@@ -66,9 +66,37 @@ let id_to_int t = Int.of_string_exn t
 let id_of_int t = Int.to_string t
 
 module Options = struct
-  type t = { minimum_transfer_time : Duration.t } [@@deriving jsont]
+  type t = {
+    minimum_transfer_time : Duration.t;
+    min_quest_duration : Duration.t;
+    max_quest_duration : Duration.t;
+    daily_break_duration : Duration.t;
+    friendship_bonus : int;
+    desired_time_bonus : int;
+    undesired_time_malus : int;
+    desired_quest_bonus : int;
+    undesired_quest_bonus : int;
+    large_amplitude_malus : int;
+    daily_equilibrium_malus : int;
+    event_equilibrium_malus : int;
+  }
+  [@@deriving jsont]
 
-  let default = { minimum_transfer_time = Duration.from_minutes 15 }
+  let default =
+    {
+      minimum_transfer_time = Duration.from_minutes 15;
+      min_quest_duration = Duration.from_minutes 15;
+      max_quest_duration = Duration.from_minutes 120;
+      daily_break_duration = Duration.from_hours_f 6.;
+      friendship_bonus = 1;
+      desired_time_bonus = 1;
+      undesired_time_malus = 1;
+      desired_quest_bonus = 1;
+      undesired_quest_bonus = 1;
+      large_amplitude_malus = 1;
+      daily_equilibrium_malus = 10;
+      event_equilibrium_malus = 5;
+    }
 end
 
 module Place = struct

@@ -30,6 +30,7 @@ let handle_put_data (req : (Vif.Type.json, Grist_import.data) Request.t) _server
   let status =
     match r with
     | Error (`Msg err) ->
+        let () = Logs.err (fun m -> m "%s" err) in
         {
           Data_repr.Api.dummy_answer with
           diagnostics = [ (Error, Format.asprintf "ERROR %s" err) ];
