@@ -38,6 +38,7 @@ module Dataset : sig
     ?tension:float ->
     ?fill:bool ->
     ?point_radius:int ->
+    ?y_axis_ID:Jstr.t ->
     data:Jv.t ->
     unit ->
     t
@@ -118,6 +119,7 @@ module Options : sig
       ?min:float ->
       ?max:float ->
       ?title:Jstr.t ->
+      ?position:Jstr.t ->
       ?stacked:bool ->
       ?begin_at_zero:bool ->
       ?grid_display:bool ->

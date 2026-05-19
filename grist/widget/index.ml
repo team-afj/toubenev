@@ -305,8 +305,16 @@ let init_optimization_chart =
       let scales =
         [
           ( Jstr.v "x",
-            Options.Scale.create ~title:(Jstr.v "Temps (s)")
+            Options.Scale.create
+              ~title:(Jstr.v "Temps de recherche (s)")
               ~typ:(Jstr.v "logarithmic") () );
+          ( Jstr.v "y",
+            Options.Scale.create ~title:(Jstr.v "Score") ~grid_display:false
+              ~position:(Jstr.v "left") ~typ:(Jstr.v "linear") () );
+          ( Jstr.v "y2",
+            Options.Scale.create ~title:(Jstr.v "Satisfaction")
+              ~position:(Jstr.v "right") ~typ:(Jstr.v "linear") ~min:(-1.)
+              ~max:1. () );
         ]
       in
       Options.create ~responsive:true ~maintainAspectRatio:false
@@ -317,12 +325,13 @@ let init_optimization_chart =
       Dataset.create ~label:(Jstr.v "Score") ~border_color:(rgb 75 192 192)
         ~background_color:(rgba 75 192 192 0.2) ~tension:0.1 ~data ()
     in
-    let d_bound =
+    let d_satisfaction =
       let data = Jv.of_jv_list [] in
-      Dataset.create ~label:(Jstr.v "Objectif") ~border_dash:[ 5.; 15. ]
-        ~tension:0.1 ~point_radius:0 ~data ()
+      Dataset.create ~label:(Jstr.v "Satisfaction")
+        ~border_color:(Jstr.v "IndianRed") ~tension:0. ~point_radius:0
+        ~y_axis_ID:(Jstr.v "y2") ~data ()
     in
-    let data = Data.create ~datasets:[ d_objective; d_bound ] () in
+    let data = Data.create ~datasets:[ d_objective; d_satisfaction ] () in
     let chart =
       match !chart with
       | None ->
@@ -334,7 +343,7 @@ let init_optimization_chart =
       | Some c -> c
     in
     let () = Chart.set_data chart data in
-    (chart, d_objective, d_bound)
+    (chart, d_objective, d_satisfaction)
 
 let optimize ~(chart_canvas : El.t) (data : Grist_import.data) =
   let+ handle =
@@ -354,7 +363,9 @@ let optimize ~(chart_canvas : El.t) (data : Grist_import.data) =
   let module Event_source = Brr_io.Event_source in
   let url = Jstr.(append (v "http://localhost:1357/optim-stream/") handle) in
   let event_source = Event_source.create ~url () in
-  let chart, d_objective, d_bound = init_optimization_chart chart_canvas in
+  let chart, d_objective, d_satisfaction =
+    init_optimization_chart chart_canvas
+  in
   let mk_point time value =
     Jv.obj
       [| ("x", Jv.of_string (Float.to_string time)); ("y", Jv.of_float value) |]
@@ -367,12 +378,12 @@ let optimize ~(chart_canvas : El.t) (data : Grist_import.data) =
           Jsont_brr.decode Data_repr.Api.answer_jsont json |> Result.get_ok
         in
         let time = answer.deterministic_time in
+        let satisfaction = Api.satisfaction answer.solution in
         Chartjs.Dataset.push_data d_objective
-          (mk_point time answer.objective_value);
-        Chartjs.Dataset.push_data d_bound
-          (mk_point time answer.best_objective_bound);
-        Chartjs.Chart.update chart;
-        Console.error [ "DBG"; answer ])
+          (mk_point time
+             (answer.objective_value -. answer.best_objective_bound));
+        Chartjs.Dataset.push_data d_satisfaction (mk_point time satisfaction);
+        Chartjs.Chart.update chart)
       (Event_source.as_target event_source)
   in
   Console.error [ "DBG"; "HANDLE"; handle; event_source ]

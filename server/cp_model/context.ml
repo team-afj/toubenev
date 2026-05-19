@@ -113,9 +113,6 @@ let prepare_answer date context (response : Ortools.Sat.Response.t) =
   let solution =
     Quest.Map.to_list solution
     |> List.map ~f:(fun (quest, volunteers) ->
-        let volunteers =
-          Volunteers.to_list_map ~f:(fun v -> v.initial) volunteers
-        in
         { Data_repr.Api.quest; volunteers })
   in
   let sufficient_assumptions_for_infeasibility =

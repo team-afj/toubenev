@@ -1,3 +1,5 @@
+open Normal
+
 type status = Ortools.Sat.Response.status =
   | Unknown
   | ModelInvalid
@@ -15,16 +17,13 @@ let diagnostic_level_to_string = function
   | Info -> "diag-info"
 
 type data = {
-  volunteers : Normal.Volunteers.t;
-  quests : Normal.Quests.t;
+  volunteers : Volunteers.t;
+  quests : Quests.t;
   diagnostics : diagnostic list;
 }
 [@@deriving jsont]
 
-type assignation = {
-  quest : Normal.Quest.t;
-  volunteers : Rich.Volunteer.t list;
-}
+type assignation = { quest : Quest.t; volunteers : Volunteers.t }
 [@@deriving jsont]
 
 type answer = {
@@ -52,3 +51,27 @@ let dummy_answer =
     deterministic_time = 0.;
     best_objective_bound = 0.;
   }
+
+let max_sat (_q : Quest.t) (_v : Volunteer.t) = 1
+let min_sat (_q : Quest.t) (_v : Volunteer.t) = -1
+
+let satisfaction (q : Quest.t) (v : Volunteer.t) =
+  let time =
+    List.fold_left ~init:0 v.preferences ~f:(fun acc (i, s) ->
+        if Time_slot.overlaps q.slot s then i + acc else acc)
+  in
+  time |> max (-1) |> min 1
+
+let satisfaction (assignations : assignation list) =
+  let min_sat, max_sat =
+    List.fold_left assignations ~init:(0, 0)
+      ~f:(fun acc { quest; volunteers } ->
+        Volunteers.fold volunteers ~init:acc ~f:(fun (min_acc, max_acc) v ->
+            (min_acc + min_sat quest v, max_acc + max_sat quest v)))
+  in
+  let sat =
+    List.fold_left assignations ~init:0 ~f:(fun acc { quest; volunteers } ->
+        Volunteers.fold volunteers ~init:acc ~f:(fun acc v ->
+            acc + satisfaction quest v))
+  in
+  (2. *. Float.of_int (sat - min_sat) /. Float.of_int (max_sat - min_sat)) -. 1.

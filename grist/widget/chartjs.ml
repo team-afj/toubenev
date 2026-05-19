@@ -19,7 +19,7 @@ module Dataset = struct
   include (Jv.Id : Jv.CONV with type t := t)
 
   let create ?label ?border_color ?background_color ?border_width
-      ?(border_dash = []) ?tension ?fill ?point_radius ~data () =
+      ?(border_dash = []) ?tension ?fill ?point_radius ?y_axis_ID ~data () =
     let obj = Jv.obj [||] in
     Jv.Jstr.set_if_some obj "label" label;
     Jv.set obj "data" data;
@@ -30,6 +30,7 @@ module Dataset = struct
     Jv.Float.set_if_some obj "tension" tension;
     Jv.Bool.set_if_some obj "fill" fill;
     Jv.Int.set_if_some obj "pointRadius" point_radius;
+    Jv.Jstr.set_if_some obj "yAxisID" y_axis_ID;
     obj
 
   let set_data t data = Jv.set t "data" data
@@ -93,12 +94,13 @@ module Options = struct
 
     include (Jv.Id : Jv.CONV with type t := t)
 
-    let create ?display ?typ ?min ?max ?title ?stacked ?begin_at_zero
+    let create ?display ?typ ?min ?max ?title ?position ?stacked ?begin_at_zero
         ?grid_display ?ticks_callback ?ticks_color ?ticks_max_ticks_limit
         ?ticks_step_size ?ticks_auto_skip () =
       let obj = Jv.obj [||] in
       Jv.Bool.set_if_some obj "display" display;
       Jv.Jstr.set_if_some obj "type" typ;
+      Jv.Jstr.set_if_some obj "position" position;
       Jv.Float.set_if_some obj "min" min;
       Jv.Float.set_if_some obj "max" max;
       Jv.Bool.set_if_some obj "stacked" stacked;
