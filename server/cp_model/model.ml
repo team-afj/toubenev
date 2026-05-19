@@ -353,14 +353,17 @@ let appreciation_of_planning (ctx : Context.t) =
   |> Sat.LinearExpr.sum
 
 let minimize_f (ctx : Context.t) =
-  Sat.minimize ctx.model
-  @@ Sat.LinearExpr.sum
-       [
-         Sat.scale (10 * 2) @@ Workload_balance.event_bounds ctx;
-         Sat.scale (10 * 2) @@ Workload_balance.sum_of_all_daily_bounds ctx;
-         Sat.scale (-1) @@ friendship_bonus ctx;
-         Sat.scale (-1) @@ appreciation_of_planning ctx;
-       ]
+  let event_bounds_coef = ctx.options.event_equilibrium_malus in
+  let daily_bounds_coef = ctx.options.daily_equilibrium_malus in
+  let friendship_coef = ctx.options.friendship_bonus in
+  let open Sat.LinearExpr in
+  [
+    scale (10 * event_bounds_coef) @@ Workload_balance.event_bounds ctx;
+    scale (10 * daily_bounds_coef) @@ Workload_balance.daily_bounds ctx;
+    scale (-1 * friendship_coef) @@ friendship_bonus ctx;
+    scale (-1) @@ appreciation_of_planning ctx;
+  ]
+  |> sum |> Sat.minimize ctx.model
 
 let make ~with_assumptions (data : Planning.t) =
   let model = Sat.make ~name:"Toubenev" () in

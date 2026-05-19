@@ -78,7 +78,7 @@ let bounds (ctx : Context.t) day day_quests =
   in
   Sat.(var upper_bound - var lower_bound)
 
-let sum_of_all_daily_bounds (ctx : Context.t) =
+let daily_bounds (ctx : Context.t) =
   Date.Map.fold
     (fun day day_quests acc -> bounds ctx day day_quests :: acc)
     ctx.by_day []

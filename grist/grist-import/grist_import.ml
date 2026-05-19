@@ -448,12 +448,15 @@ let to_planning ?(id_map = new_id_map ())
         let best =
           daily_spec horaires_preferes
           |> List.map ~f:(fun slot ->
-              { Rich.Availability.status = Available 1; slot })
+              {
+                Rich.Availability.status = Available options.desired_time_bonus;
+                slot;
+              })
         in
         let worse =
           daily_spec horaires_contraints
           |> List.map ~f:(fun slot ->
-              { Rich.Availability.status = Available (-1); slot })
+              { Rich.Availability.status = Available (-1 * options.undesired_time_malus); slot })
         in
         CCRAL.of_list
           (List.concat [ unavailable; best; worse; ponctually_unavailable ])
