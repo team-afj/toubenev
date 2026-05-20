@@ -85,7 +85,7 @@ module Options = struct
   let default =
     {
       minimum_transfer_time = Duration.from_minutes 15;
-      min_quest_duration = Duration.from_minutes 15;
+      min_quest_duration = Duration.from_minutes 45;
       max_quest_duration = Duration.from_minutes 120;
       daily_break_duration = Duration.from_hours_f 6.;
       friendship_bonus = 1;

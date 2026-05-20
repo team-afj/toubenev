@@ -44,10 +44,10 @@ let expand_time_spec
       let start = Zoned_datetime.(from ~tz date start_time |> to_utc) in
       { Time_slot.start; duration })
 
-let split_time_slot { Time_slot.start; duration } =
+let split_time_slot (options : Rich.Options.t) { Time_slot.start; duration } =
   (* Looking for [n] such that [min <= duration / n <= max] *)
-  let min_d = Duration.from_minutes 45 in
-  let max_d = Duration.from_minutes 120 in
+  let min_d = options.min_quest_duration in
+  let max_d = options.max_quest_duration in
   let max_minutes = 120 in
   let minutes = Duration.to_minutes duration in
   let n =
@@ -96,7 +96,7 @@ let normalize_volunteer event_infos (v : Rich.Volunteer.t) =
 
 (** Generates sub-quests depending of the recurrence and the task type's
     divisibility. *)
-let normalize_quest event_infos vs diags (q : Rich.Quest.t) =
+let normalize_quest event_infos options vs diags (q : Rich.Quest.t) =
   let assigned_volunteers =
     CCRAL.fold q.assigned_volunteers ~x:Volunteer.Set.empty
       ~f:(fun acc (v : Rich.Volunteer.t) ->
@@ -123,7 +123,7 @@ let normalize_quest event_infos vs diags (q : Rich.Quest.t) =
       match q.task_type with None -> false | Some tt -> tt.divisible
     in
     if not divisible then List.map ~f:List.pure slots
-    else List.map ~f:split_time_slot slots
+    else List.map ~f:(split_time_slot options) slots
   in
   let quests =
     List.mapi slots ~f:(fun i slots ->
@@ -146,7 +146,8 @@ let normalize (data : Rich.Planning.t) =
   let quests, diagnostics =
     let diags, quests =
       CCRAL.to_list data.quests
-      |> List.fold_flat_map ~init:[] ~f:(normalize_quest data.infos volunteers)
+      |> List.fold_flat_map ~init:[]
+           ~f:(normalize_quest data.infos data.options volunteers)
     in
     (Quests.of_list quests, diags)
   in
