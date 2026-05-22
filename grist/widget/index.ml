@@ -187,7 +187,9 @@ let sat =
     | Error err, _ ->
         Console.error [ "DBG"; "Decoding error: "; Jv.Error.message err ];
         Fut.return (Ok ())
-    | Ok data, Some last when Equal.poly last data -> Fut.return (Ok ())
+    | Ok data, Some last when Equal.poly last data ->
+        Lwd.set App.optimize_state (Ready data);
+        Fut.return (Ok ())
     | Ok data, _ -> begin
         let () = Lwd.set App.optimize_state Not_ready in
         let () = Console.debug [ "DBG"; "Data changes" ] in
@@ -273,11 +275,13 @@ let sat =
                 (List.rev_append answer.diagnostics @@ Lwd.peek App.diagnostics)
             in
             let* () = Solutions.upsert_solution_1 answer in
-            let assignations =
-              List.map answer.solution
-                ~f:(Grist_import.Assignation.v ~solution:1)
+            let* () =
+              let assignations =
+                List.map answer.solution
+                  ~f:(Grist_import.Assignation.v ~solution:1)
+              in
+              Assignations.insert_assignations assignations
             in
-            let* () = Assignations.insert_assignations assignations in
             let* () =
               match answer.status with
               | Feasible | Optimal ->
@@ -368,6 +372,26 @@ let optimize ~(chart_canvas : El.t) (data : Grist_import.data) =
       [| ("x", Jv.of_string (Float.to_string time)); ("y", Jv.of_float value) |]
   in
   let _ =
+    let first = ref true in
+    Ev.listen Ev.error
+      (fun _ev ->
+        if !first then begin
+          first := false;
+          match Lwd.peek App.last_answer with
+          | None -> ()
+          | Some answer ->
+              ignore
+              @@
+              let* () = Solutions.upsert_solution_1 answer in
+              let assignations =
+                List.map answer.solution
+                  ~f:(Grist_import.Assignation.v ~solution:1)
+              in
+              Assignations.insert_assignations assignations
+        end)
+      (Event_source.as_target event_source)
+  in
+  let _ =
     Ev.listen Brr_io.Message.Ev.message
       (fun ev ->
         let json : Jstr.t = Brr_io.Message.Ev.data (Ev.as_type ev) in
@@ -376,6 +400,7 @@ let optimize ~(chart_canvas : El.t) (data : Grist_import.data) =
         in
         let time = answer.deterministic_time in
         let satisfaction = Api.satisfaction answer.solution in
+        Lwd.set App.last_answer (Some answer);
         Chartjs.Dataset.push_data d_objective
           (mk_point time
              (answer.objective_value -. answer.best_objective_bound));
