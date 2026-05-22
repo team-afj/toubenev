@@ -295,7 +295,7 @@ let fetch_last () =
 
 let auto_sat () =
   let _ = sat () in
-  Brr.G.set_interval ~ms:2000 (fun () -> ignore @@ sat ())
+  Brr.G.set_interval ~ms:10000 (fun () -> ignore @@ sat ())
 
 let init_optimization_chart =
   let chart = ref None in
