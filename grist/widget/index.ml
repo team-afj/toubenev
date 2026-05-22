@@ -13,6 +13,7 @@ module App = struct
   let diagnostics : Api.diagnostic list Lwd.var = Lwd.var []
   let last_answer : Api.answer option Lwd.var = Lwd.var None
   let analyses : Shared.Analysis.t option Lwd.var = Lwd.var None
+  let check_btn : [ `Ready | `In_progress ] Lwd.var = Lwd.var `Ready
 
   type optimize_state = Not_ready | Ready of Grist_import.data | Running
 
@@ -293,10 +294,6 @@ let fetch_last () =
   let+ last_answer = Solutions.get_solution_1 () in
   Lwd.set App.last_answer (Some last_answer)
 
-let auto_sat () =
-  let _ = sat () in
-  Brr.G.set_interval ~ms:10000 (fun () -> ignore @@ sat ())
-
 let init_optimization_chart =
   let chart = ref None in
   fun canvas ->
@@ -414,22 +411,42 @@ end
 let app =
   let open Lwd_infix in
   let last_answer = Lwd.get App.last_answer in
-  let results =
-    let chart_canvas, optimize_chart =
-      let chart_canvas = El.canvas [] in
-      let display =
-        let$ state = Lwd.get App.optimize_state in
-        match state with
-        | Running -> At.void
-        | _ -> At.style (Jstr.v "display: none")
+  let chart_canvas, optimize_chart =
+    let chart_canvas = El.canvas [] in
+    let display =
+      let$ state = Lwd.get App.optimize_state in
+      match state with
+      | Running -> At.void
+      | _ -> At.style (Jstr.v "display: none")
+    in
+    ( chart_canvas,
+      Elwd.section
+        ~at:[ `R display ]
+        [
+          `P (El.div ~at:[ At.style (Jstr.v "height:20rem") ] [ chart_canvas ]);
+        ] )
+  in
+  let controls =
+    let check_btn =
+      let disabled =
+        let$ state = Lwd.get App.check_btn in
+        match state with `In_progress -> At.disabled | `Ready -> At.void
       in
-      ( chart_canvas,
-        Elwd.section
-          ~at:[ `R display ]
-          [
-            `P
-              (El.div ~at:[ At.style (Jstr.v "height:20rem") ] [ chart_canvas ]);
-          ] )
+      let ev =
+        let$ state = Lwd.get App.check_btn in
+        match state with
+        | `In_progress -> Elwd.handler Ev.click (fun _ -> ())
+        | `Ready ->
+            Elwd.handler Ev.click (fun _ ->
+                Lwd.set App.check_btn `In_progress;
+                sat ()
+                |> Fut.map (fun _ -> Lwd.set App.check_btn `Ready)
+                |> ignore)
+      in
+      Elwd.button
+        ~at:[ `R disabled ]
+        ~ev:[ `R ev ]
+        [ `P (El.txt' "Déplier les quêtes et vérifier la faisabilité") ]
     in
     let optimize_btn =
       let disabled =
@@ -446,8 +463,16 @@ let app =
             Elwd.handler Ev.click (fun _ ->
                 ignore (optimize ~chart_canvas data))
       in
-      Elwd.button ~at:[ `R disabled ] ~ev:[ `R ev ] [ `P (El.txt' "Optimize") ]
+      Elwd.button ~at:[ `R disabled ] ~ev:[ `R ev ] [ `P (El.txt' "Optimiser") ]
     in
+    let btns =
+      Elwd.fieldset
+        ~at:[ `P (At.v (Jstr.v "role") (Jstr.v "group")) ]
+        [ `R check_btn; `R optimize_btn ]
+    in
+    Elwd.section [ `R btns ]
+  in
+  let results =
     let txt =
       Lwd.map last_answer ~f:(function
         | None -> El.txt' "En attente des premiers résultats."
@@ -467,7 +492,7 @@ let app =
               :: El.txt' (" (fait à " ^ date ^ ")")
               :: sufass))
     in
-    Elwd.section [ `R txt; `R optimize_btn; `R optimize_chart ]
+    Elwd.section [ `R txt; `R optimize_chart ]
   in
   let results =
     let title =
@@ -593,12 +618,11 @@ let app =
         `R analyses;
       ]
   in
-  Elwd.div [ `R results; `R diagnostics; `R analyses ]
+  Elwd.div [ `R controls; `R results; `R diagnostics; `R analyses ]
 
 let _ =
   let on_load _ =
     let _ = fetch_last () in
-    let _ = auto_sat () in
     let root = El.find_first_by_selector (Jstr.v "main") |> Option.get in
     let app = Lwd.observe app in
     let f _ = ignore @@ Lwd.quick_sample app in
