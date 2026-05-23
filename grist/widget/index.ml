@@ -307,7 +307,7 @@ let init_optimization_chart =
         [
           ( Jstr.v "x",
             Options.Scale.create
-              ~title:(Jstr.v "Temps de recherche (s)")
+              ~title:(Jstr.v "Temps de recherche")
               ~typ:(Jstr.v "logarithmic") () );
           ( Jstr.v "y",
             Options.Scale.create ~title:(Jstr.v "Score") ~grid_display:false
@@ -471,7 +471,7 @@ let app =
       Elwd.button
         ~at:[ `R disabled ]
         ~ev:[ `R ev ]
-        [ `P (El.txt' "Déplier les quêtes et vérifier la faisabilité") ]
+        [ `P (El.txt' "1. Déplier les quêtes et vérifier la faisabilité") ]
     in
     let optimize_btn =
       let disabled =
@@ -488,7 +488,10 @@ let app =
             Elwd.handler Ev.click (fun _ ->
                 ignore (optimize ~chart_canvas data))
       in
-      Elwd.button ~at:[ `R disabled ] ~ev:[ `R ev ] [ `P (El.txt' "Optimiser") ]
+      Elwd.button
+        ~at:[ `R disabled ]
+        ~ev:[ `R ev ]
+        [ `P (El.txt' "2. Optimiser") ]
     in
     let btns =
       Elwd.fieldset
