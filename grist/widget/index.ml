@@ -429,22 +429,23 @@ end
 let app =
   let open Lwd_infix in
   let last_answer = Lwd.get App.last_answer in
-  let chart_canvas, optimize_chart =
-    let chart_canvas = El.canvas [] in
-    let display =
-      let$ state = Lwd.get App.optimize_state in
-      match state with
-      | Running -> At.void
-      | _ -> At.style (Jstr.v "display: none")
-    in
-    ( chart_canvas,
-      Elwd.section
-        ~at:[ `R display ]
-        [
-          `P (El.div ~at:[ At.style (Jstr.v "height:20rem") ] [ chart_canvas ]);
-        ] )
-  in
   let controls =
+    let chart_canvas, optimize_chart =
+      let chart_canvas = El.canvas [] in
+      let display =
+        let$ state = Lwd.get App.optimize_state in
+        match state with
+        | Running -> At.void
+        | _ -> At.style (Jstr.v "display: none")
+      in
+      ( chart_canvas,
+        Elwd.section
+          ~at:[ `R display ]
+          [
+            `P
+              (El.div ~at:[ At.style (Jstr.v "height:20rem") ] [ chart_canvas ]);
+          ] )
+    in
     let check_btn =
       let disabled =
         let$ state = Lwd.get App.check_btn in
@@ -491,7 +492,7 @@ let app =
         ~at:[ `P (At.v (Jstr.v "role") (Jstr.v "group")) ]
         [ `R check_btn; `R optimize_btn ]
     in
-    Elwd.section [ `R btns ]
+    Elwd.section [ `R btns; `R optimize_chart ]
   in
   let results =
     let txt =
@@ -513,7 +514,7 @@ let app =
               :: El.txt' (" (fait à " ^ date ^ ")")
               :: sufass))
     in
-    Elwd.section [ `R txt; `R optimize_chart ]
+    Elwd.section [ `R txt ]
   in
   let results =
     let title =
