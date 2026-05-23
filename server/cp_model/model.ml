@@ -65,6 +65,7 @@ let non_ubiquity_of_normal_humans (ctx : Context.t) =
 
 (** Not everyone is available all the time *)
 let check_unavailabilities (ctx : Context.t) =
+  let one_hour = Duration.from_hours 1 in
   ctx.for_all_volunteers @@ fun v ->
   ctx.for_all_quests @@ fun q ->
   (* We consider a one hour delay for people arrival / departure *)
