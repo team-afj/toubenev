@@ -67,9 +67,10 @@ let non_ubiquity_of_normal_humans (ctx : Context.t) =
 let check_unavailabilities (ctx : Context.t) =
   ctx.for_all_volunteers @@ fun v ->
   ctx.for_all_quests @@ fun q ->
+  (* We consider a one hour delay for people arrival / departure *)
   Option.iter
     (fun arrival ->
-      if Datetime.(q.slot.start <= arrival) then
+      if Datetime.(q.slot.start <= arrival + one_hour) then
         let name = Format.sprintf "%s_not_here_for_%s" v.name q.name in
         let only_enforce_if =
           let name = Format.sprintf "%s not here for %s" v.name q.name in
@@ -80,7 +81,7 @@ let check_unavailabilities (ctx : Context.t) =
     v.initial.arrival;
   Option.iter
     (fun departure ->
-      if Datetime.(Time_slot.end_ q.slot >= departure) then
+      if Datetime.(Time_slot.end_ q.slot >= departure - one_hour) then
         let name = Format.sprintf "%s_not_here_for_%s" v.name q.name in
         let only_enforce_if =
           let name = Format.sprintf "%s not here for %s" v.name q.name in
