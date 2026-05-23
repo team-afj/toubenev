@@ -414,7 +414,7 @@ module Ui = struct
       | false -> `P (At.v (Jstr.v "open") (Jstr.v "open")) :: at
     in
     Elwd.details ~at
-      (`R (Elwd.summary [ `R title ]) :: [ `R (Elwd.section content) ])
+      (`R (Elwd.summary [ `R title ]) :: [ `R (Pico_ui.Elwd.section content) ])
 
   let diag_card ((lvl, msg) : Api.diagnostic) =
     let at =
@@ -439,7 +439,7 @@ let app =
         | _ -> At.style (Jstr.v "display: none")
       in
       ( chart_canvas,
-        Elwd.section
+        Pico_ui.Elwd.section
           ~at:[ `R display ]
           [
             `P
@@ -492,7 +492,7 @@ let app =
         ~at:[ `P (At.v (Jstr.v "role") (Jstr.v "group")) ]
         [ `R check_btn; `R optimize_btn ]
     in
-    Elwd.section [ `R btns; `R optimize_chart ]
+    Pico_ui.Elwd.section [ `R btns; `R optimize_chart ]
   in
   let results =
     let txt =
@@ -514,7 +514,7 @@ let app =
               :: El.txt' (" (fait à " ^ date ^ ")")
               :: sufass))
     in
-    Elwd.section [ `R txt ]
+    Pico_ui.Elwd.section [ `R txt ]
   in
   let results =
     let title =
@@ -601,7 +601,7 @@ let app =
           in
           [ td "Total"; td (d_to_string total_q); td (d_to_string total_v) ]
         in
-        El.section
+        Pico_ui.El.section
           [
             El.thead
               [
