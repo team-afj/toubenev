@@ -276,13 +276,6 @@ let sat =
             in
             let* () = Solutions.upsert_solution_1 answer in
             let* () =
-              let assignations =
-                List.map answer.solution
-                  ~f:(Grist_import.Assignation.v ~solution:1)
-              in
-              Assignations.insert_assignations assignations
-            in
-            let* () =
               match answer.status with
               | Feasible | Optimal ->
                   let () = Lwd.set App.optimize_state (Ready data) in
