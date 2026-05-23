@@ -65,12 +65,27 @@ let id_to_string t = t
 let id_to_int t = Int.of_string_exn t
 let id_of_int t = Int.to_string t
 
+module Event_infos = struct
+  type kind =
+    (* TODO Weekly | Monthly *)
+    | Finite of { start_date : Date.t; end_date : Date.t }
+  [@@deriving jsont]
+
+  type t = {
+    name : string;
+    kind : kind;
+    timezone : Timezone.t;
+    day_start_utc : Time.t;
+    minimum_transfer_time : Duration.t;
+    daily_break_duration : Duration.t;
+  }
+  [@@deriving jsont]
+end
+
 module Options = struct
   type t = {
-    minimum_transfer_time : Duration.t;
     min_quest_duration : Duration.t;
     max_quest_duration : Duration.t;
-    daily_break_duration : Duration.t;
     friendship_bonus : int;
     desired_time_bonus : int;
     undesired_time_malus : int;
@@ -84,10 +99,8 @@ module Options = struct
 
   let default =
     {
-      minimum_transfer_time = Duration.from_minutes 15;
       min_quest_duration = Duration.from_minutes 45;
       max_quest_duration = Duration.from_minutes 120;
-      daily_break_duration = Duration.from_hours_f 6.;
       friendship_bonus = 1;
       desired_time_bonus = 1;
       undesired_time_malus = 1;
@@ -437,21 +450,6 @@ module Quest = struct
 end
 
 module Quests = Random_access_list (Quest)
-
-module Event_infos = struct
-  type kind =
-    (* TODO Weekly | Monthly *)
-    | Finite of { start_date : Date.t; end_date : Date.t }
-  [@@deriving jsont]
-
-  type t = {
-    name : string;
-    kind : kind;
-    timezone : Timezone.t;
-    day_start_utc : Time.t;
-  }
-  [@@deriving jsont]
-end
 
 module Planning = struct
   type t = {

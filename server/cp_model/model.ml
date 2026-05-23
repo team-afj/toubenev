@@ -44,7 +44,7 @@ let all_staffed (ctx : Context.t) =
 (** Volunteers cannot do several things at the same time *)
 let non_ubiquity_of_normal_humans (ctx : Context.t) =
   ctx.for_all_quests @@ fun q ->
-  let overlapping = Quest.overlaps_with ctx.options q ctx.qs in
+  let overlapping = Quest.overlaps_with ctx.data.infos q ctx.qs in
   Quests.iter overlapping ~f:(fun q' ->
       if not (Quest.equal q q') then
         ctx.for_all_volunteers @@ fun v ->
@@ -355,9 +355,10 @@ let appreciation_of_planning (ctx : Context.t) =
   |> Sat.LinearExpr.sum
 
 let minimize_f (ctx : Context.t) =
-  let event_bounds_coef = ctx.options.event_equilibrium_malus in
-  let daily_bounds_coef = ctx.options.daily_equilibrium_malus in
-  let friendship_coef = ctx.options.friendship_bonus in
+  let options = ctx.data.options in
+  let event_bounds_coef = options.event_equilibrium_malus in
+  let daily_bounds_coef = options.daily_equilibrium_malus in
+  let friendship_coef = options.friendship_bonus in
   let open Sat.LinearExpr in
   [
     scale (10 * event_bounds_coef) @@ Workload_balance.event_bounds ctx;

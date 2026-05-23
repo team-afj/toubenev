@@ -8,16 +8,16 @@ module Infos = struct
     end_ : int;
     timezone : string;
     day_start_time : float;
+    minimum_transfer_time : int;  (** minutes *)
+    daily_break_duration : float;  (** hours *)
   }
   [@@deriving jsont]
 end
 
 module Options = struct
   type t = {
-    inter_quest : int;  (** minutes *)
     min_quest_duration : int;  (** minutes *)
     max_quest_duration : int;  (** minutes *)
-    break_duration : float;  (** hours *)
     coef_friend : int;
     coef_bad_time : int;
     coef_good_time : int;
@@ -256,6 +256,8 @@ let to_planning ?(id_map = new_id_map ())
       kind = Finite { start_date; end_date };
       timezone;
       day_start_utc;
+      minimum_transfer_time = Duration.from_minutes infos.minimum_transfer_time;
+      daily_break_duration = Duration.from_hours_f infos.daily_break_duration;
     }
   in
   let make_spec ~rec_flag ~days ~start:start' ~duration_h ~end_date =
@@ -293,10 +295,8 @@ let to_planning ?(id_map = new_id_map ())
     let options = List.hd options in
     Rich.Options.
       {
-        minimum_transfer_time = Duration.from_minutes options.inter_quest;
         min_quest_duration = Duration.from_minutes options.min_quest_duration;
         max_quest_duration = Duration.from_minutes options.max_quest_duration;
-        daily_break_duration = Duration.from_hours_f options.break_duration;
         friendship_bonus = options.coef_friend;
         desired_time_bonus = options.coef_good_time;
         undesired_time_malus = options.coef_bad_time;
@@ -456,7 +456,11 @@ let to_planning ?(id_map = new_id_map ())
         let worse =
           daily_spec horaires_contraints
           |> List.map ~f:(fun slot ->
-              { Rich.Availability.status = Available (-1 * options.undesired_time_malus); slot })
+              {
+                Rich.Availability.status =
+                  Available (-1 * options.undesired_time_malus);
+                slot;
+              })
         in
         CCRAL.of_list
           (List.concat [ unavailable; best; worse; ponctually_unavailable ])

@@ -99,7 +99,7 @@ module Quest = struct
 
   (** Check if two quests are overlapping. If they are in separate places they
       must be separated by at least [Options.minimum_transfer_time]. *)
-  let overlaps { Options.minimum_transfer_time; _ } (q1 : t) (q2 : t) =
+  let overlaps { Event_infos.minimum_transfer_time; _ } (q1 : t) (q2 : t) =
     let same_place =
       match (q1.initial.place, q2.initial.place) with
       | Some p1, Some p2 -> Rich.Place.equal p1 p2
@@ -117,7 +117,7 @@ module Quest = struct
 
   (** Returns the set of quests from [qs] overlapping with [q]. Note that this
       set might contain [q] itself if [q] ∈ [qs]. *)
-  let overlaps_with options q qs = Set.filter (overlaps options q) qs
+  let overlaps_with infos q qs = Set.filter (overlaps infos q) qs
 end
 
 module Quests = Quest.Set

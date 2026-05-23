@@ -6,7 +6,7 @@ open Normal
 
 type t = {
   model : Sat.model;
-  options : Options.t;
+  data : Planning.t;
   with_assumptions : bool;
   assignations : Volunteer.t -> Quest.t -> Sat.Var.t_bool;
   intervals : Volunteer.t -> Quest.t -> Sat.interval_var;
@@ -78,7 +78,7 @@ let prepare ~with_assumptions model (data : Planning.t) =
   {
     model;
     with_assumptions;
-    options = data.options;
+    data;
     assignations;
     intervals;
     assignations_rev;

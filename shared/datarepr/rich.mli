@@ -50,20 +50,20 @@ module Event_infos : sig
     kind : kind;
     timezone : Timezone.t;
     day_start_utc : Time.t;
+    minimum_transfer_time : Duration.t;
+        (** The free time volunteers should have to move between two quests that
+            are in different places. *)
+    daily_break_duration : Duration.t;
+        (** Each day, volunteer will have [daily_break_duration] consecutive
+            free time. *)
   }
   [@@deriving jsont]
 end
 
 module Options : sig
   type t = {
-    minimum_transfer_time : Duration.t;
-        (** The free time volunteers should have to move between two quests that
-            are in different places. *)
     min_quest_duration : Duration.t;  (** Used when dividing quests. *)
     max_quest_duration : Duration.t;  (** Used when dividing quests. *)
-    daily_break_duration : Duration.t;
-        (** Each day, volunteer will have [daily_break_duration] consecutive
-            free time. *)
     friendship_bonus : int;  (** Working with friends bonus coefficient. *)
     desired_time_bonus : int;
         (** Applied for each 15 minutes done at a desired time. *)
