@@ -2,16 +2,21 @@ open Rich
 open Lunar_jsont
 
 module Time_slot = struct
-  type t = { start : Datetime.t;  (** UTC *) duration : Duration.t }
+  type t = { start : Zoned_datetime.t;  (** UTC *) duration : Duration.t }
   [@@deriving jsont]
 
-  let dummy = { start = Datetime.epoch; duration = Duration.zero }
-  let end_ t = Datetime.(t.start + t.duration)
+  let dummy = { start = Zoned_datetime.epoch (); duration = Duration.zero }
+  let end_ t = Zoned_datetime.(t.start + t.duration)
+
+  let to_string t =
+    let start = Time.to_string (Zoned_datetime.local_time t.start) in
+    let end_ = Time.to_string (Zoned_datetime.local_time (end_ t)) in
+    start ^ " / " ^ end_
 
   let overlaps t1 t2 =
     let t1_start, t1_end = (t1.start, end_ t1) in
     let t2_start, t2_end = (t2.start, end_ t2) in
-    not Datetime.(t1_end <= t2_start || t1_start >= t2_end)
+    not Zoned_datetime.(t1_end <= t2_start || t1_start >= t2_end)
 end
 
 module Volunteer = struct
@@ -110,10 +115,10 @@ module Quest = struct
     let q2_start, q2_end =
       if same_place then (q2_start, q2_end)
       else
-        ( Datetime.(q2_start - minimum_transfer_time),
-          Datetime.(q2_end + minimum_transfer_time) )
+        ( Zoned_datetime.(q2_start - minimum_transfer_time),
+          Zoned_datetime.(q2_end + minimum_transfer_time) )
     in
-    not Datetime.(q1_end <= q2_start || q1_start >= q2_end)
+    not Zoned_datetime.(q1_end <= q2_start || q1_start >= q2_end)
 
   (** Returns the set of quests from [qs] overlapping with [q]. Note that this
       set might contain [q] itself if [q] ∈ [qs]. *)
@@ -126,9 +131,10 @@ let quests_by_day (infos : Event_infos.t) quests =
   Quests.fold quests ~init:Date.Map.empty ~f:(fun acc q ->
       let offseted =
         (* The day is often offseted in a festival *)
-        Datetime.(q.slot.start - Time.to_duration infos.day_start_utc)
+        Zoned_datetime.(q.slot.start - Time.to_duration infos.day_start_utc)
       in
-      Date.Map.update (Datetime.date offseted)
+      Date.Map.update
+        (Zoned_datetime.local_date offseted)
         (function
           | None -> Some (Quests.singleton q)
           | Some quests -> Some (Quests.add q quests))

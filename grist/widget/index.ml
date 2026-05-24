@@ -2,7 +2,7 @@ open Brrer
 open Brr
 open Brr_lwd
 open Fut.Result_syntax
-open Lunar
+open Lunar_jsont
 open Shared
 open! Data_repr
 
@@ -218,17 +218,16 @@ let sat =
         (* New assignations (unfolded quests) *)
         let () = Console.debug [ "DBG"; "Prepare empty assignations" ] in
         let assignations =
-          let open Lunar in
           let open Normal in
           Quests.to_list_map
             ~f:(fun { Quest.id; name; initial; slot; _ } ->
               let initial_quest = Rich.id_to_int initial.id in
               let start =
-                Datetime.to_duration slot.start |> Duration.to_seconds
+                Zoned_datetime.to_utc_duration slot.start |> Duration.to_seconds
               in
               let end_ =
-                Datetime.(slot.start + slot.duration)
-                |> Datetime.to_duration |> Duration.to_seconds
+                Zoned_datetime.(slot.start + slot.duration)
+                |> Zoned_datetime.to_utc_duration |> Duration.to_seconds
               in
               {
                 Grist_import.Assignation.solution = 1;

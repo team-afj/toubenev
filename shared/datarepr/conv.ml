@@ -41,7 +41,7 @@ let expand_time_spec
               Weekday.Set.mem wd weekdays)
   in
   List.map all_dates ~f:(fun date ->
-      let start = Zoned_datetime.(from ~tz date start_time |> to_utc) in
+      let start = Zoned_datetime.(from ~tz date start_time) in
       { Time_slot.start; duration })
 
 let split_time_slot (options : Rich.Options.t) { Time_slot.start; duration } =
@@ -60,11 +60,11 @@ let split_time_slot (options : Rich.Options.t) { Time_slot.start; duration } =
       List.rev (Time_slot.{ start; duration = remaining } :: acc)
     else if Duration.(remaining <= splits_duration + min_d) then
       let acc = Time_slot.{ start; duration = min_d } :: acc in
-      aux acc Datetime.(start + min_d) Duration.(remaining - min_d)
+      aux acc Zoned_datetime.(start + min_d) Duration.(remaining - min_d)
     else
       let acc = Time_slot.{ start; duration = splits_duration } :: acc in
       aux acc
-        Datetime.(start + splits_duration)
+        Zoned_datetime.(start + splits_duration)
         Duration.(remaining - splits_duration)
   in
   aux [] start duration
@@ -130,7 +130,8 @@ let normalize_quest event_infos options vs diags (q : Rich.Quest.t) =
         List.mapi slots ~f:(fun j (slot : Time_slot.t) ->
             let id = Printf.sprintf "%s_%i_%i" (Rich.id_to_string q.id) i j in
             let name =
-              Printf.sprintf "%s_%s" q.name (Datetime.to_string slot.start)
+              Printf.sprintf "%s_%s" q.name
+                (Zoned_datetime.to_string slot.start)
             in
             { Quest.id; initial = q; name; slot; assigned_volunteers }))
     |> List.concat

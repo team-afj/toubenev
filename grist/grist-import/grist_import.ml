@@ -170,18 +170,20 @@ module Assignation = struct
     ref : string;
     name : string;
     initial_quest : int;
-    start : int;
-    end_ : int;
+    start : int;  (** UTC timestamp *)
+    end_ : int;  (** UTC timestamp *)
     volunteers : int list;
   }
   [@@deriving jsont]
 
   let v ~solution (assignation : Api.assignation) =
     let slot = assignation.quest.slot in
-    let start = Datetime.to_duration slot.start |> Duration.to_seconds in
+    let start =
+      Zoned_datetime.to_utc_duration slot.start |> Duration.to_seconds
+    in
     let end_ =
-      Datetime.(slot.start + slot.duration)
-      |> Datetime.to_duration |> Duration.to_seconds
+      Zoned_datetime.to_utc_duration (Normal.Time_slot.end_ slot)
+      |> Duration.to_seconds
     in
     {
       solution;
@@ -424,13 +426,15 @@ let to_planning ?(id_map = new_id_map ())
       let arrival =
         Option.map
           (fun arrival ->
-            Datetime.from_duration @@ Duration.from_seconds arrival)
+            Zoned_datetime.from_duration @@ Duration.from_seconds arrival
+            |> Zoned_datetime.change_timezone ~tz:infos.timezone)
           date_d_arrivee
       in
       let departure =
         Option.map
           (fun departure ->
-            Datetime.from_duration @@ Duration.from_seconds departure)
+            Zoned_datetime.from_duration @@ Duration.from_seconds departure
+            |> Zoned_datetime.change_timezone ~tz:infos.timezone)
           date_de_depart
       in
       let availabilities =

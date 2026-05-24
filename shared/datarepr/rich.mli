@@ -197,8 +197,8 @@ module Volunteer : sig
     daily_workload : Duration.t;
     manually_assigned : bool;
     availabilities : Availabilities.t;
-    arrival : Datetime.t option;
-    departure : Datetime.t option;
+    arrival : Zoned_datetime.t option;
+    departure : Zoned_datetime.t option;
     mutable friends : t id list;
     mutable ennemis : t id list;
     proficiencies : Task_types.t;
@@ -218,8 +218,8 @@ module Volunteer : sig
     ?forbidden_tasks:Task_types.t ->
     ?forbidden_places:Places.t ->
     ?availabilities:Availabilities.t ->
-    ?arrival:Datetime.t ->
-    ?departure:Datetime.t ->
+    ?arrival:Zoned_datetime.t ->
+    ?departure:Zoned_datetime.t ->
     ?manually_assigned:bool ->
     daily_workload:Duration.t ->
     name:string ->

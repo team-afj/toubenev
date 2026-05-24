@@ -26,10 +26,10 @@ let day_stats (_planning : Planning.t) (normalized : Api.data) day quests =
        start time and with additional weights. Then sweep the list to accumulate
        the weight and remember the maximum. *)
     let events =
-      Quests.fold quests ~init:Datetime.Map.empty ~f:(fun acc q ->
+      Quests.fold quests ~init:Zoned_datetime.Map.empty ~f:(fun acc q ->
           let required_volunteers = q.initial.required_volunteers in
           let add_delta acc time delta =
-            Datetime.Map.update time
+            Zoned_datetime.Map.update time
               (function
                 | None -> Some delta
                 | Some existing_delta -> Some (existing_delta + delta))
@@ -38,7 +38,7 @@ let day_stats (_planning : Planning.t) (normalized : Api.data) day quests =
           let acc = add_delta acc q.slot.start required_volunteers in
           add_delta acc (Time_slot.end_ q.slot) (-required_volunteers))
     in
-    Datetime.Map.fold
+    Zoned_datetime.Map.fold
       (fun _time delta (current_active, current_peak) ->
         let current_active = current_active + delta in
         (current_active, max current_peak current_active))
@@ -51,11 +51,12 @@ let day_stats (_planning : Planning.t) (normalized : Api.data) day quests =
       (fun v ->
         match (v.initial.arrival, v.initial.departure) with
         | None, None -> true
-        | Some arrival, None -> Date.(Datetime.date arrival <= day')
-        | None, Some departure -> Date.(day' <= Datetime.date departure)
+        | Some arrival, None -> Date.(Zoned_datetime.local_date arrival <= day')
+        | None, Some departure ->
+            Date.(day' <= Zoned_datetime.local_date departure)
         | Some arrival, Some departure ->
-            Date.(Datetime.date arrival <= day')
-            && Date.(day' <= Datetime.date departure))
+            Date.(Zoned_datetime.local_date arrival <= day')
+            && Date.(day' <= Zoned_datetime.local_date departure))
       normalized.volunteers
   in
   let total_volunteer_time =

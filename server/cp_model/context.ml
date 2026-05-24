@@ -39,7 +39,8 @@ let assignations m vs qs =
               let interval =
                 let open Lunar in
                 let datetime_to_minutes d =
-                  Datetime.to_duration d |> Duration.to_minutes
+                  Zoned_datetime.to_local_datetime d
+                  |> Datetime.to_duration |> Duration.to_minutes
                   |> Sat.LinearExpr.of_int
                 in
                 let start = datetime_to_minutes q.slot.start in

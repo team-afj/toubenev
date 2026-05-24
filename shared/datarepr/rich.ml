@@ -314,8 +314,8 @@ module Volunteer = struct
     daily_workload : Duration.t;
     manually_assigned : bool;
     availabilities : Availabilities.t;
-    arrival : Datetime.t option;
-    departure : Datetime.t option;
+    arrival : Zoned_datetime.t option;
+    departure : Zoned_datetime.t option;
     mutable friends : t id list;
     mutable ennemis : t id list;
     proficiencies : Task_types.t;
@@ -346,8 +346,8 @@ module Volunteer = struct
     | New_name of string
     | New_daily_workload of Duration.t
     | Update_availabilities of Availabilities.edit
-    | New_arrival of Datetime.t option
-    | New_departure of Datetime.t option
+    | New_arrival of Zoned_datetime.t option
+    | New_departure of Zoned_datetime.t option
     | New_friends of t id list
     | New_ennemis of t id list
   [@@deriving jsont]

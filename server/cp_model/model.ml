@@ -71,7 +71,7 @@ let check_unavailabilities (ctx : Context.t) =
   (* We consider a one hour delay for people arrival / departure *)
   Option.iter
     (fun arrival ->
-      if Datetime.(q.slot.start <= arrival + one_hour) then
+      if Zoned_datetime.(q.slot.start <= arrival + one_hour) then
         let name = Format.sprintf "%s_not_here_for_%s" v.name q.name in
         let only_enforce_if =
           let name = Format.sprintf "%s not here for %s" v.name q.name in
@@ -82,7 +82,7 @@ let check_unavailabilities (ctx : Context.t) =
     v.initial.arrival;
   Option.iter
     (fun departure ->
-      if Datetime.(Time_slot.end_ q.slot >= departure - one_hour) then
+      if Zoned_datetime.(Time_slot.end_ q.slot >= departure - one_hour) then
         let name = Format.sprintf "%s_not_here_for_%s" v.name q.name in
         let only_enforce_if =
           let name = Format.sprintf "%s not here for %s" v.name q.name in
@@ -325,11 +325,15 @@ let appreciation_of_quest (v : Volunteer.t) (q : Quest.t) =
   let quest_end = Time_slot.end_ q.slot in
   let fifteen_minutes = Duration.from_minutes 15 in
   let rec loop acc current =
-    if Datetime.(current >= quest_end) then acc
+    if Zoned_datetime.(current >= quest_end) then acc
     else
-      let next_time = Datetime.(min (current + fifteen_minutes) quest_end) in
+      let next_time =
+        Zoned_datetime.(min (current + fifteen_minutes) quest_end)
+      in
       let block_duration =
-        Duration.(Datetime.to_duration next_time - Datetime.to_duration current)
+        Duration.(
+          Zoned_datetime.to_local_duration next_time
+          - Zoned_datetime.to_local_duration current)
       in
       let current_block =
         { Time_slot.start = current; duration = block_duration }

@@ -1,25 +1,25 @@
 
 Status OPTIMAL
 Solution:
-0_V1_is_assigned_to_Accueil_2026-05-26T06:00:00: false;
-1_V1_is_assigned_to_Accueil_2026-05-27T06:00:00: false;
-2_V1_is_assigned_to_Accueil_2026-05-28T06:00:00: false;
-3_V1_is_assigned_to_Accueil_2026-05-29T06:00:00: false;
-4_V1_is_assigned_to_Accueil_2026-05-30T06:00:00: false;
-5_V1_is_assigned_to_Bar_2026-05-26T06:00:00: true;
-6_V1_is_assigned_to_Bar_2026-05-27T06:00:00: true;
-7_V1_is_assigned_to_Bar_2026-05-28T06:00:00: true;
-8_V1_is_assigned_to_Bar_2026-05-29T06:00:00: true;
-9_V1_is_assigned_to_Bar_2026-05-30T06:00:00: true;
-10_V2_is_assigned_to_Accueil_2026-05-26T06:00:00: true;
-11_V2_is_assigned_to_Accueil_2026-05-27T06:00:00: true;
-12_V2_is_assigned_to_Accueil_2026-05-28T06:00:00: true;
-13_V2_is_assigned_to_Accueil_2026-05-29T06:00:00: true;
-14_V2_is_assigned_to_Accueil_2026-05-30T06:00:00: true;
-15_V2_is_assigned_to_Bar_2026-05-26T06:00:00: false;
-16_V2_is_assigned_to_Bar_2026-05-27T06:00:00: false;
-17_V2_is_assigned_to_Bar_2026-05-28T06:00:00: false;
-18_V2_is_assigned_to_Bar_2026-05-29T06:00:00: false;
-19_V2_is_assigned_to_Bar_2026-05-30T06:00:00: false
+0_V1_is_assigned_to_Accueil_2026-05-26T08:00:00+02:00: false;
+1_V1_is_assigned_to_Accueil_2026-05-27T08:00:00+02:00: false;
+2_V1_is_assigned_to_Accueil_2026-05-28T08:00:00+02:00: false;
+3_V1_is_assigned_to_Accueil_2026-05-29T08:00:00+02:00: false;
+4_V1_is_assigned_to_Accueil_2026-05-30T08:00:00+02:00: false;
+5_V1_is_assigned_to_Bar_2026-05-26T08:00:00+02:00: true;
+6_V1_is_assigned_to_Bar_2026-05-27T08:00:00+02:00: true;
+7_V1_is_assigned_to_Bar_2026-05-28T08:00:00+02:00: true;
+8_V1_is_assigned_to_Bar_2026-05-29T08:00:00+02:00: true;
+9_V1_is_assigned_to_Bar_2026-05-30T08:00:00+02:00: true;
+10_V2_is_assigned_to_Accueil_2026-05-26T08:00:00+02:00: true;
+11_V2_is_assigned_to_Accueil_2026-05-27T08:00:00+02:00: true;
+12_V2_is_assigned_to_Accueil_2026-05-28T08:00:00+02:00: true;
+13_V2_is_assigned_to_Accueil_2026-05-29T08:00:00+02:00: true;
+14_V2_is_assigned_to_Accueil_2026-05-30T08:00:00+02:00: true;
+15_V2_is_assigned_to_Bar_2026-05-26T08:00:00+02:00: false;
+16_V2_is_assigned_to_Bar_2026-05-27T08:00:00+02:00: false;
+17_V2_is_assigned_to_Bar_2026-05-28T08:00:00+02:00: false;
+18_V2_is_assigned_to_Bar_2026-05-29T08:00:00+02:00: false;
+19_V2_is_assigned_to_Bar_2026-05-30T08:00:00+02:00: false
 Solution info: main
 Log: 
