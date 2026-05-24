@@ -85,7 +85,7 @@ module Month = struct
     | May -> "Mai"
     | Jun -> "Juin"
     | Jul -> "Juillet"
-    | Aug -> "Aout"
+    | Aug -> "Août"
     | Sep -> "Septembre"
     | Oct -> "Octobre"
     | Nov -> "Novembre"
@@ -163,4 +163,12 @@ module Zoned_datetime = struct
   let local_time t = to_local_datetime t |> Datetime.time
   let to_local_duration t = to_local_datetime t |> Datetime.to_duration
   let to_utc_duration t = to_utc t |> Datetime.to_duration
+end
+
+module Utils = struct
+  let lpad ?(char = '0') ~size n =
+    let pre = if n < 0 then "-" else "" in
+    let str = string_of_int (abs n) in
+    let len = String.length str in
+    pre ^ if len >= size then str else String.make (size - len) char ^ str
 end

@@ -1,0 +1,13 @@
+table.planning {
+
+  & td,
+  th {
+    text-align: center;
+    border: solid 1px black;
+
+    @media (prefers-color-scheme: dark) {
+      border: solid 1px white;
+
+    }
+  }
+}

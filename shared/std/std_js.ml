@@ -81,6 +81,12 @@ module Map = struct
     val jsont : t Jsont.t
   end
 
+  module type S_jsont = sig
+    include S
+
+    val jsont : 'a Jsont.t -> 'a t Jsont.t
+  end
+
   module Make_jsont (C : OrderedTypeJsont) = struct
     include Make (C)
 
