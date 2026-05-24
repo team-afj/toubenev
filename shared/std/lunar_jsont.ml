@@ -22,8 +22,79 @@ module Weekday = struct
     | Sat -> "Sam"
     | Sun -> "Dim"
 
+  let to_fr_long_string = function
+    | Mon -> "Lundi"
+    | Tue -> "Mardi"
+    | Wed -> "Mercredi"
+    | Thu -> "Jeudi"
+    | Fri -> "Vendredi"
+    | Sat -> "Samedi"
+    | Sun -> "Dimanche"
+
   let to_intl_short_string lang t =
     match lang with `Fr -> to_fr_short_string t
+
+  let to_intl_long_string lang t = match lang with `Fr -> to_fr_long_string t
+
+  module Set = struct
+    include Set
+
+    let jsont = Jsont.map ~dec:of_list ~enc:to_list (Jsont.list jsont)
+  end
+end
+
+module Month = struct
+  include Lunar.Month
+
+  let jsont : t Jsont.t =
+    Jsont.enum
+      [
+        ("Jan", Jan);
+        ("Feb", Feb);
+        ("Mar", Mar);
+        ("Apr", Apr);
+        ("May", May);
+        ("Jun", Jun);
+        ("Jul", Jul);
+        ("Aug", Aug);
+        ("Sep", Sep);
+        ("Oct", Oct);
+        ("Nov", Nov);
+        ("Dec", Dec);
+      ]
+
+  let to_fr_short_string = function
+    | Jan -> "Jan"
+    | Feb -> "Fev"
+    | Mar -> "Mar"
+    | Apr -> "Avr"
+    | May -> "Mai"
+    | Jun -> "Juin"
+    | Jul -> "Juil"
+    | Aug -> "Aou"
+    | Sep -> "Sep"
+    | Oct -> "Oct"
+    | Nov -> "Nov"
+    | Dec -> "Dec"
+
+  let to_fr_long_string = function
+    | Jan -> "Janvier"
+    | Feb -> "Février"
+    | Mar -> "Mars"
+    | Apr -> "Avril"
+    | May -> "Mai"
+    | Jun -> "Juin"
+    | Jul -> "Juillet"
+    | Aug -> "Aout"
+    | Sep -> "Septembre"
+    | Oct -> "Octobre"
+    | Nov -> "Novembre"
+    | Dec -> "Décembre"
+
+  let to_intl_short_string lang t =
+    match lang with `Fr -> to_fr_short_string t
+
+  let to_intl_long_string lang t = match lang with `Fr -> to_fr_long_string t
 
   module Set = struct
     include Set
@@ -55,6 +126,17 @@ end
 
 module Date = struct
   include Lunar.Date
+
+  let to_intl_long_string lang t =
+    let weekday = weekday t in
+    let day_of_month = day_of_month t in
+    let month = month t in
+    String.concat " "
+      [
+        Weekday.to_intl_long_string lang weekday;
+        string_of_int day_of_month;
+        Month.to_intl_long_string lang month;
+      ]
 
   let jsont : t Jsont.t =
     Jsont.map ~dec:from_string_exn ~enc:to_string Jsont.string
