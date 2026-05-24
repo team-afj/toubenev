@@ -11,7 +11,10 @@ API with short-live tokens. *)
 
 module App = struct
   let diagnostics : Api.diagnostic list Lwd.var = Lwd.var []
-  let last_answer : Api.answer option Lwd.var = Lwd.var None
+
+  type last_answer = Grist_import.data * Api.answer [@@deriving jsont]
+
+  let last_answer : last_answer option Lwd.var = Lwd.var None
   let analyses : Shared.Analysis.t option Lwd.var = Lwd.var None
   let check_btn : [ `Ready | `In_progress ] Lwd.var = Lwd.var `Ready
 
@@ -114,8 +117,10 @@ module Solutions = struct
   let table () =
     Lazy.force (lazy (Grist.get_table ~table_id:Data.solutions_tbl_id ()))
 
-  let upsert_solution_1 answer =
-    let* json = Fut.return @@ Jsont_brr.encode Api.answer_jsont answer in
+  let upsert_solution_1 data answer =
+    let* json =
+      Fut.return @@ Jsont_brr.encode App.last_answer_jsont (data, answer)
+    in
     let records =
       [
         Grist.Record.v ~id:1
@@ -129,7 +134,7 @@ module Solutions = struct
     let* solutions = Data.fetch Data.solutions_tbl_id in
     let first = Jv.call solutions "at" [| Jv.of_int 0 |] in
     let answer = Jv.get first "last_answer" in
-    Fut.return @@ Jsont_brr.decode Api.answer_jsont (Jv.to_jstr answer)
+    Fut.return @@ Jsont_brr.decode App.last_answer_jsont (Jv.to_jstr answer)
 end
 
 module Assignations = struct
@@ -274,7 +279,7 @@ let sat =
               Lwd.set App.diagnostics
                 (List.rev_append answer.diagnostics @@ Lwd.peek App.diagnostics)
             in
-            let* () = Solutions.upsert_solution_1 answer in
+            let* () = Solutions.upsert_solution_1 data answer in
             let* () =
               match answer.status with
               | Feasible | Optimal ->
@@ -284,7 +289,7 @@ let sat =
                   let () = Lwd.set App.optimize_state Not_ready in
                   Titles.update_prefixes "🔴"
             in
-            Fut.ok @@ Lwd.set App.last_answer (Some answer)
+            Fut.ok @@ Lwd.set App.last_answer (Some (data, answer))
       end
 
 let fetch_last () =
@@ -372,10 +377,10 @@ let optimize ~(chart_canvas : El.t) (data : Grist_import.data) =
           first := false;
           match Lwd.peek App.last_answer with
           | None -> ()
-          | Some answer ->
+          | Some (data, answer) ->
               ignore
               @@
-              let* () = Solutions.upsert_solution_1 answer in
+              let* () = Solutions.upsert_solution_1 data answer in
               let assignations =
                 List.map answer.solution
                   ~f:(Grist_import.Assignation.v ~solution:1)
@@ -393,7 +398,7 @@ let optimize ~(chart_canvas : El.t) (data : Grist_import.data) =
         in
         let time = answer.deterministic_time in
         let satisfaction = Api.satisfaction answer.solution in
-        Lwd.set App.last_answer (Some answer);
+        Lwd.set App.last_answer (Some (data, answer));
         Chartjs.Dataset.push_data d_objective
           (mk_point time
              (answer.objective_value -. answer.best_objective_bound));
@@ -498,7 +503,8 @@ let app =
     let txt =
       Lwd.map last_answer ~f:(function
         | None -> El.txt' "En attente des premiers résultats."
-        | Some { status; sufficient_assumptions_for_infeasibility; date; _ } ->
+        | Some (_, { status; sufficient_assumptions_for_infeasibility; date; _ })
+          ->
             let date =
               Zoned_datetime.to_local_datetime date |> Datetime.to_string
             in
