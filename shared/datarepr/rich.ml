@@ -113,15 +113,22 @@ module Options = struct
 end
 
 module Place = struct
-  type t = {
-    id : t id;
-    slug : string;
-    name : string;
-    description : string option;
-  }
-  [@@deriving jsont]
+  module T = struct
+    type t = {
+      id : t id;
+      slug : string;
+      name : string;
+      description : string option;
+    }
+    [@@deriving jsont]
 
-  let equal p1 p2 = id_equal p1.id p2.id
+    let equal p1 p2 = id_equal p1.id p2.id
+    let compare t1 t2 = String.compare (id_to_string t1.id) (id_to_string t2.id)
+  end
+
+  include T
+  module Map = Map.Make_jsont (T)
+
   let dummy = { id = ""; slug = ""; name = ""; description = None }
 
   type edit =
