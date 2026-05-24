@@ -6,7 +6,8 @@
   >   "fiche_de_poste": "",
   >   "impose": "Non",
   >   "specialiste_requis": false,
-  >   "decoupable": true
+  >   "decoupable": true,
+  >   "free": false
   > }
 
   $ cat initial | ./grist_conv.exe task_type | jq | tee recoded
@@ -17,7 +18,8 @@
     "fiche_de_poste": "",
     "impose": "Non",
     "specialiste_requis": false,
-    "decoupable": true
+    "decoupable": true,
+    "free": false
   }
 
   $ diff initial recoded
