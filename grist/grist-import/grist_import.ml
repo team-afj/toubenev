@@ -101,8 +101,8 @@ let grist_string_list_jsont = grist_list Jsont.string
 module Benevole = struct
   type t = {
     id : int;
-    pseudo : string option;
-    nom : string option;
+    pseudo : string;
+    nom : string;
     prenom : string;
     nb_heures : float;
     langues : grist_string_list; [@default []]
@@ -403,8 +403,13 @@ let to_planning ?(id_map = new_id_map ())
       let ids = Rich.id_of_int id in
       let name =
         match (nom, prenom) with
-        | None, s | Some "", s | Some s, "" -> s
-        | Some n, p -> Printf.sprintf "%s %s" p n
+        | "", "" -> "Inconnu " ^ string_of_int id
+        | "", s | s, "" -> s
+        | n, p -> Printf.sprintf "%s %s" p n
+      in
+      let name = String.trim name in
+      let public_name =
+        if String.is_empty public_name then None else Some public_name
       in
       let daily_workload =
         let seconds = nb_heures *. 60. *. 60. in
