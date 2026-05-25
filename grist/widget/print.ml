@@ -22,5 +22,5 @@ let print el =
          (* let head = Document.head i_doc in *)
          let body = Document.body i_doc in
          El.append_children body [ el ];
-         Window.print i_win)
+         G.set_timeout ~ms:250 (fun () -> Window.print i_win) |> ignore)
        (El.as_target iframe)
