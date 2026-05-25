@@ -12,10 +12,14 @@ module Time_slot = struct
     let start = Zoned_datetime.local_time t.start in
     let end_ = Zoned_datetime.local_time (end_ t) in
     let start_h = Time.hour start |> Utils.lpad ~size:2 in
-    let start_m = Time.minute start |> Utils.lpad ~size:2 in
+    let start_m =
+      Time.minute start |> function 0 -> "" | m -> Utils.lpad ~size:2 m
+    in
     let end_h = Time.hour end_ |> Utils.lpad ~size:2 in
-    let end_m = Time.minute end_ |> Utils.lpad ~size:2 in
-    start_h ^ "H" ^ start_m ^ " / " ^ end_h ^ "H" ^ end_m
+    let end_m =
+      Time.minute end_ |> function 0 -> "" | m -> Utils.lpad ~size:2 m
+    in
+    start_h ^ "h" ^ start_m ^ " / " ^ end_h ^ "h" ^ end_m
 
   let overlaps t1 t2 =
     let t1_start, t1_end = (t1.start, end_ t1) in

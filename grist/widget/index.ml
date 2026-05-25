@@ -491,12 +491,29 @@ let app =
         ~ev:[ `R ev ]
         [ `P (El.txt' "2. Optimiser") ]
     in
+    let print_btn =
+      let ev =
+        Elwd.handler Ev.click @@ fun _ ->
+        match Lwd.peek App.last_answer with
+        | None -> ()
+        | Some (data, answer) ->
+            let _id_map, planning = Grist_import.to_planning data in
+            let planning = Render.make_plannings planning answer in
+            Print.print planning
+      in
+      Elwd.button ~ev:[ `P ev ] [ `P (El.txt' "3. Imprimer") ]
+    in
     let btns =
       Elwd.fieldset
         ~at:[ `P (At.v (Jstr.v "role") (Jstr.v "group")) ]
-        [ `R check_btn; `R optimize_btn ]
+        [ `R check_btn ]
     in
-    Pico_ui.Elwd.section [ `R btns; `R optimize_chart ]
+    let btns2 =
+      Elwd.fieldset
+        ~at:[ `P (At.v (Jstr.v "role") (Jstr.v "group")) ]
+        [ `R optimize_btn; `R print_btn ]
+    in
+    Pico_ui.Elwd.section [ `R btns; `R btns2; `R optimize_chart ]
   in
   let results =
     let txt =

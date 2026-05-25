@@ -54,14 +54,15 @@ let make_day_table (date : Date.t) assignations =
            :: rest)
          []
   in
-  El.table ~at:[ cls "planning" ] (head :: rows)
+  El.div [ El.table ~at:[ cls "planning" ] (head :: rows) ]
 
 let make_day_table acc (d, a) = make_day_table d a :: acc
 
 let make_place_planning (place : Place.t) assignations =
   let title = El.h1 [ El.txt' ("Planning " ^ place.name) ] in
   let days = Date.Map.to_rev_seq assignations |> Seq.fold make_day_table [] in
-  El.section (title :: days)
+  let days = El.div ~at:[ cls "grid" ] days in
+  El.section ~at:[ At.class' (Jstr.v "planning-place") ] [ title; days ]
 
 let make_plannings (data : Rich.Planning.t) (answer : Api.answer) =
   let assignations =
@@ -90,4 +91,4 @@ let make_plannings (data : Rich.Planning.t) (answer : Api.answer) =
   let place_sections = Place.Map.fold make_place_planning assignations [] in
   El.section
     ~at:[ cls "planning-view" ]
-    [ El.h2 [ text "Planning par lieu et par jour" ]; El.div place_sections ]
+    [ El.div ~at:[ cls "planning-sections" ] place_sections ]
