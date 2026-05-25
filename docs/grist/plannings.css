@@ -9,9 +9,23 @@
 
   body {
     font-size: 12pt;
-    zoom: 100%;
   }
 }
+
+.planning-view {
+
+  & h1 {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+
+  & .day-grid {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-evenly;
+  }
+}
+
 
 table.planning {
 

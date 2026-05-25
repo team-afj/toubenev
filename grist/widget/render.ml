@@ -61,7 +61,7 @@ let make_day_table acc (d, a) = make_day_table d a :: acc
 let make_place_planning (place : Place.t) assignations =
   let title = El.h1 [ El.txt' ("Planning " ^ place.name) ] in
   let days = Date.Map.to_rev_seq assignations |> Seq.fold make_day_table [] in
-  let days = El.div ~at:[ cls "grid" ] days in
+  let days = El.div ~at:[ cls "day-grid" ] days in
   El.section ~at:[ At.class' (Jstr.v "planning-place") ] [ title; days ]
 
 let make_plannings (data : Rich.Planning.t) (answer : Api.answer) =
