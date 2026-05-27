@@ -9,12 +9,20 @@ open! Data_repr
 (* TODO: There might be more efficient way to do some tthings by using the REST
 API with short-live tokens. *)
 
+(* Current (26/05/2026) dataflow:
+  -- Fetch from Grist widget API -> [Grist_import.data]
+     -- [Sent to the server fot sat check ] -> [Api.answer]
+  -- [Grist_import.to_planning] -> [Rich.Planning.t]
+  -- [Conv.normalize] -> [Api.data]
+     -- Used for "Dummy assignations" -> [Grist_import.Assignation.t list]
+*)
+
 module App = struct
   let diagnostics : Api.diagnostic list Lwd.var = Lwd.var []
 
-  type last_answer = Grist_import.data * Api.answer [@@deriving jsont]
+  type last_state = Grist_import.data * Api.answer [@@deriving jsont]
 
-  let last_answer : last_answer option Lwd.var = Lwd.var None
+  let last_answer : last_state option Lwd.var = Lwd.var None
   let analyses : Shared.Analysis.t option Lwd.var = Lwd.var None
   let check_btn : [ `Ready | `In_progress ] Lwd.var = Lwd.var `Ready
 
@@ -119,7 +127,7 @@ module Solutions = struct
 
   let upsert_solution_1 data answer =
     let* json =
-      Fut.return @@ Jsont_brr.encode App.last_answer_jsont (data, answer)
+      Fut.return @@ Jsont_brr.encode App.last_state_jsont (data, answer)
     in
     let records =
       [
@@ -134,7 +142,7 @@ module Solutions = struct
     let* solutions = Data.fetch Data.solutions_tbl_id in
     let first = Jv.call solutions "at" [| Jv.of_int 0 |] in
     let answer = Jv.get first "last_answer" in
-    Fut.return @@ Jsont_brr.decode App.last_answer_jsont (Jv.to_jstr answer)
+    Fut.return @@ Jsont_brr.decode App.last_state_jsont (Jv.to_jstr answer)
 end
 
 module Assignations = struct
