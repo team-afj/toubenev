@@ -39,14 +39,20 @@ let make_day_table (date : Date.t) assignations =
     |> Seq.fold
          (fun acc (_datetime, { Api.quest; volunteers }) ->
            let slot = Normal.Time_slot.to_string quest.slot in
-           let n = Normal.Volunteers.cardinal volunteers in
+           let n = quest.initial.required_volunteers in
+           let n_missing =
+             max 0 (n - Normal.Volunteers.cardinal volunteers - 1)
+           in
            let first, rest =
              match Normal.Volunteers.to_list volunteers with
              | [] -> (El.nbsp (), [])
              | hd :: tl -> (El.txt' hd.name, tl)
            in
+           let missing =
+             List.init ~len:n_missing ~f:(fun _ -> El.td [ El.nbsp () ])
+           in
            let rest =
-             List.fold_left rest ~init:acc
+             List.fold_left rest ~init:(List.rev_append missing acc)
                ~f:(fun acc (v : Normal.Volunteer.t) ->
                  El.tr [ El.td [ El.txt' v.name ] ] :: acc)
            in

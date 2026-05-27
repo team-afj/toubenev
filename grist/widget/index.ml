@@ -192,6 +192,15 @@ module Assignations = struct
     Grist.Table_operations.upsert (assignations_table ()) ~records ()
 end
 
+let solution_placeholder (quests : Normal.Quests.t) =
+  Normal.Quests.to_list_map
+    ~f:(fun quest -> { Api.quest; volunteers = quest.assigned_volunteers })
+    quests
+
+let empty_answer (data : Api.data) =
+  let solution = solution_placeholder data.quests in
+  { Api.dummy_answer with solution }
+
 let sat =
   let last_data = ref None in
   fun () ->
@@ -280,22 +289,31 @@ let sat =
               Response.as_body resp |> Body.json
         in
         match Jsont_brr.decode_jv Data_repr.Api.answer_jsont res with
-        | Error jv -> Fut.ok (Console.error [ jv ])
+        | Error jv ->
+            let answer = empty_answer normalized_planning in
+            Lwd.set App.last_answer (Some (data, answer));
+            let* () = Solutions.upsert_solution_1 data answer in
+            Fut.ok (Console.error [ jv ])
         | Ok answer ->
             let () =
               Lwd.set App.diagnostics
                 (List.rev_append answer.diagnostics @@ Lwd.peek App.diagnostics)
             in
-            let* () = Solutions.upsert_solution_1 data answer in
-            let* () =
+            let* answer =
               match answer.status with
               | Feasible | Optimal ->
                   let () = Lwd.set App.optimize_state (Ready data) in
-                  Titles.update_prefixes "🟢"
+                  let+ () = Titles.update_prefixes "🟢" in
+                  answer
               | Unknown | ModelInvalid | Infeasible ->
                   let () = Lwd.set App.optimize_state Not_ready in
-                  Titles.update_prefixes "🔴"
+                  let+ () = Titles.update_prefixes "🔴" in
+                  let solution =
+                    solution_placeholder normalized_planning.quests
+                  in
+                  { answer with solution }
             in
+            let* () = Solutions.upsert_solution_1 data answer in
             Fut.ok @@ Lwd.set App.last_answer (Some (data, answer))
       end
 
