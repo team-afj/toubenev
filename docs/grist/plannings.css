@@ -27,6 +27,13 @@
 }
 
 
+.planning-legend {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
 table.planning {
 
   & td,
@@ -36,7 +43,11 @@ table.planning {
 
     @media (prefers-color-scheme: dark) {
       border: solid 1px white;
+    }
 
+    & .planning-cell-tdq {
+      float: left;
+      margin-right: 0.5rem;
     }
   }
 }

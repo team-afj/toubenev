@@ -18,7 +18,16 @@ let event_day (infos : Event_infos.t) (slot : Normal.Time_slot.t) =
 let place_of_assignation (assignation : Api.assignation) =
   assignation.quest.initial.Rich.Quest.place
 
-let make_day_table (date : Date.t) assignations =
+let make_assignation_cell ?tdq el =
+  match tdq with
+  | None -> El.td [ el ]
+  | Some tdq ->
+      El.td [ El.span ~at:[ cls "planning-cell-tdq" ] [ El.txt' tdq ]; el ]
+
+let make_empty_cell ?tdq () = make_assignation_cell ?tdq (El.nbsp ())
+let make_assigned_cell ?tdq name = make_assignation_cell ?tdq (El.txt' name)
+
+let make_day_table ~with_types (date : Date.t) assignations =
   let head =
     let title =
       El.tr
@@ -43,33 +52,65 @@ let make_day_table (date : Date.t) assignations =
            let n_missing =
              max 0 (n - Normal.Volunteers.cardinal volunteers - 1)
            in
+           let tdq =
+             match (with_types, quest.initial.task_type) with
+             | true, Some tdq -> Some tdq.slug
+             | _, _ -> None
+           in
            let first, rest =
              match Normal.Volunteers.to_list volunteers with
-             | [] -> (El.nbsp (), [])
-             | hd :: tl -> (El.txt' hd.name, tl)
+             | [] -> (make_empty_cell ?tdq (), [])
+             | hd :: tl -> (make_assigned_cell ?tdq hd.name, tl)
            in
            let missing =
-             List.init ~len:n_missing ~f:(fun _ ->
-                 El.tr [ El.td [ El.nbsp () ] ])
+             List.init ~len:n_missing ~f:(fun _ -> El.tr [ make_empty_cell () ])
            in
            let rest =
              List.fold_left rest ~init:(List.rev_append missing acc)
                ~f:(fun acc (v : Normal.Volunteer.t) ->
-                 El.tr [ El.td [ El.txt' v.name ] ] :: acc)
+                 El.tr [ make_assigned_cell ?tdq v.name ] :: acc)
            in
-           El.tr [ El.th ~at:[ rowspan n ] [ El.txt' slot ]; El.td [ first ] ]
-           :: rest)
+           El.tr [ El.th ~at:[ rowspan n ] [ El.txt' slot ]; first ] :: rest)
          []
   in
   El.div [ El.table ~at:[ cls "planning" ] (head :: rows) ]
 
-let make_day_table acc (d, a) = make_day_table d a :: acc
+let make_day_table ~with_types acc (d, a) =
+  let el = make_day_table ~with_types d a in
+  el :: acc
+
+let make_task_type_legend types =
+  let lis =
+    Task_type.Set.fold types ~init:[] ~f:(fun acc tdq ->
+        let txt =
+          match tdq.slug with "" -> tdq.name | slug -> slug ^ " " ^ tdq.name
+        in
+        El.span [ El.txt' txt ] :: acc)
+  in
+  Pico_ui.El.section [ El.div ~at:[ cls "planning-legend" ] lis ]
 
 let make_place_planning (place : Place.t) assignations =
   let title = El.h1 [ El.txt' ("Planning " ^ place.name) ] in
-  let days = Date.Map.to_rev_seq assignations |> Seq.fold make_day_table [] in
+  let types =
+    Date.Map.fold
+      (fun _date v acc ->
+        Zoned_datetime.Map.fold
+          (fun _zdate v acc ->
+            match v.Api.quest.initial.task_type with
+            | None -> acc
+            | Some tdq -> Task_type.Set.add tdq acc)
+          v acc)
+      assignations Task_type.Set.empty
+  in
+  let days =
+    Date.Map.to_rev_seq assignations
+    |> Seq.fold
+         (make_day_table ~with_types:(Task_type.Set.cardinal types > 1))
+         []
+  in
+  let legend = make_task_type_legend types in
   let days = El.div ~at:[ cls "day-grid" ] days in
-  El.section ~at:[ At.class' (Jstr.v "planning-place") ] [ title; days ]
+  El.section ~at:[ At.class' (Jstr.v "planning-place") ] [ title; legend; days ]
 
 let make_plannings (data : Rich.Planning.t) (answer : Api.answer) =
   let assignations =
