@@ -18,8 +18,6 @@ API with short-live tokens. *)
 *)
 
 module App = struct
-  let diagnostics : Api.diagnostic list Lwd.var = Lwd.var []
-
   type last_state = Grist_import.data * Api.answer [@@deriving jsont]
 
   let last_answer : last_state option Lwd.var = Lwd.var None
@@ -197,9 +195,8 @@ let solution_placeholder (quests : Normal.Quests.t) =
     ~f:(fun quest -> { Api.quest; volunteers = quest.assigned_volunteers })
     quests
 
-let empty_answer (data : Api.data) =
-  let solution = solution_placeholder data.quests in
-  { Api.dummy_answer with solution }
+let rev_append_diags diags (answer : Api.answer) =
+  { answer with diagnostics = List.rev_append diags answer.diagnostics }
 
 let sat =
   let last_data = ref None in
@@ -227,10 +224,14 @@ let sat =
           Lwd.set App.analyses (Some result);
           Analysis.diags result
         in
-        let () =
-          Lwd.set App.diagnostics
-            (List.rev_append analysis_diagnostics
-               normalized_planning.diagnostics)
+        let initial_answer =
+          {
+            Api.dummy_answer with
+            solution = solution_placeholder normalized_planning.quests;
+            diagnostics =
+              List.rev_append analysis_diagnostics
+                normalized_planning.diagnostics;
+          }
         in
         (* New assignations (unfolded quests) *)
         let () = Console.debug [ "DBG"; "Prepare empty assignations" ] in
@@ -290,15 +291,15 @@ let sat =
         in
         match Jsont_brr.decode_jv Data_repr.Api.answer_jsont res with
         | Error jv ->
-            let answer = empty_answer normalized_planning in
+            let answer =
+              rev_append_diags
+                [ (Error, Jv.Error.message jv |> Jstr.to_string) ]
+                initial_answer
+            in
             Lwd.set App.last_answer (Some (data, answer));
             let* () = Solutions.upsert_solution_1 data answer in
             Fut.ok (Console.error [ jv ])
         | Ok answer ->
-            let () =
-              Lwd.set App.diagnostics
-                (List.rev_append answer.diagnostics @@ Lwd.peek App.diagnostics)
-            in
             let* answer =
               match answer.status with
               | Feasible | Optimal ->
@@ -308,11 +309,9 @@ let sat =
               | Unknown | ModelInvalid | Infeasible ->
                   let () = Lwd.set App.optimize_state Not_ready in
                   let+ () = Titles.update_prefixes "🔴" in
-                  let solution =
-                    solution_placeholder normalized_planning.quests
-                  in
-                  { answer with solution }
+                  { answer with solution = initial_answer.solution }
             in
+            let answer = rev_append_diags initial_answer.diagnostics answer in
             let* () = Solutions.upsert_solution_1 data answer in
             Fut.ok @@ Lwd.set App.last_answer (Some (data, answer))
       end
@@ -574,7 +573,10 @@ let app =
   in
   let diagnostics =
     let diags =
-      let$ diags = Lwd.get App.diagnostics in
+      let$ answer = Lwd.get App.last_answer in
+      let diags =
+        match answer with None -> [] | Some (_, answer) -> answer.diagnostics
+      in
       El.div
       @@
       if List.is_empty diags then
