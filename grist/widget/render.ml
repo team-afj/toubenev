@@ -49,7 +49,8 @@ let make_day_table (date : Date.t) assignations =
              | hd :: tl -> (El.txt' hd.name, tl)
            in
            let missing =
-             List.init ~len:n_missing ~f:(fun _ -> El.td [ El.nbsp () ])
+             List.init ~len:n_missing ~f:(fun _ ->
+                 El.tr [ El.td [ El.nbsp () ] ])
            in
            let rest =
              List.fold_left rest ~init:(List.rev_append missing acc)
