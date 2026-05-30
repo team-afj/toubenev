@@ -517,16 +517,29 @@ let app =
         [ `P (El.txt' "2. Optimiser") ]
     in
     let print_btn =
-      let ev =
-        Elwd.handler Ev.click @@ fun _ ->
-        match Lwd.peek App.last_answer with
-        | None -> ()
-        | Some (data, answer) ->
-            let _id_map, planning = Grist_import.to_planning data in
-            let planning = Render.make_plannings planning answer in
-            Print.print planning
+      let disabled =
+        let$ answer = Lwd.get App.last_answer in
+        match answer with
+        | None | Some (_, { solution = []; _ }) -> At.disabled
+        | Some _ -> At.void
       in
-      Elwd.button ~ev:[ `P ev ] [ `P (El.txt' "3. Imprimer") ]
+      let ev =
+        let$ answer = Lwd.get App.last_answer in
+        let f =
+          match answer with
+          | None -> ignore
+          | Some (data, answer) ->
+              fun _ ->
+                let _id_map, planning = Grist_import.to_planning data in
+                let planning = Render.make_plannings planning answer in
+                Print.print planning
+        in
+        Elwd.handler Ev.click f
+      in
+      Elwd.button
+        ~at:[ `R disabled ]
+        ~ev:[ `R ev ]
+        [ `P (El.txt' "3. Imprimer") ]
     in
     let btns =
       Elwd.fieldset
