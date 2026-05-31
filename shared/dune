@@ -1,4 +1,6 @@
 (library
  (name shared)
  (flags :standard -open Std_js)
- (libraries std data_repr))
+ (libraries std data_repr)
+ (preprocess
+  (pps ppx_deriving_jsont)))

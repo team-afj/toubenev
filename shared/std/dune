@@ -1,3 +1,5 @@
 (library
  (name std_js)
- (libraries containers lunar jsont uuidm jsont.bytesrw))
+ (libraries containers lunar jsont uuidm jsont.bytesrw)
+ (preprocess
+  (pps ppx_deriving_jsont)))

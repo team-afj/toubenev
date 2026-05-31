@@ -140,6 +140,17 @@ module Date = struct
 
   let jsont : t Jsont.t =
     Jsont.map ~dec:from_string_exn ~enc:to_string Jsont.string
+
+  module Map = struct
+    type date = t
+
+    include Map
+
+    type 'a binding = (date[@jsont jsont]) * 'a [@@deriving jsont]
+
+    let jsont v =
+      Jsont.map ~dec:of_list ~enc:to_list (Jsont.list (binding_jsont v))
+  end
 end
 
 module Time = struct

@@ -18,13 +18,17 @@ API with short-live tokens. *)
 *)
 
 module App = struct
-  type last_state = Grist_import.data * Api.answer [@@deriving jsont]
+  type state = {
+    data : Grist_import.data;
+    answer : Api.answer;
+    analysis : Shared.Analysis.t;
+  }
+  [@@deriving jsont]
 
-  let last_answer : last_state option Lwd.var = Lwd.var None
-  let analyses : Shared.Analysis.t option Lwd.var = Lwd.var None
+  let last_answer : state option Lwd.var = Lwd.var None
   let check_btn : [ `Ready | `In_progress ] Lwd.var = Lwd.var `Ready
 
-  type optimize_state = Not_ready | Ready of Grist_import.data | Running
+  type optimize_state = Not_ready | Ready of state | Running
 
   let optimize_state : optimize_state Lwd.var = Lwd.var Not_ready
 
@@ -123,10 +127,8 @@ module Solutions = struct
   let table () =
     Lazy.force (lazy (Grist.get_table ~table_id:Data.solutions_tbl_id ()))
 
-  let upsert_solution_1 data answer =
-    let* json =
-      Fut.return @@ Jsont_brr.encode App.last_state_jsont (data, answer)
-    in
+  let upsert_solution_1 state =
+    let* json = Fut.return @@ Jsont_brr.encode App.state_jsont state in
     let records =
       [
         Grist.Record.v ~id:1
@@ -140,7 +142,7 @@ module Solutions = struct
     let* solutions = Data.fetch Data.solutions_tbl_id in
     let first = Jv.call solutions "at" [| Jv.of_int 0 |] in
     let answer = Jv.get first "last_answer" in
-    Fut.return @@ Jsont_brr.decode App.last_state_jsont (Jv.to_jstr answer)
+    Fut.return @@ Jsont_brr.decode App.state_jsont (Jv.to_jstr answer)
 end
 
 module Assignations = struct
@@ -207,7 +209,8 @@ let sat =
         Console.error [ "DBG"; "Decoding error: "; Jv.Error.message err ];
         Fut.return (Ok ())
     | Ok data, Some last when Equal.poly last data ->
-        Lwd.set App.optimize_state (Ready data);
+        let last = Lwd.peek App.last_answer in
+        Option.iter (fun data -> Lwd.set App.optimize_state (Ready data)) last;
         Fut.return (Ok ())
     | Ok data, _ -> begin
         let () = Lwd.set App.optimize_state Not_ready in
@@ -216,21 +219,11 @@ let sat =
         let _id_map, planning = Grist_import.to_planning data in
         let () = Console.debug [ "DBG"; "Normalize" ] in
         let normalized_planning = Conv.normalize planning in
-        (* Analysis *)
-        let analysis_diagnostics =
-          let result =
-            Shared.Analysis.of_planning planning normalized_planning
-          in
-          Lwd.set App.analyses (Some result);
-          Analysis.diags result
-        in
         let initial_answer =
           {
             Api.dummy_answer with
             solution = solution_placeholder normalized_planning.quests;
-            diagnostics =
-              List.rev_append analysis_diagnostics
-                normalized_planning.diagnostics;
+            diagnostics = normalized_planning.diagnostics;
           }
         in
         (* New assignations (unfolded quests) *)
@@ -296,24 +289,36 @@ let sat =
                 [ (Error, Jv.Error.message jv |> Jstr.to_string) ]
                 initial_answer
             in
-            Lwd.set App.last_answer (Some (data, answer));
-            let* () = Solutions.upsert_solution_1 data answer in
+            let analysis =
+              Shared.Analysis.of_planning planning normalized_planning
+            in
+            let state = { App.data; answer; analysis } in
+            Lwd.set App.last_answer (Some state);
+            let* () = Solutions.upsert_solution_1 state in
             Fut.ok (Console.error [ jv ])
         | Ok answer ->
             let* answer =
               match answer.status with
               | Feasible | Optimal ->
-                  let () = Lwd.set App.optimize_state (Ready data) in
                   let+ () = Titles.update_prefixes "🟢" in
                   answer
               | Unknown | ModelInvalid | Infeasible ->
-                  let () = Lwd.set App.optimize_state Not_ready in
                   let+ () = Titles.update_prefixes "🔴" in
                   { answer with solution = initial_answer.solution }
             in
             let answer = rev_append_diags initial_answer.diagnostics answer in
-            let* () = Solutions.upsert_solution_1 data answer in
-            Fut.ok @@ Lwd.set App.last_answer (Some (data, answer))
+            let analysis =
+              Shared.Analysis.of_planning planning normalized_planning
+            in
+            let state = { App.data; answer; analysis } in
+            let () =
+              match answer.status with
+              | Feasible | Optimal -> Lwd.set App.optimize_state (Ready state)
+              | Api.Unknown | Api.ModelInvalid | Api.Infeasible ->
+                  Lwd.set App.optimize_state Not_ready
+            in
+            let* () = Solutions.upsert_solution_1 state in
+            Fut.ok @@ Lwd.set App.last_answer (Some state)
       end
 
 let fetch_last () =
@@ -368,7 +373,8 @@ let init_optimization_chart =
     let () = Chart.set_data chart data in
     (chart, d_objective, d_satisfaction)
 
-let optimize ~(chart_canvas : El.t) (data : Grist_import.data) =
+let optimize ~(chart_canvas : El.t) (current_state : App.state) =
+  let data = current_state.data in
   let+ handle =
     let open Brr_io.Fetch in
     let* json = Fut.return @@ Jsont_brr.encode Grist_import.data_jsont data in
@@ -401,10 +407,10 @@ let optimize ~(chart_canvas : El.t) (data : Grist_import.data) =
           first := false;
           match Lwd.peek App.last_answer with
           | None -> ()
-          | Some (data, answer) ->
+          | Some ({ answer; _ } as state) ->
               ignore
               @@
-              let* () = Solutions.upsert_solution_1 data answer in
+              let* () = Solutions.upsert_solution_1 state in
               let assignations =
                 List.map answer.solution
                   ~f:(Grist_import.Assignation.v ~solution:1)
@@ -422,7 +428,8 @@ let optimize ~(chart_canvas : El.t) (data : Grist_import.data) =
         in
         let time = answer.deterministic_time in
         let satisfaction = Api.satisfaction answer.solution in
-        Lwd.set App.last_answer (Some (data, answer));
+        let analysis = (* TODO *) current_state.analysis in
+        Lwd.set App.last_answer (Some { data; answer; analysis });
         Chartjs.Dataset.push_data d_objective
           (mk_point time
              (answer.objective_value -. answer.best_objective_bound));
@@ -507,9 +514,9 @@ let app =
         let$ state = Lwd.get App.optimize_state in
         match state with
         | Not_ready | Running -> Elwd.handler Ev.click (fun _ -> ())
-        | Ready data ->
+        | Ready state ->
             Elwd.handler Ev.click (fun _ ->
-                ignore (optimize ~chart_canvas data))
+                ignore (optimize ~chart_canvas state))
       in
       Elwd.button
         ~at:[ `R disabled ]
@@ -520,7 +527,7 @@ let app =
       let disabled =
         let$ answer = Lwd.get App.last_answer in
         match answer with
-        | None | Some (_, { solution = []; _ }) -> At.disabled
+        | None | Some { answer = { solution = []; _ }; _ } -> At.disabled
         | Some _ -> At.void
       in
       let ev =
@@ -528,7 +535,7 @@ let app =
         let f =
           match answer with
           | None -> ignore
-          | Some (data, answer) ->
+          | Some { data; answer; _ } ->
               fun _ ->
                 let _id_map, planning = Grist_import.to_planning data in
                 let planning = Render.make_plannings planning answer in
@@ -557,8 +564,12 @@ let app =
     let txt =
       Lwd.map last_answer ~f:(function
         | None -> El.txt' "En attente des premiers résultats."
-        | Some (_, { status; sufficient_assumptions_for_infeasibility; date; _ })
-          ->
+        | Some
+            {
+              answer =
+                { status; sufficient_assumptions_for_infeasibility; date; _ };
+              _;
+            } ->
             let date =
               Zoned_datetime.to_local_datetime date |> Datetime.to_string
             in
@@ -588,7 +599,9 @@ let app =
     let diags =
       let$ answer = Lwd.get App.last_answer in
       let diags =
-        match answer with None -> [] | Some (_, answer) -> answer.diagnostics
+        match answer with
+        | None -> []
+        | Some { answer; _ } -> answer.diagnostics
       in
       El.div
       @@
@@ -603,10 +616,10 @@ let app =
     section
   in
   let analyses =
-    let$ results = Lwd.get App.analyses in
+    let$ results = Lwd.get App.last_answer in
     match results with
     | None -> El.nbsp ()
-    | Some { daily } ->
+    | Some { analysis = { daily; _ }; _ } ->
         let th ?tooltip v =
           let el =
             let txt = El.txt' v in

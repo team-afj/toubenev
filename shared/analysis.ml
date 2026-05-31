@@ -9,8 +9,9 @@ type daily = {
   max_concurrent_volunteers : int;
   available_volunteers : int;
 }
+[@@deriving jsont]
 
-type t = { daily : daily Date.Map.t }
+type t = { daily : daily Date.Map.t } [@@deriving jsont]
 
 let day_stats (_planning : Planning.t) (normalized : Api.data) day quests =
   let total_quest_time =
