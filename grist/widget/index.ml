@@ -601,7 +601,8 @@ let app =
       let diags =
         match answer with
         | None -> []
-        | Some { answer; _ } -> answer.diagnostics
+        | Some { answer; analysis; _ } ->
+            List.rev_append (Shared.Analysis.diags analysis) answer.diagnostics
       in
       El.div
       @@
