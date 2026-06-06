@@ -62,7 +62,7 @@ module Volunteer = struct
   end
 
   module Map = struct
-    include Map.Make (T)
+    include Map.Make_jsont (T)
 
     let find_by_id id = find { dummy with id }
   end
