@@ -209,15 +209,20 @@ let sat =
         Console.error [ "DBG"; "Decoding error: "; Jv.Error.message err ];
         Fut.return (Ok ())
     | Ok data, Some last when Equal.poly last data ->
+        let () = Console.info [ "TBN"; "Nothing to do, data didn't change" ] in
         let last = Lwd.peek App.last_answer in
-        Option.iter (fun data -> Lwd.set App.optimize_state (Ready data)) last;
+        Option.iter
+          (fun (data : App.state) ->
+            if Equal.poly data.answer.status Feasible then
+              Lwd.set App.optimize_state (Ready data))
+          last;
         Fut.return (Ok ())
     | Ok data, _ -> begin
         let () = Lwd.set App.optimize_state Not_ready in
-        let () = Console.debug [ "DBG"; "Data changes" ] in
+        let () = Console.info [ "TBN"; "Data changed" ] in
         let () = last_data := Some data in
         let _id_map, planning = Grist_import.to_planning data in
-        let () = Console.debug [ "DBG"; "Normalize" ] in
+        let () = Console.debug [ "TBN"; "Normalize" ] in
         let normalized_planning = Conv.normalize planning in
         let initial_answer =
           {
@@ -227,7 +232,7 @@ let sat =
           }
         in
         (* New assignations (unfolded quests) *)
-        let () = Console.debug [ "DBG"; "Prepare empty assignations" ] in
+        let () = Console.debug [ "TBN"; "Prepare empty assignations" ] in
         let assignations =
           let open Normal in
           Quests.to_list_map
@@ -254,41 +259,52 @@ let sat =
               })
             normalized_planning.quests
         in
+        let () = Console.debug [ "TBN"; "Update assignations" ] in
         let* () = Assignations.remove_assignations ~solution:1 in
         let* () = Assignations.insert_assignations assignations in
+        let open Fut.Syntax in
         let* res =
-          let open Brr_io.Fetch in
-          let* data =
-            Fut.return @@ Jsont_brr.encode Grist_import.data_jsont data
+          let open Fut.Result_syntax in
+          let* server_response =
+            let open Brr_io.Fetch in
+            let* data =
+              Fut.return @@ Jsont_brr.encode Grist_import.data_jsont data
+            in
+            let body = Body.of_jstr data in
+            Console.debug [ "TBN"; "Querying server" ];
+            let method' = Jstr.v "PUT" in
+            let uri = Jstr.v "http://localhost:1357/grist/data" in
+            let headers =
+              Headers.of_assoc
+                [ (Jstr.v "Content-Type", Jstr.v "application/json") ]
+            in
+            let init = Request.init ~body ~method' ~headers () in
+            let open Fut.Syntax in
+            let () = Lwd.set App.server_status Working in
+            let* response = url ~init uri in
+            match response with
+            | Error err ->
+                Console.info [ "TBN"; "Error querying server" ];
+                let* _ = Titles.update_prefixes "⛓️‍💥" in
+                let () = Lwd.set App.server_status Offline in
+                Fut.error err
+            | Ok resp ->
+                Console.info [ "TBN"; "Got server response" ];
+                let () = Lwd.set App.server_status Done in
+                Response.as_body resp |> Body.json
           in
-          let body = Body.of_jstr data in
-          Console.error [ "DBG"; "Querying server  " ];
-          let method' = Jstr.v "PUT" in
-          let uri = Jstr.v "http://localhost:1357/grist/data" in
-          let headers =
-            Headers.of_assoc
-              [ (Jstr.v "Content-Type", Jstr.v "application/json") ]
-          in
-          let init = Request.init ~body ~method' ~headers () in
-          let open Fut.Syntax in
-          let () = Lwd.set App.server_status Working in
-          let* response = url ~init uri in
-          match response with
-          | Error err ->
-              let* _ = Titles.update_prefixes "⛓️‍💥" in
-              let () = Lwd.set App.server_status Offline in
-              Fut.error err
-          | Ok resp ->
-              let () = Lwd.set App.server_status Done in
-              Response.as_body resp |> Body.json
+          Fut.return
+          @@ Jsont_brr.decode_jv Data_repr.Api.answer_jsont server_response
         in
-        match Jsont_brr.decode_jv Data_repr.Api.answer_jsont res with
+        let open Fut.Result_syntax in
+        match res with
         | Error jv ->
             let answer =
               rev_append_diags
                 [ (Error, Jv.Error.message jv |> Jstr.to_string) ]
                 initial_answer
             in
+            Console.debug [ "TBN"; "Perform analysis on empty assignations." ];
             let analysis =
               Shared.Analysis.of_planning planning answer normalized_planning
             in
@@ -307,6 +323,7 @@ let sat =
                   { answer with solution = initial_answer.solution }
             in
             let answer = rev_append_diags initial_answer.diagnostics answer in
+            Console.debug [ "TBN"; "Perform analysis on assignations." ];
             let analysis =
               Shared.Analysis.of_planning planning answer normalized_planning
             in
