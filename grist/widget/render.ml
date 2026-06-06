@@ -63,7 +63,8 @@ let make_day_table ~with_types (date : Date.t) assignations =
              | hd :: tl -> (make_assigned_cell ?tdq hd.name, tl)
            in
            let missing =
-             List.init ~len:n_missing ~f:(fun _ -> El.tr [ make_empty_cell () ])
+             List.init ~len:n_missing ~f:(fun _ ->
+                 El.tr [ make_empty_cell ?tdq () ])
            in
            let rest =
              List.fold_left rest ~init:(List.rev_append missing acc)
