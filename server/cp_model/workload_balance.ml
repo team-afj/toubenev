@@ -36,7 +36,7 @@ let theoretical_coef (ctx : Context.t) ~of_ ~on =
     of_int (theoretical_load ctx ~of_ ~on)
     / of_int (total_theoretical_load ctx ~on))
 
-let adjusted_load (ctx : Context.t) volunteer day day_quests =
+let adjusted_load_minutes (ctx : Context.t) volunteer day day_quests =
   let quests_time = total_quests_time day_quests in
   let adjustement_coef = theoretical_coef ctx ~of_:volunteer ~on:day in
   Float.(to_int (adjustement_coef * of_int quests_time))
@@ -47,7 +47,7 @@ let adjusted_load (ctx : Context.t) volunteer day day_quests =
     actual load in the current solution. *)
 let load_diff (ctx : Context.t) volunteer day day_quests =
   let time_spent = time_spent ctx ~by:volunteer ~on:day_quests in
-  let adjusted_load = adjusted_load ctx volunteer day day_quests in
+  let adjusted_load = adjusted_load_minutes ctx volunteer day day_quests in
   Sat.(time_spent - of_int adjusted_load)
 
 (** Lower and upper bounds *)
