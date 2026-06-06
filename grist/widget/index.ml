@@ -290,7 +290,7 @@ let sat =
                 initial_answer
             in
             let analysis =
-              Shared.Analysis.of_planning planning normalized_planning
+              Shared.Analysis.of_planning planning answer normalized_planning
             in
             let state = { App.data; answer; analysis } in
             Lwd.set App.last_answer (Some state);
@@ -308,7 +308,7 @@ let sat =
             in
             let answer = rev_append_diags initial_answer.diagnostics answer in
             let analysis =
-              Shared.Analysis.of_planning planning normalized_planning
+              Shared.Analysis.of_planning planning answer normalized_planning
             in
             let state = { App.data; answer; analysis } in
             let () =

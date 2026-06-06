@@ -11,7 +11,20 @@ type daily = {
 }
 [@@deriving jsont]
 
-type t = { daily : daily Date.Map.t } [@@deriving jsont]
+type facts = {
+  worload_balance : int;
+      (** The difference between the expected workload and the actual workload.
+      *)
+}
+[@@deriving jsont]
+
+type volunteer_analyses = { daily : facts Date.Map.t } [@@deriving jsont]
+
+type t = {
+  daily : daily Date.Map.t;
+  volunteers : volunteer_analyses Volunteer.Map.t;
+}
+[@@deriving jsont]
 
 let day_stats (_planning : Planning.t) (normalized : Api.data) day quests =
   let total_quest_time =
@@ -76,9 +89,10 @@ let daily (planning : Planning.t) (normalized : Api.data) =
   let by_day = quests_by_day planning.infos normalized.quests in
   Date.Map.mapi (day_stats planning normalized) by_day
 
-let of_planning infos n = { daily = daily infos n }
+let of_planning infos (_answer : Api.answer) n : t =
+  { daily = daily infos n; volunteers = Volunteer.Map.empty }
 
-let diags { daily } =
+let diags { daily; _ } =
   Date.Map.fold
     (fun d { max_concurrent_volunteers; available_volunteers; _ } acc ->
       if available_volunteers >= max_concurrent_volunteers then acc
