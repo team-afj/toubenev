@@ -48,7 +48,7 @@ let make_day_table ~with_types (date : Date.t) assignations =
     |> Seq.fold
          (fun acc (_datetime, { Api.quest; volunteers }) ->
            let slot = Normal.Time_slot.to_string quest.slot in
-           let n = quest.initial.required_volunteers in
+           let n = max 1 quest.initial.required_volunteers in
            let n_missing =
              max 0 (n - Normal.Volunteers.cardinal volunteers - 1)
            in
