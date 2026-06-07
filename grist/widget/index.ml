@@ -601,17 +601,29 @@ let app =
             let chart, data, dataset =
               Charts.v_workdiff_bar_chart_init canvas
             in
-            let labels, values, _v_max =
+            let labels_values, _v_max =
               Normal.Volunteer.Map.fold
-                (fun v { Analysis.event; _ } (labels, values, v_max) ->
+                (fun v { Analysis.event; _ } (values, v_max) ->
                   let real = Duration.to_minutes event.actual_load in
                   let theory = Duration.to_minutes event.theoretical_load in
                   let adjusted = Duration.to_minutes event.adjusted_load in
-                  let diff = real - theory in
+                  let diff = real - adjusted in
                   Console.debug
-                    [ "TBN"; v.name; " has adjusted load "; adjusted ];
-                  (v.name :: labels, diff :: values, max v_max (abs diff)))
-                volunteers ([], [], 0)
+                    [
+                      "TBN";
+                      v.name;
+                      " has adjusted load ";
+                      adjusted;
+                      " (";
+                      theory;
+                      ")";
+                    ];
+                  ((v.name, diff) :: values, max v_max (abs diff)))
+                volunteers ([], 0)
+            in
+            let labels, values =
+              List.sort ~cmp:(fun (_, v1) (_, v2) -> v2 - v1) labels_values
+              |> List.split
             in
             let () =
               let open Chartjs in
