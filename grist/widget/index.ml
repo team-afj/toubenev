@@ -460,29 +460,6 @@ let optimize ~(chart_canvas : El.t) (current_state : App.state) =
   in
   Console.error [ "DBG"; "HANDLE"; handle; event_source ]
 
-module Ui = struct
-  let accordion ~name ?(closed = false) ~title content =
-    (* TODO there might a bug in lwd, with the pure version of this function the
-    open attribute disapears *)
-    let at =
-      let at = [ `P (At.name (Jstr.v name)) ] in
-      match closed with
-      | true -> at
-      | false -> `P (At.v (Jstr.v "open") (Jstr.v "open")) :: at
-    in
-    Elwd.details ~at
-      (`R (Elwd.summary [ `R title ]) :: [ `R (Pico_ui.Elwd.section content) ])
-
-  let diag_card ((lvl, msg) : Api.diagnostic) =
-    let at =
-      [
-        At.class' (Jstr.v "diag-card");
-        At.class' (Jstr.v (Api.diagnostic_level_to_string lvl));
-      ]
-    in
-    El.article ~at [ El.txt' msg ]
-end
-
 let app =
   let open Lwd_infix in
   let last_answer = Lwd.get App.last_answer in
@@ -641,7 +618,7 @@ let app =
       in
       Pico_ui.Elwd.section [ `R txt; `R facts ]
     in
-    Ui.accordion ~name:"results" ~title [ `R results ]
+    Pico_ui.accordion ~name:"results" ~title [ `R results ]
   in
   let diagnostics =
     let diags =
@@ -655,12 +632,12 @@ let app =
       El.div
       @@
       if List.is_empty diags then
-        [ Ui.diag_card (Info, "Jusqu'ici tout va bien.") ]
-      else List.map diags ~f:Ui.diag_card
+        [ Pico_ui.diag_card (Info, "Jusqu'ici tout va bien.") ]
+      else List.map diags ~f:Pico_ui.diag_card
     in
     let section =
       let title = Lwd.return @@ El.txt' "Diagnostiques" in
-      Ui.accordion ~name:"diags" ~title [ `R diags ]
+      Pico_ui.accordion ~name:"diags" ~title [ `R diags ]
     in
     section
   in
@@ -752,7 +729,7 @@ let app =
           ]
   in
   let analyses =
-    Ui.accordion ~name:"analyses"
+    Pico_ui.accordion ~name:"analyses"
       ~title:(Lwd.return (El.txt' "Analyses"))
       [
         `P
