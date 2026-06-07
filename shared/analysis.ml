@@ -110,7 +110,9 @@ let group_assignations_by_date_and_volunteer infos assignations =
 
 let volunteer_load (assignations : Api.assignation list) =
   List.fold_left assignations ~init:Duration.zero
-    ~f:(fun acc { Api.quest; _ } -> Duration.(acc + quest.slot.duration))
+    ~f:(fun acc { Api.quest; _ } ->
+      if Rich.Quest.is_free quest.initial then acc
+      else Duration.(acc + quest.slot.duration))
 
 let volunteer_analyses (planning : Planning.t) (answer : Api.answer)
     (normalized : Api.data) =

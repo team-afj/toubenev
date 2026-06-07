@@ -454,6 +454,9 @@ module Quest = struct
       required_volunteers;
       assigned_volunteers;
     }
+
+  let is_free (t : t) =
+    Option.map_or ~default:false (fun qt -> qt.Task_type.free) t.task_type
 end
 
 module Quests = Random_access_list (Quest)

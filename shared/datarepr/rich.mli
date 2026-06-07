@@ -262,6 +262,8 @@ module Quest : sig
     ?assigned_volunteers:Volunteers.t ->
     unit ->
     t
+
+  val is_free : t -> bool
 end
 
 module Quests : sig

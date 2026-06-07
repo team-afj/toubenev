@@ -416,6 +416,8 @@ let optimize ~(chart_canvas : El.t) (current_state : App.state) =
     Jv.obj
       [| ("x", Jv.of_string (Float.to_string time)); ("y", Jv.of_float value) |]
   in
+  let _id_map, planning = Grist_import.to_planning data in
+  let normalized_planning = Conv.normalize planning in
   let _ =
     let first = ref true in
     Ev.listen Ev.error
@@ -445,7 +447,9 @@ let optimize ~(chart_canvas : El.t) (current_state : App.state) =
         in
         let time = answer.deterministic_time in
         let satisfaction = Api.satisfaction answer.solution in
-        let analysis = (* TODO *) current_state.analysis in
+        let analysis =
+          Shared.Analysis.of_planning planning answer normalized_planning
+        in
         Lwd.set App.last_answer (Some { data; answer; analysis });
         Chartjs.Dataset.push_data d_objective
           (mk_point time
@@ -578,37 +582,64 @@ let app =
     Pico_ui.Elwd.section [ `R btns; `R btns2; `R optimize_chart ]
   in
   let results =
-    let txt =
-      Lwd.map last_answer ~f:(function
-        | None -> El.txt' "En attente des premiers résultats."
-        | Some
-            {
-              answer =
-                { status; sufficient_assumptions_for_infeasibility; date; _ };
-              _;
-            } ->
-            let date =
-              Zoned_datetime.to_local_datetime date |> Datetime.to_string
-            in
-            let sufass =
-              match sufficient_assumptions_for_infeasibility with
-              | [] -> []
-              | ass ->
-                  El.h4 [ El.txt' "Sufficient assumptions for infeasibility:" ]
-                  :: [ El.ul (List.map ~f:(fun s -> El.li [ El.txt' s ]) ass) ]
-            in
-            El.div
-              (El.txt' (Ortools.Sat.Response.string_of_status status)
-              :: El.txt' (" (fait à " ^ date ^ ")")
-              :: sufass))
-    in
-    Pico_ui.Elwd.section [ `R txt ]
-  in
-  let results =
     let title =
       let$ status = Lwd.get App.server_status in
       let slug = App.to_fr_slug status in
       El.txt' ("Résultats " ^ slug)
+    in
+    let results =
+      let txt =
+        Lwd.map last_answer ~f:(function
+          | None -> El.txt' "En attente des premiers résultats."
+          | Some
+              {
+                answer =
+                  { status; sufficient_assumptions_for_infeasibility; date; _ };
+                _;
+              } ->
+              let date =
+                Zoned_datetime.to_local_datetime date |> Datetime.to_string
+              in
+              let sufass =
+                match sufficient_assumptions_for_infeasibility with
+                | [] -> []
+                | ass ->
+                    El.h4
+                      [ El.txt' "Sufficient assumptions for infeasibility:" ]
+                    :: [
+                         El.ul (List.map ~f:(fun s -> El.li [ El.txt' s ]) ass);
+                       ]
+              in
+              El.div
+                (El.txt' (Ortools.Sat.Response.string_of_status status)
+                :: El.txt' (" (fait à " ^ date ^ ")")
+                :: sufass))
+      in
+      let facts =
+        let$ state = Lwd.get App.last_answer in
+        match state with
+        | None -> El.nbsp ()
+        | Some { analysis = { volunteers; _ }; _ } ->
+            El.section
+            @@ Normal.Volunteer.Map.fold
+                 (fun v { Analysis.event; _ } acc ->
+                   let real = Duration.to_minutes event.actual_load in
+                   let theory = Duration.to_minutes event.theoretical_load in
+                   let adjusted = Duration.to_minutes event.adjusted_load in
+                   El.div
+                     [
+                       El.txt' v.name;
+                       El.txt' (": Theoritical: " ^ string_of_int real ^ "m");
+                       El.txt' (" / " ^ string_of_int theory ^ "m");
+                       El.txt' (" => " ^ string_of_int (real - theory) ^ "m");
+                       El.br ();
+                       El.txt' ("Adjusted " ^ string_of_int adjusted ^ "m");
+                       El.txt' (" => " ^ string_of_int (real - adjusted) ^ "m");
+                     ]
+                   :: acc)
+                 volunteers []
+      in
+      Pico_ui.Elwd.section [ `R txt; `R facts ]
     in
     Ui.accordion ~name:"results" ~title [ `R results ]
   in

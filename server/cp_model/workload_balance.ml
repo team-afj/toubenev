@@ -5,6 +5,11 @@ open! Rich
 open Normal
 open Shared.Workload_analysis
 
+(* Things to keep in mind:
+   - Volunteer have arrival adn departure times
+   - Some quests are free: they don't count in the volunteer workload
+*)
+
 (** Real assignations *)
 
 (** [time_spent ctx ~by:volunteer ~on:quests] sums the duration of each quest in
@@ -13,7 +18,11 @@ let time_spent (ctx : Context.t) ~by:volunteer ~on:quests =
   Sat.LinearExpr.weighted_sum
   @@ Quests.to_list_map quests ~f:(fun q ->
       let assigned = ctx.assignations volunteer q in
-      (Duration.to_minutes q.slot.duration, assigned))
+      let duration =
+        if Rich.Quest.is_free q.initial then 0
+        else Duration.to_minutes q.slot.duration
+      in
+      (duration, assigned))
 
 (** Diffs *)
 

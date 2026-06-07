@@ -1,4 +1,4 @@
 (library
  (name cp_model)
  (flags :standard -open Std)
- (libraries std utils ortools data_repr logs))
+ (libraries std utils ortools shared data_repr logs))
