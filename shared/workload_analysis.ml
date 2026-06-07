@@ -12,20 +12,25 @@ let total_quests_time =
 
 (** Theoretical targets *)
 
-let theoretical_load ~of_:volunteer ~on:_ =
-  (* TODO IMPORTANT CHECK ARRIVAL DEPARTURE AND OTHER FACTORS *)
-  Duration.to_seconds volunteer.Volunteer.initial.daily_workload
+let theoretical_load ~of_:(volunteer : Volunteer.t) ~on:date =
+  (* TODO Maybe check other factors ? Pro rata of arrival time ? *)
+  match (volunteer.initial.arrival, volunteer.initial.departure) with
+  | Some arrival, _ when Date.(date < Zoned_datetime.local_date arrival) ->
+      Duration.zero
+  | _, Some departure when Date.(Zoned_datetime.local_date departure < date) ->
+      Duration.zero
+  | _ -> volunteer.initial.daily_workload
 
 let total_theoretical_load volunteers ~on =
   Volunteers.fold volunteers ~init:0 ~f:(fun acc v ->
-      acc + theoretical_load ~of_:v ~on)
+      acc + (Duration.to_minutes @@ theoretical_load ~of_:v ~on))
 
-let theoretical_coef volunteers ~of_ ~on =
+let theoretical_coef ~total ~of_ ~on =
   Float.(
-    of_int (theoretical_load ~of_ ~on)
-    / of_int (total_theoretical_load volunteers ~on))
+    of_int (Duration.to_minutes @@ theoretical_load ~of_ ~on) / of_int total)
 
 let adjusted_load_minutes volunteers volunteer day day_quests =
   let quests_time = total_quests_time day_quests in
-  let adjustement_coef = theoretical_coef volunteers ~of_:volunteer ~on:day in
+  let total = total_theoretical_load volunteers ~on:day in
+  let adjustement_coef = theoretical_coef ~total ~of_:volunteer ~on:day in
   Float.(to_int (adjustement_coef * of_int quests_time))

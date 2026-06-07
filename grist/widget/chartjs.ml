@@ -94,15 +94,18 @@ module Options = struct
 
     include (Jv.Id : Jv.CONV with type t := t)
 
-    let create ?display ?typ ?min ?max ?title ?position ?stacked ?begin_at_zero
-        ?grid_display ?ticks_callback ?ticks_color ?ticks_max_ticks_limit
-        ?ticks_step_size ?ticks_auto_skip () =
+    let create ?display ?typ ?min ?max ?suggested_min ?suggested_max ?title
+        ?position ?stacked ?begin_at_zero ?grid_display ?ticks_callback
+        ?ticks_color ?ticks_max_ticks_limit ?ticks_step_size ?ticks_auto_skip ()
+        =
       let obj = Jv.obj [||] in
       Jv.Bool.set_if_some obj "display" display;
       Jv.Jstr.set_if_some obj "type" typ;
       Jv.Jstr.set_if_some obj "position" position;
       Jv.Float.set_if_some obj "min" min;
       Jv.Float.set_if_some obj "max" max;
+      Jv.Float.set_if_some obj "suggestedMin" suggested_min;
+      Jv.Float.set_if_some obj "suggestedMax" suggested_max;
       Jv.Bool.set_if_some obj "stacked" stacked;
       Jv.Bool.set_if_some obj "beginAtZero" begin_at_zero;
       let grid = Jv.obj [||] in

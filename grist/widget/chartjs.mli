@@ -118,6 +118,8 @@ module Options : sig
       ?typ:Jstr.t ->
       ?min:float ->
       ?max:float ->
+      ?suggested_min:float ->
+      ?suggested_max:float ->
       ?title:Jstr.t ->
       ?position:Jstr.t ->
       ?stacked:bool ->

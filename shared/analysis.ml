@@ -126,7 +126,9 @@ let volunteer_analyses (planning : Planning.t) (answer : Api.answer)
         Date.Map.mapi
           (fun date assignations ->
             let actual_load = volunteer_load assignations in
-            let theoretical_load = v.initial.daily_workload in
+            let theoretical_load =
+              Workload_analysis.theoretical_load ~of_:v ~on:date
+            in
             let day_quests = Date.Map.find date quests_by_day in
             let adjusted_load =
               Workload_analysis.adjusted_load_minutes normalized.volunteers v

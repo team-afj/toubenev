@@ -593,28 +593,34 @@ let app =
                 :: sufass))
       in
       let facts =
+        let canvas = El.canvas [] in
         let$ state = Lwd.get App.last_answer in
         match state with
         | None -> El.nbsp ()
         | Some { analysis = { volunteers; _ }; _ } ->
-            El.section
-            @@ Normal.Volunteer.Map.fold
-                 (fun v { Analysis.event; _ } acc ->
-                   let real = Duration.to_minutes event.actual_load in
-                   let theory = Duration.to_minutes event.theoretical_load in
-                   let adjusted = Duration.to_minutes event.adjusted_load in
-                   El.div
-                     [
-                       El.txt' v.name;
-                       El.txt' (": Theoritical: " ^ string_of_int real ^ "m");
-                       El.txt' (" / " ^ string_of_int theory ^ "m");
-                       El.txt' (" => " ^ string_of_int (real - theory) ^ "m");
-                       El.br ();
-                       El.txt' ("Adjusted " ^ string_of_int adjusted ^ "m");
-                       El.txt' (" => " ^ string_of_int (real - adjusted) ^ "m");
-                     ]
-                   :: acc)
-                 volunteers []
+            let chart, data, dataset =
+              Charts.v_workdiff_bar_chart_init canvas
+            in
+            let labels, values, _v_max =
+              Normal.Volunteer.Map.fold
+                (fun v { Analysis.event; _ } (labels, values, v_max) ->
+                  let real = Duration.to_minutes event.actual_load in
+                  let theory = Duration.to_minutes event.theoretical_load in
+                  let adjusted = Duration.to_minutes event.adjusted_load in
+                  let diff = real - theory in
+                  Console.debug
+                    [ "TBN"; v.name; " has adjusted load "; adjusted ];
+                  (v.name :: labels, diff :: values, max v_max (abs diff)))
+                volunteers ([], [], 0)
+            in
+            let () =
+              let open Chartjs in
+              Console.debug [ "TBN"; "Redraw workload bar chart" ];
+              Data.set_labels data (List.map ~f:Jstr.v labels);
+              Dataset.set_data dataset (Jv.of_list Jv.of_int values);
+              Chart.update chart
+            in
+            El.section [ canvas ]
       in
       Pico_ui.Elwd.section [ `R txt; `R facts ]
     in
