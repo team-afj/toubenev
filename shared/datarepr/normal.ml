@@ -135,14 +135,14 @@ end
 
 module Quests = Quest.Set
 
+let to_event_local_date (infos : Event_infos.t) datetime =
+  Zoned_datetime.(datetime - Time.to_duration infos.day_start_utc)
+  |> Zoned_datetime.local_date
+
 let quests_by_day (infos : Event_infos.t) quests =
   Quests.fold quests ~init:Date.Map.empty ~f:(fun acc q ->
-      let offseted =
-        (* The day is often offseted in a festival *)
-        Zoned_datetime.(q.slot.start - Time.to_duration infos.day_start_utc)
-      in
       Date.Map.update
-        (Zoned_datetime.local_date offseted)
+        (to_event_local_date infos q.slot.start)
         (function
           | None -> Some (Quests.singleton q)
           | Some quests -> Some (Quests.add q quests))

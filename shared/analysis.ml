@@ -12,13 +12,21 @@ type daily = {
 [@@deriving jsont]
 
 type facts = {
-  worload_balance : int;
-      (** The difference between the expected workload and the actual workload.
-      *)
+  adjusted_load : Duration.t;
+  theoretical_load : Duration.t;
+  actual_load : Duration.t;
 }
 [@@deriving jsont]
 
-type volunteer_analyses = { daily : facts Date.Map.t } [@@deriving jsont]
+let zero_facts =
+  {
+    adjusted_load = Duration.zero;
+    theoretical_load = Duration.zero;
+    actual_load = Duration.zero;
+  }
+
+type volunteer_analyses = { daily : facts Date.Map.t; event : facts }
+[@@deriving jsont]
 
 type t = {
   daily : daily Date.Map.t;
@@ -89,8 +97,59 @@ let daily (planning : Planning.t) (normalized : Api.data) =
   let by_day = quests_by_day planning.infos normalized.quests in
   Date.Map.mapi (day_stats planning normalized) by_day
 
-let of_planning infos (_answer : Api.answer) n : t =
-  { daily = daily infos n; volunteers = Volunteer.Map.empty }
+let group_assignations_by_date_and_volunteer infos assignations =
+  List.fold_left assignations ~init:Volunteer.Map.empty
+    ~f:(fun acc (assignation : Api.assignation) ->
+      let date = to_event_local_date infos assignation.quest.slot.start in
+      Volunteers.fold assignation.volunteers ~init:acc ~f:(fun acc volunteer ->
+          Volunteer.Map.update volunteer
+            (function
+              | None -> Some (Date.Map.singleton date [ assignation ])
+              | Some dates -> Some (Date.Map.add_to_list date assignation dates))
+            acc))
+
+let volunteer_load (assignations : Api.assignation list) =
+  List.fold_left assignations ~init:Duration.zero
+    ~f:(fun acc { Api.quest; _ } -> Duration.(acc + quest.slot.duration))
+
+let volunteer_analyses (planning : Planning.t) (answer : Api.answer)
+    (normalized : Api.data) =
+  let quests_by_day = quests_by_day planning.infos normalized.quests in
+  let assignations =
+    group_assignations_by_date_and_volunteer planning.infos answer.solution
+  in
+  Volunteer.Map.mapi
+    (fun v dates ->
+      let daily =
+        Date.Map.mapi
+          (fun date assignations ->
+            let actual_load = volunteer_load assignations in
+            let theoretical_load = v.initial.daily_workload in
+            let day_quests = Date.Map.find date quests_by_day in
+            let adjusted_load =
+              Workload_analysis.adjusted_load_minutes normalized.volunteers v
+                date day_quests
+              |> Duration.from_minutes
+            in
+            { adjusted_load; theoretical_load; actual_load })
+          dates
+      in
+      let event =
+        Date.Map.fold
+          (fun _ f f' ->
+            let open Duration in
+            {
+              adjusted_load = f.adjusted_load + f'.adjusted_load;
+              actual_load = f.actual_load + f'.actual_load;
+              theoretical_load = f.theoretical_load + f'.theoretical_load;
+            })
+          daily zero_facts
+      in
+      { daily; event })
+    assignations
+
+let of_planning infos (answer : Api.answer) n =
+  { daily = daily infos n; volunteers = volunteer_analyses infos answer n }
 
 let diags { daily; _ } =
   Date.Map.fold

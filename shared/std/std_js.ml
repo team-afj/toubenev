@@ -87,6 +87,18 @@ module Map = struct
     val jsont : 'a Jsont.t -> 'a t Jsont.t
   end
 
+  module Make (C : OrderedType) = struct
+    include Make (C)
+
+    let add_multi ~singleton ~cons key v t =
+      update key
+        (function None -> Some (singleton v) | Some vs -> Some (cons v vs))
+        t
+
+    let add_multi_list key v t =
+      add_multi ~singleton:List.return ~cons:List.cons key v t
+  end
+
   module Make_jsont (C : OrderedTypeJsont) = struct
     include Make (C)
 
