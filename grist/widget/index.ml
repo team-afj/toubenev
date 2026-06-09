@@ -592,76 +592,13 @@ let app =
                 :: El.txt' (" (fait à " ^ date ^ ")")
                 :: sufass))
       in
-      let facts =
-        let canvas = El.canvas [] in
-        let$ state = Lwd.get App.last_answer in
-        match state with
-        | None -> El.nbsp ()
-        | Some { analysis = { volunteers; _ }; _ } ->
-            let chart, data, dataset =
-              Charts.v_workdiff_bar_chart_init canvas
-            in
-            let labels_values, _v_max =
-              Normal.Volunteer.Map.fold
-                (fun v { Analysis.event; daily } (values, v_max) ->
-                  let real = Duration.to_minutes event.actual_load in
-                  let theory = Duration.to_minutes event.theoretical_load in
-                  let adjusted = Duration.to_minutes event.adjusted_load in
-                  let diff = real - adjusted in
-                  Date.Map.iter
-                    (fun date (facts : Analysis.facts) ->
-                      (* let _real = Duration.to_minutes facts.actual_load in *)
-                      let theory = Duration.to_minutes facts.theoretical_load in
-                      let adjusted = Duration.to_minutes facts.adjusted_load in
-
-                      Console.debug
-                        [
-                          "TBN";
-                          "Day ";
-                          Date.to_intl_long_string `Fr date;
-                          ": ";
-                          v.name;
-                          " has adjusted load ";
-                          adjusted;
-                          " (";
-                          theory;
-                          ")";
-                        ])
-                    daily;
-                  Console.debug
-                    [
-                      "TBN";
-                      "Event: ";
-                      v.name;
-                      " has adjusted load ";
-                      adjusted;
-                      " (";
-                      theory;
-                      ")";
-                    ];
-                  ((v.name, diff) :: values, max v_max (abs diff)))
-                volunteers ([], 0)
-            in
-            let labels, values =
-              List.sort ~cmp:(fun (_, v1) (_, v2) -> v2 - v1) labels_values
-              |> List.split
-            in
-            let () =
-              let open Chartjs in
-              Console.debug [ "TBN"; "Redraw workload bar chart" ];
-              Data.set_labels data (List.map ~f:Jstr.v labels);
-              Dataset.set_data dataset (Jv.of_list Jv.of_int values);
-              Chart.update chart
-            in
-            El.section [ canvas ]
-      in
       let diffs =
         let$ state = Lwd.get App.last_answer in
         match state with
         | None -> El.nbsp ()
         | Some { analysis; _ } -> Diffs_table.make analysis
       in
-      Pico_ui.Elwd.section [ `R txt; `R diffs; `R facts ]
+      Pico_ui.Elwd.section [ `R txt; `R diffs ]
     in
     Pico_ui.accordion ~name:"results" ~title [ `R results ]
   in

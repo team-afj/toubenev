@@ -1,3 +1,4 @@
+(* TODO this is currently dead code *)
 let v_workdiff_bar_chart_init =
   let chart = ref None in
   fun canvas ->
