@@ -7,6 +7,16 @@ open Analysis
 
 let print_signed_int = Int.to_string
 
+let color_grad i =
+  At.style (Jstr.v ("background-color: hwb(9 " ^ string_of_int i ^ "% 0%);"))
+
+let max_red = 200
+
+let make_red i =
+  let i = max 0 (min max_red (abs i)) in
+  let i = i * 100 / max_red in
+  color_grad (100 - i)
+
 let make (analysis : t) =
   let head =
     Date.Map.fold
@@ -23,7 +33,7 @@ let make (analysis : t) =
         Duration.(
           facts.event.actual_load - facts.event.adjusted_load |> to_minutes)
       in
-      (diff, El.td [ El.txt' (print_signed_int diff) ])
+      (diff, El.td ~at:[ make_red diff ] [ El.txt' (print_signed_int diff) ])
     in
     ( total_diff,
       Date.Map.fold
@@ -31,7 +41,7 @@ let make (analysis : t) =
           let diff =
             Duration.(facts.actual_load - facts.adjusted_load |> to_minutes)
           in
-          El.td [ El.txt' (print_signed_int diff) ] :: acc)
+          El.td ~at:[ make_red diff ] [ El.txt' (print_signed_int diff) ] :: acc)
         facts.daily [ total; name ]
       |> List.rev |> El.tr )
   in
