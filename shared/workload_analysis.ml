@@ -5,10 +5,12 @@ open Normal
 
 (** Utilites *)
 let total_quest_time (q : Quest.t) =
-  Duration.to_minutes q.slot.duration * q.initial.required_volunteers
+  if Rich.Quest.is_free q.initial then Duration.zero
+  else Duration.(q.slot.duration * q.initial.required_volunteers)
 
 let total_quests_time =
-  Quests.fold ~init:0 ~f:(fun acc q -> acc + total_quest_time q)
+  Quests.fold ~init:Duration.zero ~f:(fun acc q ->
+      Duration.(acc + total_quest_time q))
 
 (** Theoretical targets *)
 
@@ -30,7 +32,7 @@ let theoretical_coef ~total ~of_ ~on =
     of_int (Duration.to_minutes @@ theoretical_load ~of_ ~on) / of_int total)
 
 let adjusted_load_minutes volunteers volunteer day day_quests =
-  let quests_time = total_quests_time day_quests in
+  let quests_time = total_quests_time day_quests |> Duration.to_minutes in
   let total = total_theoretical_load volunteers ~on:day in
   let adjustement_coef = theoretical_coef ~total ~of_:volunteer ~on:day in
   Float.(to_int (adjustement_coef * of_int quests_time))

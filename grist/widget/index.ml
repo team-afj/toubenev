@@ -603,14 +603,35 @@ let app =
             in
             let labels_values, _v_max =
               Normal.Volunteer.Map.fold
-                (fun v { Analysis.event; _ } (values, v_max) ->
+                (fun v { Analysis.event; daily } (values, v_max) ->
                   let real = Duration.to_minutes event.actual_load in
                   let theory = Duration.to_minutes event.theoretical_load in
                   let adjusted = Duration.to_minutes event.adjusted_load in
                   let diff = real - adjusted in
+                  Date.Map.iter
+                    (fun date (facts : Analysis.facts) ->
+                      (* let _real = Duration.to_minutes facts.actual_load in *)
+                      let theory = Duration.to_minutes facts.theoretical_load in
+                      let adjusted = Duration.to_minutes facts.adjusted_load in
+
+                      Console.debug
+                        [
+                          "TBN";
+                          "Day ";
+                          Date.to_intl_long_string `Fr date;
+                          ": ";
+                          v.name;
+                          " has adjusted load ";
+                          adjusted;
+                          " (";
+                          theory;
+                          ")";
+                        ])
+                    daily;
                   Console.debug
                     [
                       "TBN";
+                      "Event: ";
                       v.name;
                       " has adjusted load ";
                       adjusted;

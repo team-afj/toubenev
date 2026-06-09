@@ -37,10 +37,7 @@ type t = {
 let day_stats (_planning : Planning.t) (normalized : Api.data) day quests =
   let total_quest_time =
     Quests.fold quests ~init:Duration.zero ~f:(fun acc q ->
-        let is_free =
-          match q.initial.task_type with None -> false | Some tt -> tt.free
-        in
-        if is_free then acc
+        if Rich.Quest.is_free q.initial then acc
         else Duration.(acc + (q.slot.duration * q.initial.required_volunteers)))
   in
   let max_concurrent_volunteers =
@@ -120,24 +117,35 @@ let volunteer_analyses (planning : Planning.t) (answer : Api.answer)
   let assignations =
     group_assignations_by_date_and_volunteer planning.infos answer.solution
   in
-  Volunteer.Map.mapi
-    (fun v dates ->
-      let daily =
-        Date.Map.mapi
-          (fun date assignations ->
-            let actual_load = volunteer_load assignations in
+  let by_day =
+    Date.Map.mapi
+      (fun date day_quests ->
+        Volunteer.Set.fold ~init:Volunteer.Map.empty
+          ~f:(fun acc v ->
+            let assignations =
+              Option.bind
+                (Volunteer.Map.find_opt v assignations)
+                (Date.Map.find_opt date)
+              |> Option.get_or ~default:[]
+            in
             let theoretical_load =
               Workload_analysis.theoretical_load ~of_:v ~on:date
             in
-            let day_quests = Date.Map.find date quests_by_day in
+            let actual_load = volunteer_load assignations in
             let adjusted_load =
               Workload_analysis.adjusted_load_minutes normalized.volunteers v
                 date day_quests
               |> Duration.from_minutes
             in
-            { adjusted_load; theoretical_load; actual_load })
-          dates
-      in
+            Volunteer.Map.add v
+              { adjusted_load; theoretical_load; actual_load }
+              acc)
+          normalized.volunteers)
+      quests_by_day
+  in
+  Volunteer.Set.fold normalized.volunteers ~init:Volunteer.Map.empty
+    ~f:(fun acc v ->
+      let daily = Date.Map.map (Volunteer.Map.find v) by_day in
       let event =
         Date.Map.fold
           (fun _ f f' ->
@@ -149,8 +157,7 @@ let volunteer_analyses (planning : Planning.t) (answer : Api.answer)
             })
           daily zero_facts
       in
-      { daily; event })
-    assignations
+      Volunteer.Map.add v { daily; event } acc)
 
 let of_planning infos (answer : Api.answer) n =
   { daily = daily infos n; volunteers = volunteer_analyses infos answer n }
