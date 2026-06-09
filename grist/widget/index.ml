@@ -655,7 +655,13 @@ let app =
             in
             El.section [ canvas ]
       in
-      Pico_ui.Elwd.section [ `R txt; `R facts ]
+      let diffs =
+        let$ state = Lwd.get App.last_answer in
+        match state with
+        | None -> El.nbsp ()
+        | Some { analysis; _ } -> Diffs_table.make analysis
+      in
+      Pico_ui.Elwd.section [ `R txt; `R diffs; `R facts ]
     in
     Pico_ui.accordion ~name:"results" ~title [ `R results ]
   in

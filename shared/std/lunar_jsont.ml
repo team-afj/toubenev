@@ -1,3 +1,11 @@
+module Utils = struct
+  let lpad ?(char = '0') ~size n =
+    let pre = if n < 0 then "-" else "" in
+    let str = string_of_int (abs n) in
+    let len = String.length str in
+    pre ^ if len >= size then str else String.make (size - len) char ^ str
+end
+
 module Weekday = struct
   include Lunar.Weekday
 
@@ -138,6 +146,15 @@ module Date = struct
         Month.to_intl_long_string lang month;
       ]
 
+  let to_short_string ?(format = `DDMMYYYY) t =
+    let day_of_month = day_of_month t |> Utils.lpad ~size:2 in
+    let month = month t |> Month.to_int |> Utils.lpad ~size:2 in
+    match format with
+    | `DDMM -> day_of_month ^ "/" ^ month
+    | `DDMMYYYY ->
+        let year = year t |> string_of_int in
+        day_of_month ^ "/" ^ month ^ "/" ^ year
+
   let jsont : t Jsont.t =
     Jsont.map ~dec:from_string_exn ~enc:to_string Jsont.string
 
@@ -174,12 +191,4 @@ module Zoned_datetime = struct
   let local_time t = to_local_datetime t |> Datetime.time
   let to_local_duration t = to_local_datetime t |> Datetime.to_duration
   let to_utc_duration t = to_utc t |> Datetime.to_duration
-end
-
-module Utils = struct
-  let lpad ?(char = '0') ~size n =
-    let pre = if n < 0 then "-" else "" in
-    let str = string_of_int (abs n) in
-    let len = String.length str in
-    pre ^ if len >= size then str else String.make (size - len) char ^ str
 end

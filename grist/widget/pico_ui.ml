@@ -4,6 +4,12 @@ module Api = Data_repr.Api
 
 let container = At.class' (Jstr.v "container")
 
+module At = struct
+  include At
+
+  let overflow_auto = At.class' (Jstr.v "overflow-auto")
+end
+
 module El = struct
   include El
 
