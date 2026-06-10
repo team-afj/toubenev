@@ -104,12 +104,14 @@ module Benevole = struct
     pseudo : string;
     nom : string;
     prenom : string;
-    nb_heures : float;
+    nb_heures : float; [@default 4.]
     langues : grist_string_list; [@default []]
     telephone : string;
     email : string;
     specialites : grist_int_list; [@default []]
     taches_interdites : grist_int_list; [@default []]
+    favorite_quests : grist_int_list; [@default []]
+    constrained_quests : grist_int_list; [@default []]
     amis : grist_int_list; [@default []]
     ennemis : grist_int_list; [@default []]
     date_d_arrivee : int option;
@@ -392,6 +394,8 @@ let to_planning ?(id_map = new_id_map ())
           nb_heures;
           specialites;
           taches_interdites;
+          favorite_quests;
+          constrained_quests;
           indisponibilites_quotidiennes;
           horaires_preferes;
           horaires_contraints;
@@ -424,6 +428,16 @@ let to_planning ?(id_map = new_id_map ())
         CCRAL.of_list_map
           ~f:(fun i -> Int.Map.find i id_map.task_types)
           taches_interdites
+      in
+      let wanted_tasks =
+        CCRAL.of_list_map
+          ~f:(fun i -> Int.Map.find i id_map.task_types)
+          favorite_quests
+      in
+      let unwanted_tasks =
+        CCRAL.of_list_map
+          ~f:(fun i -> Int.Map.find i id_map.task_types)
+          constrained_quests
       in
       let forbidden_places =
         CCRAL.of_list_map ~f:(fun i -> Int.Map.find i id_map.places) []
@@ -476,8 +490,8 @@ let to_planning ?(id_map = new_id_map ())
       in
       let v =
         Rich.Volunteer.make ~id:ids ?public_name ~name ~daily_workload
-          ~proficiencies ~forbidden_tasks ~forbidden_places ~availabilities
-          ?arrival ?departure ()
+          ~proficiencies ~forbidden_tasks ~forbidden_places ~wanted_tasks
+          ~unwanted_tasks ~availabilities ?arrival ?departure ()
       in
       ({ id_map with volunteers = Int.Map.add id v id_map.volunteers }, v)
     in

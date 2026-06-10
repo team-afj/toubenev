@@ -321,6 +321,8 @@ module Volunteer = struct
     proficiencies : Task_types.t;
     forbidden_tasks : Task_types.t;
     forbidden_places : Places.t;
+    wanted_tasks : Task_types.t;
+    unwanted_tasks : Task_types.t;
   }
   [@@deriving jsont]
 
@@ -339,6 +341,8 @@ module Volunteer = struct
       proficiencies = CCRAL.empty;
       forbidden_tasks = CCRAL.empty;
       forbidden_places = CCRAL.empty;
+      wanted_tasks = CCRAL.empty;
+      unwanted_tasks = CCRAL.empty;
     }
 
   type edit =
@@ -369,6 +373,7 @@ module Volunteer = struct
 
   let make ?id ?(friends = []) ?(ennemis = []) ?(proficiencies = CCRAL.empty)
       ?(forbidden_tasks = CCRAL.empty) ?(forbidden_places = CCRAL.empty)
+      ?(wanted_tasks = CCRAL.empty) ?(unwanted_tasks = CCRAL.empty)
       ?(availabilities = CCRAL.empty) ?arrival ?departure
       ?(manually_assigned = false) ~daily_workload ~name ?public_name () =
     let id = Option.get_lazy make_id id in
@@ -386,6 +391,8 @@ module Volunteer = struct
       ennemis;
       forbidden_tasks;
       forbidden_places;
+      wanted_tasks;
+      unwanted_tasks;
     }
 
   let set_friends t fs = t.friends <- fs

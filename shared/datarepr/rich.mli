@@ -204,6 +204,8 @@ module Volunteer : sig
     proficiencies : Task_types.t;
     forbidden_tasks : Task_types.t;
     forbidden_places : Places.t;
+    wanted_tasks : Task_types.t;
+    unwanted_tasks : Task_types.t;
   }
 
   include S with type t := t
@@ -217,6 +219,8 @@ module Volunteer : sig
     ?proficiencies:Task_types.t ->
     ?forbidden_tasks:Task_types.t ->
     ?forbidden_places:Places.t ->
+    ?wanted_tasks:Task_types.t ->
+    ?unwanted_tasks:Task_types.t ->
     ?availabilities:Availabilities.t ->
     ?arrival:Zoned_datetime.t ->
     ?departure:Zoned_datetime.t ->

@@ -76,6 +76,12 @@ let normalize_volunteer event_infos (v : Rich.Volunteer.t) =
   let forbidden_tasks =
     Rich.Task_type.Set.of_list (CCRAL.to_list v.forbidden_tasks)
   in
+  let wanted_tasks =
+    Rich.Task_type.Set.of_list (CCRAL.to_list v.wanted_tasks)
+  in
+  let unwanted_tasks =
+    Rich.Task_type.Set.of_list (CCRAL.to_list v.unwanted_tasks)
+  in
   let unavailabilities, preferences =
     CCRAL.fold v.availabilities ~x:([], [])
       ~f:(fun (u_acc, p_acc) { Rich.Availability.status; slot } ->
@@ -90,6 +96,8 @@ let normalize_volunteer event_infos (v : Rich.Volunteer.t) =
     name;
     initial = v;
     forbidden_tasks;
+    wanted_tasks;
+    unwanted_tasks;
     unavailabilities;
     preferences;
   }

@@ -321,9 +321,18 @@ let friendship_bonus (ctx : Context.t) =
 (** Appreciation score for a volunteer doing a specific quest based on time
     preferences. Breaks down the quest into 15-minute blocks and sums preference
     scores for each block where a volunteer's preferred time slot overlaps. *)
-let appreciation_of_quest (v : Volunteer.t) (q : Quest.t) =
+let appreciation_of_quest (opt : Options.t) (v : Volunteer.t) (q : Quest.t) =
   let quest_end = Time_slot.end_ q.slot in
   let fifteen_minutes = Duration.from_minutes 15 in
+  let quest_type_score =
+    q.initial.task_type
+    |> Option.map_or ~default:0 @@ fun quest_type ->
+       if Task_type.Set.mem quest_type v.wanted_tasks then
+         opt.desired_quest_bonus
+       else if Task_type.Set.mem quest_type v.unwanted_tasks then
+         -1 * opt.undesired_quest_bonus
+       else 0
+  in
   let rec loop acc current =
     if Zoned_datetime.(current >= quest_end) then acc
     else
@@ -338,22 +347,23 @@ let appreciation_of_quest (v : Volunteer.t) (q : Quest.t) =
       let current_block =
         { Time_slot.start = current; duration = block_duration }
       in
-      let score =
+      let preferences_score =
         List.fold_left v.preferences ~init:0
           ~f:(fun sum (pref_score, pref_slot) ->
             if Time_slot.overlaps current_block pref_slot then sum + pref_score
             else sum)
       in
-      loop (acc + score) next_time
+      loop (acc + quest_type_score + preferences_score) next_time
   in
   loop 0 q.slot.start
 
 (** Total appreciation of a planning for a volunteer. Sums the appreciation of
     each quest, weighted by whether the volunteer is assigned. *)
-let appreciation_of_planning (ctx : Context.t) =
+let appreciation_of_planning opts (ctx : Context.t) =
   Volunteers.fold ctx.vs ~init:[] ~f:(fun acc v ->
       Quests.fold ctx.qs ~init:acc ~f:(fun acc q ->
-          let appreciation = appreciation_of_quest v q in
+          let appreciation = appreciation_of_quest opts v q in
+          Logs.debug (fun msg -> msg "%s + %s = %i" v.name q.name appreciation);
           Sat.scale appreciation (Sat.LinearExpr.var (ctx.assignations v q))
           :: acc))
   |> Sat.LinearExpr.sum
@@ -368,7 +378,7 @@ let minimize_f (ctx : Context.t) =
     scale (10 * event_bounds_coef) @@ Workload_balance.event_bounds ctx;
     scale (10 * daily_bounds_coef) @@ Workload_balance.daily_bounds ctx;
     scale (-1 * friendship_coef) @@ friendship_bonus ctx;
-    scale (-1) @@ appreciation_of_planning ctx;
+    scale (-1) @@ appreciation_of_planning options ctx;
   ]
   |> sum |> Sat.minimize ctx.model
 

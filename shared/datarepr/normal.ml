@@ -34,6 +34,8 @@ module Volunteer = struct
       name : string;
       initial : Volunteer.t;
       forbidden_tasks : Task_type.Set.t;
+      wanted_tasks : Task_type.Set.t;
+      unwanted_tasks : Task_type.Set.t;
       unavailabilities : Time_slot.t list;
       preferences : (int * Time_slot.t) list;
     }
@@ -51,6 +53,8 @@ module Volunteer = struct
       name = "";
       initial = Volunteer.dummy;
       forbidden_tasks = Task_type.Set.empty;
+      wanted_tasks = Task_type.Set.empty;
+      unwanted_tasks = Task_type.Set.empty;
       unavailabilities = [];
       preferences = [];
     }
