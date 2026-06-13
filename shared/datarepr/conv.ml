@@ -48,13 +48,7 @@ let split_time_slot (options : Rich.Options.t) { Time_slot.start; duration } =
   (* Looking for [n] such that [min <= duration / n <= max] *)
   let min_d = options.min_quest_duration in
   let max_d = options.max_quest_duration in
-  let max_minutes = 120 in
-  let minutes = Duration.to_minutes duration in
-  let n =
-    let n = minutes / max_minutes in
-    if minutes mod max_minutes = 0 then n else n + 1
-  in
-  let splits_duration = Duration.from_minutes (minutes / n) in
+  let splits_duration = max_d in
   let rec aux acc start remaining =
     if Duration.(remaining <= max_d) then
       List.rev (Time_slot.{ start; duration = remaining } :: acc)
