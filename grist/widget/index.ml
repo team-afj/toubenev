@@ -207,6 +207,25 @@ let sat =
     match (data, !last_data) with
     | Error err, _ ->
         Console.error [ "DBG"; "Decoding error: "; Jv.Error.message err ];
+        let err =
+          Jv.Error.message err |> Jstr.to_string
+          |> String.replace ~sub:"[0m" ~by:"\""
+          |> String.replace ~sub:"[1m" ~by:"\""
+        in
+        let error =
+          [
+            El.p
+              [
+                El.txt'
+                  "Une erreur est survenue lors de la lecture des données. \
+                   Cela signifie probablement que le type d'une colonne n'est \
+                   pas respéctée ou qu'une information nécéssaire est \
+                   manquante.";
+              ];
+            El.pre [ El.txt' err ];
+          ]
+        in
+        Pico_ui.Modal.one_shot ~title:"Oups !" error;
         Fut.return (Ok ())
     | Ok data, Some last when Equal.poly last data ->
         let () = Console.info [ "TBN"; "Nothing to do, data didn't change" ] in

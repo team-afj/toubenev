@@ -2,6 +2,7 @@ open Brr
 open Brr_lwd
 module Api = Data_repr.Api
 
+let j = Jstr.v
 let container = At.class' (Jstr.v "container")
 
 module At = struct
@@ -13,6 +14,7 @@ end
 module El = struct
   include El
 
+  let dialog ?d ?at v = El.v ?d ?at (Jstr.v "dialog") v
   let section ?(at = []) = El.section ~at:(container :: at)
 end
 
@@ -42,3 +44,40 @@ let diag_card ((lvl, msg) : Api.diagnostic) =
     ]
   in
   El.article ~at [ El.txt' msg ]
+
+module Modal = struct
+  let one_shot ~title content =
+    let btn =
+      El.button ~at:[ At.v (j "aria-label") (j "Close"); At.rel (j "prev") ] []
+    in
+    let dialog =
+      let header = [ btn; El.p [ El.strong [ El.txt' title ] ] ] |> El.header in
+      El.dialog
+        ~at:[ At.v (j "open") (j "true") ]
+        [ El.article (header :: content) ]
+    in
+    let _ = Ev.listen Ev.click (fun _ -> El.remove dialog) (El.as_target btn) in
+    El.append_children (G.document |> Document.body) [ dialog ]
+end
+
+(*
+<dialog open>
+  <article>
+    <header>
+      <button aria-label="Close" rel="prev"></button>
+      <p>
+        <strong>🗓️ Thank You for Registering!</strong>
+      </p>
+    </header>
+    <p>
+      We're excited to have you join us for our
+      upcoming event. Please arrive at the museum
+      on time to check in and get started.
+    </p>
+    <ul>
+      <li>Date: Saturday, April 15</li>
+      <li>Time: 10:00am - 12:00pm</li>
+    </ul>
+  </article>
+</dialog>
+*)
