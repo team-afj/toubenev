@@ -41,6 +41,14 @@ let make_day_table ~with_types (date : Date.t) assignations =
     Zoned_datetime.Map.to_rev_seq assignations
     |> Seq.fold
          (fun acc (_datetime, assignations) ->
+           let assignations =
+             List.sort
+               ~cmp:(fun { Api.quest = q; _ } { Api.quest = q'; _ } ->
+                 Zoned_datetime.compare
+                   (Normal.Time_slot.end_ q'.slot)
+                   (Normal.Time_slot.end_ q.slot))
+               assignations
+           in
            List.fold_left assignations ~init:acc
              ~f:(fun acc { Api.quest; volunteers } ->
                let slot = Normal.Time_slot.to_string quest.slot in
