@@ -158,8 +158,8 @@ module Quete = struct
     recurrence : string;
     jours : jour_list; [@default []]
     date_et_heure_de_debut : int;
-    benevoles : int;
-    duree_heures : float;
+    benevoles : int; [@default 1]
+    duree_heures : float; [@default 1.]
     fin_de_recurrence : int option;
     benevoles_assignes : grist_int_list; [@default []]
   }
