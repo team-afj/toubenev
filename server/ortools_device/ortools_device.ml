@@ -30,13 +30,16 @@ let new_optim t (p : Data_repr.Rich.Planning.t) =
         ~num_workers:8l ()
     in
     let observer response =
+      Logs.info (fun m -> m "Ortools_device: new solution");
       let date = now ~tz:p.infos.timezone () in
       let answer = Cp_model.Context.prepare_answer date context response in
       Bqueue.put queue answer
     in
     let response =
+      Logs.info (fun m -> m "Ortools_device: start solving.");
       Ortools_solvers.Sat.solve ~observer ~parameters context.model
     in
+    Logs.info (fun m -> m "Ortools_device: finished solving.");
     let date = now ~tz:p.infos.timezone () in
     let answer = Cp_model.Context.prepare_answer date context response in
     Bqueue.put queue answer;
