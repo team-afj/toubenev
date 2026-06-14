@@ -12,6 +12,10 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.colors.min.css">
   <link rel="stylesheet" href="plannings.css">
   <style>
+    body:has(> dialog[open]) {
+      overflow: hidden;
+    }
+
     .container {
       overflow-x: auto;
       position: relative;
