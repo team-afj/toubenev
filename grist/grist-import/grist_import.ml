@@ -158,7 +158,7 @@ module Quete = struct
     recurrence : string;
     jours : jour_list; [@default []]
     date_et_heure_de_debut : int;
-    benevoles : int; [@default 1]
+    benevoles : int option; [@default None]
     duree_heures : float; [@default 1.]
     fin_de_recurrence : int option;
     benevoles_assignes : grist_int_list; [@default []]
@@ -531,7 +531,7 @@ let to_planning ?(id_map = new_id_map ())
           nom = name;
           type_;
           lieu;
-          benevoles = required_volunteers;
+          benevoles = required_volunteers_opt;
           benevoles_assignes;
           recurrence;
           date_et_heure_de_debut;
@@ -541,6 +541,9 @@ let to_planning ?(id_map = new_id_map ())
           _;
         } =
       let ids = Rich.id_of_int id in
+      let required_volunteers =
+        Option.value ~default:1 required_volunteers_opt
+      in
       let task_type = Int.Map.find_opt type_ id_map.task_types in
       let place = Int.Map.find_opt lieu id_map.places in
       let assigned_volunteers =
