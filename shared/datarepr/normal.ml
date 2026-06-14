@@ -140,7 +140,7 @@ end
 module Quests = Quest.Set
 
 let to_event_local_date (infos : Event_infos.t) datetime =
-  Zoned_datetime.(datetime - Time.to_duration infos.day_start_utc)
+  Zoned_datetime.(datetime - Time.to_duration infos.day_start_local)
   |> Zoned_datetime.local_date
 
 let quests_by_day (infos : Event_infos.t) quests =

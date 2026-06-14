@@ -75,7 +75,7 @@ module Event_infos = struct
     name : string;
     kind : kind;
     timezone : Timezone.t;
-    day_start_utc : Time.t;
+    day_start_local : Time.t;
     minimum_transfer_time : Duration.t;
     daily_break_duration : Duration.t;
   }

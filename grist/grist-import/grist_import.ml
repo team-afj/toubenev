@@ -250,16 +250,15 @@ let to_planning ?(id_map = new_id_map ())
     let start_date = Date.from_duration (Duration.from_seconds infos.start) in
     let end_date = Date.from_duration (Duration.from_seconds infos.end_) in
     let timezone = Rich.Timezones.of_string infos.timezone in
-    let day_start_time =
+    let day_start_local =
       let seconds = Int.of_float (infos.day_start_time *. 3600.) in
       Time.from_duration (Duration.from_seconds seconds)
     in
-    let day_start_utc = Time.(day_start_time - Timezone.to_duration timezone) in
     {
       Rich.Event_infos.name = infos.name;
       kind = Finite { start_date; end_date };
       timezone;
-      day_start_utc;
+      day_start_local;
       minimum_transfer_time = Duration.from_minutes infos.minimum_transfer_time;
       daily_break_duration = Duration.from_hours_f infos.daily_break_duration;
     }

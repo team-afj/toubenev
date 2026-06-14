@@ -49,7 +49,7 @@ module Event_infos : sig
     name : string;
     kind : kind;
     timezone : Timezone.t;
-    day_start_utc : Time.t;
+    day_start_local : Time.t;
     minimum_transfer_time : Duration.t;
         (** The free time volunteers should have to move between two quests that
             are in different places. *)

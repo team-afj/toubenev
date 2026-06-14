@@ -16,7 +16,7 @@ let example_planning : Planning.t =
       Event_infos.name = "Event 1";
       kind = Finite { start_date; end_date };
       timezone = Timezones.europe_paris;
-      day_start_utc = Time.make_exn ~hour:3 ~min:0 ~sec:0 ();
+      day_start_local = Time.make_exn ~hour:3 ~min:0 ~sec:0 ();
       minimum_transfer_time = Duration.from_minutes 15;
       daily_break_duration = Duration.from_hours 6;
     }
