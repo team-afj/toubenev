@@ -40,32 +40,34 @@ let make_day_table ~with_types (date : Date.t) assignations =
   let rows =
     Zoned_datetime.Map.to_rev_seq assignations
     |> Seq.fold
-         (fun acc (_datetime, { Api.quest; volunteers }) ->
-           let slot = Normal.Time_slot.to_string quest.slot in
-           let n = max 1 quest.initial.required_volunteers in
-           let n_missing =
-             max 0 (n - Normal.Volunteers.cardinal volunteers - 1)
-           in
-           let tdq =
-             match (with_types, quest.initial.task_type) with
-             | true, Some tdq -> Some tdq.slug
-             | _, _ -> None
-           in
-           let first, rest =
-             match Normal.Volunteers.to_list volunteers with
-             | [] -> (make_empty_cell ?tdq (), [])
-             | hd :: tl -> (make_assigned_cell ?tdq hd.name, tl)
-           in
-           let missing =
-             List.init ~len:n_missing ~f:(fun _ ->
-                 El.tr [ make_empty_cell ?tdq () ])
-           in
-           let rest =
-             List.fold_left rest ~init:(List.rev_append missing acc)
-               ~f:(fun acc (v : Normal.Volunteer.t) ->
-                 El.tr [ make_assigned_cell ?tdq v.name ] :: acc)
-           in
-           El.tr [ El.th ~at:[ rowspan n ] [ El.txt' slot ]; first ] :: rest)
+         (fun acc (_datetime, assignations) ->
+           List.fold_left assignations ~init:acc
+             ~f:(fun acc { Api.quest; volunteers } ->
+               let slot = Normal.Time_slot.to_string quest.slot in
+               let n = max 1 quest.initial.required_volunteers in
+               let n_missing =
+                 max 0 (n - Normal.Volunteers.cardinal volunteers - 1)
+               in
+               let tdq =
+                 match (with_types, quest.initial.task_type) with
+                 | true, Some tdq -> Some tdq.slug
+                 | _, _ -> None
+               in
+               let first, rest =
+                 match Normal.Volunteers.to_list volunteers with
+                 | [] -> (make_empty_cell ?tdq (), [])
+                 | hd :: tl -> (make_assigned_cell ?tdq hd.name, tl)
+               in
+               let missing =
+                 List.init ~len:n_missing ~f:(fun _ ->
+                     El.tr [ make_empty_cell ?tdq () ])
+               in
+               let rest =
+                 List.fold_left rest ~init:(List.rev_append missing acc)
+                   ~f:(fun acc (v : Normal.Volunteer.t) ->
+                     El.tr [ make_assigned_cell ?tdq v.name ] :: acc)
+               in
+               El.tr [ El.th ~at:[ rowspan n ] [ El.txt' slot ]; first ] :: rest))
          []
   in
   El.div [ El.table ~at:[ cls "planning" ] (head :: rows) ]
@@ -90,10 +92,13 @@ let make_place_planning (place : Place.t) assignations =
     Date.Map.fold
       (fun _date v acc ->
         Zoned_datetime.Map.fold
-          (fun _zdate v acc ->
-            match v.Api.quest.initial.task_type with
-            | None -> acc
-            | Some tdq -> Task_type.Set.add tdq acc)
+          (fun _zdate assignations acc ->
+            List.fold_left ~init:acc
+              ~f:(fun acc assignation ->
+                match assignation.Api.quest.initial.task_type with
+                | None -> acc
+                | Some tdq -> Task_type.Set.add tdq acc)
+              assignations)
           v acc)
       assignations Task_type.Set.empty
   in
@@ -114,19 +119,27 @@ let make_plannings (data : Rich.Planning.t) (answer : Api.answer) =
         let place = Option.value ~default:Place.dummy quest.initial.place in
         let date = Normal.to_event_local_date data.infos quest.slot.start in
         let time = quest.slot.start in
+        (* let end_time = Normal.Time_slot.end_ quest.slot in *)
         Place.Map.update place
           (function
             | None ->
                 Some
                   (Date.Map.singleton date
-                     (Zoned_datetime.Map.singleton time ass))
+                     (Zoned_datetime.Map.singleton time [ ass ]))
             | Some dates ->
                 Some
                   (Date.Map.update date
                      (function
-                       | None -> Some (Zoned_datetime.Map.singleton time ass)
+                       | None ->
+                           Some (Zoned_datetime.Map.singleton time [ ass ])
                        | Some times ->
-                           Some (Zoned_datetime.Map.add time ass times))
+                           Some
+                             (Zoned_datetime.Map.update time
+                                (function
+                                  | None -> Some [ ass ]
+                                  | Some assignations ->
+                                      Some (ass :: assignations))
+                                times))
                      dates))
           acc)
   in
