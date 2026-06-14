@@ -1,4 +1,4 @@
-open Lunar
+open Lunar_jsont
 open Normal
 
 (** Normalization simplifies the representaiton for the solver, notably by
@@ -9,6 +9,7 @@ let expand_time_spec
     {
       Rich.Event_infos.kind = Finite { start_date; end_date };
       timezone = tz;
+      day_start_local;
       _;
     } (spec : Rich.Time_spec.t) =
   let first_day =
@@ -22,17 +23,36 @@ let expand_time_spec
     | Some date -> Date.min end_date date
   in
   let start_time = spec.start in
-  let duration = spec.duration in
+  let first =
+    (* FIXME: this work only for quests with no boundary ?? *)
+    Zoned_datetime.(from_date ~tz first_day + Time.to_duration day_start_local)
+  in
+  let last =
+    Zoned_datetime.(
+      from_date ~tz (Date.add_days 1 last_day)
+      + Time.to_duration day_start_local)
+  in
+  Logs.debug (fun m ->
+      m "First: %s Last: %s (%s)"
+        (Zoned_datetime.to_string first)
+        (Zoned_datetime.to_string last)
+        (Zoned_datetime.from_date ~tz last_day |> Zoned_datetime.to_string));
+  let range = Zoned_datetime.Range.make ~first ~last in
   let all_dates =
     if Date.(last_day < first_day) then []
     else
-      let range = Date.Range.make ~first:first_day ~last:last_day in
       let all_days_in_range () =
-        Date.Range.(
+        Zoned_datetime.Range.(
           to_list ~include_boundaries:true ~iterator:iterator_day range)
+        |> List.map ~f:Zoned_datetime.local_date
+        |> Date.Set.of_list |> Date.Set.to_list
       in
+      Logs.debug (fun m ->
+          m "Dates in range: %s"
+            (String.concat ~sep:", "
+               (List.map (all_days_in_range ()) ~f:Date.to_string)));
       match spec.recurrence with
-      | On dates -> List.filter ~f:(Fun.flip Date.Range.contains range) dates
+      | On dates -> dates
       | Daily -> all_days_in_range ()
       | Weekly weekdays ->
           let range = all_days_in_range () in
@@ -40,9 +60,11 @@ let expand_time_spec
               let wd = Date.day_of_week d in
               Weekday.Set.mem wd weekdays)
   in
-  List.map all_dates ~f:(fun date ->
+  List.filter_map all_dates ~f:(fun date ->
       let start = Zoned_datetime.(from ~tz date start_time) in
-      { Time_slot.start; duration })
+      if Zoned_datetime.Range.contains start range then
+        Some { Time_slot.start; duration = spec.duration }
+      else None)
 
 let split_time_slot (options : Rich.Options.t) { Time_slot.start; duration } =
   (* Looking for [n] such that [min <= duration / n <= max] *)

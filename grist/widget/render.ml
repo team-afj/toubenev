@@ -9,12 +9,6 @@ let colspan i = At.v (Jstr.v "colspan") (Jstr.of_int i)
 let rowspan i = At.v (Jstr.v "rowspan") (Jstr.of_int i)
 let scope s = At.v (Jstr.v "scope") (Jstr.v s)
 
-let event_day (infos : Event_infos.t) (slot : Normal.Time_slot.t) =
-  let offseted =
-    Zoned_datetime.(slot.start - Time.to_duration infos.day_start_utc)
-  in
-  Zoned_datetime.local_date offseted
-
 let place_of_assignation (assignation : Api.assignation) =
   assignation.quest.initial.Rich.Quest.place
 
@@ -118,7 +112,7 @@ let make_plannings (data : Rich.Planning.t) (answer : Api.answer) =
     List.fold_left answer.solution ~init:Place.Map.empty
       ~f:(fun acc ({ Api.quest; _ } as ass) ->
         let place = Option.value ~default:Place.dummy quest.initial.place in
-        let date = event_day data.infos quest.slot in
+        let date = Normal.to_event_local_date data.infos quest.slot.start in
         let time = quest.slot.start in
         Place.Map.update place
           (function

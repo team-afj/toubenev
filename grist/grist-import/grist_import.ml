@@ -280,7 +280,9 @@ let to_planning ?(id_map = new_id_map ())
     let duration =
       Duration.from_seconds (Float.to_int (duration_h *. 60. *. 60.))
     in
-    let first_day = Some (local_date start) in
+    let first_day =
+      match recurrence with On _ -> None | _ -> Some (local_date start)
+    in
     let last_day =
       Option.map
         (fun d -> Date.from_duration (Duration.from_seconds d))
