@@ -32,11 +32,11 @@ let expand_time_spec
       from_date ~tz (Date.add_days 1 last_day)
       + Time.to_duration day_start_local)
   in
-  Logs.debug (fun m ->
+  (* Logs.debug (fun m ->
       m "First: %s Last: %s (%s)"
         (Zoned_datetime.to_string first)
         (Zoned_datetime.to_string last)
-        (Zoned_datetime.from_date ~tz last_day |> Zoned_datetime.to_string));
+        (Zoned_datetime.from_date ~tz last_day |> Zoned_datetime.to_string)); *)
   let range = Zoned_datetime.Range.make ~first ~last in
   let all_dates =
     if Date.(last_day < first_day) then []
@@ -47,10 +47,10 @@ let expand_time_spec
         |> List.map ~f:Zoned_datetime.local_date
         |> Date.Set.of_list |> Date.Set.to_list
       in
-      Logs.debug (fun m ->
+      (* Logs.debug (fun m ->
           m "Dates in range: %s"
             (String.concat ~sep:", "
-               (List.map (all_days_in_range ()) ~f:Date.to_string)));
+               (List.map (all_days_in_range ()) ~f:Date.to_string))); *)
       match spec.recurrence with
       | On dates -> dates
       | Daily -> all_days_in_range ()
