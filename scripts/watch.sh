@@ -1,5 +1,7 @@
 #!/bin/sh
 
+export OCAMLRUNPARAM=b
+
 ./toubenev.exe &
 
 fswatch -o toubenev.exe www/** www -l 1 | xargs -L1 bash -c \
