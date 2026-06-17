@@ -190,5 +190,6 @@ module Zoned_datetime = struct
   let local_date t = to_local_datetime t |> Datetime.date
   let local_time t = to_local_datetime t |> Datetime.time
   let to_local_duration t = to_local_datetime t |> Datetime.to_duration
+  let to_local_minutes t = to_local_duration t |> Duration.to_minutes
   let to_utc_duration t = to_utc t |> Datetime.to_duration
 end
