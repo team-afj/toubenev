@@ -275,9 +275,9 @@ let know_your_ennemy (ctx : Context.t) =
                 [ ctx.assignations v q; ctx.assignations ennemy q ]
               |> Sat.add ctx.model ~name ?only_enforce_if)
 
-(* Daily break *)
+(* TODO Daily break *)
 
-(** Quests groups *)
+(** TODO Quests groups *)
 
 (* TODO:
    - at least one volunteer in all of them
@@ -383,6 +383,7 @@ let minimize_f (ctx : Context.t) =
   |> sum |> Sat.minimize ctx.model
 
 let make ~with_assumptions (data : Planning.t) =
+  let start_time = Unix.gettimeofday () in
   let model = Sat.make ~name:"Toubenev" () in
   let context = Context.prepare ~with_assumptions model data in
 
@@ -397,6 +398,8 @@ let make ~with_assumptions (data : Planning.t) =
 
   let () = if not with_assumptions then minimize_f context in
 
+  Logs.debug (fun m ->
+      m "Model building took %fs" (Unix.gettimeofday () -. start_time));
   context
 
 let resolve_solution (ctx : Context.t) arr =
