@@ -54,7 +54,7 @@ let optim_stream req handle server () =
         Response.add ~field "text/event-stream"
       in
       let* () = Cors.allow_origin () in
-      let* () = Response.with_source req src in
+      let* () = Response.with_source ~compression:`DEFLATE req src in
       let* () = Response.respond `OK in
       Logs.debug (fun fmt -> fmt "SSE connection closed");
       Ortools_device.cancel ortools handle;
