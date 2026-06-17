@@ -34,6 +34,8 @@ type t = {
 }
 [@@deriving jsont]
 
+let empty = { daily = Date.Map.empty; volunteers = Volunteer.Map.empty }
+
 let day_stats (_planning : Planning.t) (normalized : Api.data) day quests =
   let total_quest_time =
     Quests.fold quests ~init:Duration.zero ~f:(fun acc q ->
