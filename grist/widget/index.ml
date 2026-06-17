@@ -445,7 +445,7 @@ let optimize ~(chart_canvas : El.t) (current_state : App.state) =
           first := false;
           match Lwd.peek App.last_answer with
           | None -> ()
-          | Some ({ answer; _ } as state) ->
+          | Some ({ answer; data; _ } as state) ->
               ignore
               @@
               let* () = Solutions.upsert_solution_1 state in
@@ -453,6 +453,10 @@ let optimize ~(chart_canvas : El.t) (current_state : App.state) =
                 List.map answer.solution
                   ~f:(Grist_import.Assignation.v ~solution:1)
               in
+              let analysis =
+                Shared.Analysis.of_planning planning answer normalized_planning
+              in
+              Lwd.set App.last_answer (Some { data; answer; analysis });
               Assignations.insert_assignations assignations
         end)
       (Event_source.as_target event_source)
