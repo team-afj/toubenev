@@ -43,8 +43,8 @@ let max_daily_load (ctx : Context.t) =
 let bounds (ctx : Context.t) day day_quests =
   let s_date = Date.to_string day in
   let max_daily_load = max_daily_load ctx in
-  let lb = -2 * max_daily_load in
-  let ub = 2 * max_daily_load in
+  let lb = -1 * max_daily_load in
+  let ub = max_daily_load in
   let lower_bound =
     Printf.sprintf "diff_lower_bound_day_%s" s_date
     |> Sat.Var.new_int ctx.model ~lb ~ub
@@ -61,6 +61,21 @@ let bounds (ctx : Context.t) day day_quests =
   in
   Sat.(var upper_bound - var lower_bound)
 
+(* TODO maybe we should take the abs at the end here ? Or for every day ? *)
+(*
+let daily_bounds (ctx : Context.t) =
+  let max_daily_load = max_daily_load ctx in
+  let _ub = max_daily_load * Date.Map.cardinal ctx.by_day in
+  let open Sat in
+  let abs = Printf.sprintf "abs_diff_days" |> Var.new_int ctx.model ~lb:0 ~ub in
+  let by_day =
+    Date.Map.fold
+      (fun day day_quests acc -> bounds ctx day day_quests :: acc)
+      ctx.by_day []
+  in
+  add ctx.model (Constraint.abs_equality abs [ LinearExpr.sum by_day ]);
+  var abs
+*)
 let daily_bounds (ctx : Context.t) =
   Date.Map.fold
     (fun day day_quests acc -> bounds ctx day day_quests :: acc)
@@ -88,4 +103,10 @@ let event_bounds (ctx : Context.t) =
     Sat.(add ctx.model (diff <= var upper_bound));
     Sat.(add ctx.model (diff >= var lower_bound))
   in
+  (* TODO and here too ?
+  let open Sat in
+  let abs = Sat.Var.new_int ctx.model ~lb:0 ~ub "abs_diff_event" in
+  add ctx.model
+    (Constraint.abs_equality abs [ var upper_bound - var lower_bound ]);
+  var abs *)
   Sat.(var upper_bound - var lower_bound)
