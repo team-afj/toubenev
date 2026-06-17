@@ -27,13 +27,24 @@ let new_optim t (p : Data_repr.Rich.Planning.t) =
     let context = Cp_model.Model.make ~with_assumptions:false p in
     let parameters =
       Ortools.Sat_parameters.make_sat_parameters ~log_search_progress:false
-        ~num_workers:8l ()
+        ~num_workers:12l ~max_time_in_seconds:(60. *. 10.) ()
+    in
+    let atomic_queue = Miou.Queue.create () in
+    let listener =
+      Miou.call (fun () ->
+          let rec loop () =
+            let copy = Miou.Queue.transfer atomic_queue in
+            Miou.Queue.to_list copy |> List.iter ~f:(Bqueue.put queue);
+            Miou_unix.sleep 0.250;
+            loop ()
+          in
+          loop ())
     in
     let observer response =
       Logs.info (fun m -> m "Ortools_device: new solution");
       let date = now ~tz:p.infos.timezone () in
       let answer = Cp_model.Context.prepare_answer date context response in
-      Bqueue.put queue answer
+      Miou.Queue.enqueue atomic_queue answer
     in
     let response =
       Logs.info (fun m -> m "Ortools_device: start solving.");
@@ -42,6 +53,7 @@ let new_optim t (p : Data_repr.Rich.Planning.t) =
     Logs.info (fun m -> m "Ortools_device: finished solving.");
     let date = now ~tz:p.infos.timezone () in
     let answer = Cp_model.Context.prepare_answer date context response in
+    Miou.cancel listener;
     Bqueue.put queue answer;
     Bqueue.close queue
   in
@@ -63,7 +75,7 @@ let rec clean_up orphans =
       clean_up orphans
 
 let v =
-  let finally (t : t) = Miou.await_exn t.task_launcher in
+  let finally (t : t) = Miou.cancel t.task_launcher in
   Vif.Device.v ~name:"ortools" ~finally [] @@ fun () ->
   let task_queue : (task, task option) Bqueue.t =
     Bqueue.(create with_close 256)
@@ -72,7 +84,10 @@ let v =
   let task_launcher =
     Miou.async (fun () ->
         let orphans = Miou.orphans () in
-        Flux.Source.each (fun f -> ignore (Miou.call ~orphans f)) task_source;
-        clean_up orphans)
+        Flux.Source.each
+          (fun f ->
+            clean_up orphans;
+            ignore (Miou.call ~orphans f))
+          task_source)
   in
   { tasks = Hashtbl.create 16; task_queue; task_launcher }
