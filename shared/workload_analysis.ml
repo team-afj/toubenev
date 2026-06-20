@@ -9,6 +9,9 @@ let total_quest_time (q : Quest.t) =
   else Duration.(q.slot.duration * q.initial.required_volunteers)
 
 let total_quests_time =
+  (* TODO We should not count quest time for assigned volunteers that are manually
+     assigned. If their time is 0 or the length of the quest, applying the
+     proportional coefficient will biased them. *)
   Quests.fold ~init:Duration.zero ~f:(fun acc q ->
       Duration.(acc + total_quest_time q))
 
@@ -31,8 +34,11 @@ let theoretical_coef ~total ~of_ ~on =
   Float.(
     of_int (Duration.to_minutes @@ theoretical_load ~of_ ~on) / of_int total)
 
-let adjusted_load_minutes volunteers volunteer day day_quests =
+let adjusted_load_minutes ?(unit = `Minutes) volunteers volunteer day day_quests
+    =
   let quests_time = total_quests_time day_quests |> Duration.to_minutes in
   let total = total_theoretical_load volunteers ~on:day in
   let adjustement_coef = theoretical_coef ~total ~of_:volunteer ~on:day in
-  Float.(to_int (adjustement_coef * of_int quests_time))
+  let adjusted_m = Float.(adjustement_coef * of_int quests_time) in
+  let adjusted = Quest.minutes_conv ~unit adjusted_m in
+  Float.to_int adjusted

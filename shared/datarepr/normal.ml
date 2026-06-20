@@ -114,6 +114,21 @@ module Quest = struct
     let find_by_id id t = find { dummy with id } t
   end
 
+  let minutes_conv ~unit t =
+    match unit with
+    | `Minutes -> t
+    | `Five_minutes -> Float.(t / 5. |> round)
+    | `Fifteen_minutes -> Float.(t / 15. |> round)
+    | `N_minutes n -> Float.(t / of_int n |> round)
+
+  (** The "real" quest duration. Free quests last 0 minutes. *)
+  let real_duration ?(unit = `Five_minutes) q =
+    let duration_m =
+      if Rich.Quest.is_free q.initial then 0
+      else Duration.to_minutes q.slot.duration (* Resolution 15 ? *)
+    in
+    Float.to_int (minutes_conv ~unit (Float.of_int duration_m))
+
   (** Check if two quests are overlapping. If they are in separate places they
       must be separated by at least [Options.minimum_transfer_time]. *)
   let overlaps { Event_infos.minimum_transfer_time; _ } (q1 : t) (q2 : t) =
