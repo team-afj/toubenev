@@ -9,6 +9,7 @@ let sat_check planning =
   let response = Ortools_solvers.Sat.solve ~parameters context.model in
   Logs.debug (fun m ->
       m "Solver took %fs" (Unix.gettimeofday () -. time_before));
+  Logs.debug (fun m -> m "Unfeasible, running again with assumptions.");
   if Equal.poly response.status Ortools.Sat.Response.Infeasible then
     (* If the model is not satisfaiable, we run again with assumptions to
        provide some hints about the conflicting constraints. We do this in a
@@ -20,7 +21,10 @@ let sat_check planning =
         ~num_workers:1l ()
     in
     (context, Ortools_solvers.Sat.solve ~parameters context.model)
-  else (context, response)
+  else begin
+    Logs.debug (fun m -> m "Feasible.");
+    (context, response)
+  end
 
 let solve planning =
   let context, response = sat_check planning in

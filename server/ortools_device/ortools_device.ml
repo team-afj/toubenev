@@ -27,7 +27,7 @@ let new_optim t (p : Data_repr.Rich.Planning.t) =
     let context = Cp_model.Model.make ~with_assumptions:false p in
     let parameters =
       Ortools.Sat_parameters.make_sat_parameters ~log_search_progress:false
-        ~num_workers:12l ~max_time_in_seconds:(60. *. 10.) ()
+        ~num_workers:8l ~max_time_in_seconds:(60. *. 10.) ()
     in
     let atomic_queue = Miou.Queue.create () in
     let listener =
@@ -40,8 +40,12 @@ let new_optim t (p : Data_repr.Rich.Planning.t) =
           in
           loop ())
     in
+    let time = ref (Sys.time ()) in
     let observer response =
-      Logs.info (fun m -> m "Ortools_device: new solution");
+      let new_time = Sys.time () in
+      Logs.info (fun m ->
+          m "Ortools_device: new solution after %f" (new_time -. !time));
+      time := new_time;
       let date = now ~tz:p.infos.timezone () in
       let answer = Cp_model.Context.prepare_answer date context response in
       Miou.Queue.enqueue atomic_queue answer
