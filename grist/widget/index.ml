@@ -461,6 +461,19 @@ let optimize ~(chart_canvas : El.t) (current_state : App.state) =
         end)
       (Event_source.as_target event_source)
   in
+  let handle_new_solution (answer : Api.answer) =
+    let time = answer.deterministic_time in
+    let satisfaction = Api.satisfaction answer.solution in
+    let analysis =
+      Shared.Analysis.of_planning planning answer normalized_planning
+    in
+    Lwd.set App.last_answer (Some { data; answer; analysis });
+    Chartjs.Dataset.push_data d_objective
+      (mk_point time (answer.objective_value -. answer.best_objective_bound));
+    Chartjs.Dataset.push_data d_satisfaction (mk_point time satisfaction);
+    Chartjs.Chart.update chart
+  in
+  let handle = Brrer.Limiter.throttle ~delay_ms:500 in
   let _ =
     Ev.listen Brr_io.Message.Ev.message
       (fun ev ->
@@ -468,17 +481,7 @@ let optimize ~(chart_canvas : El.t) (current_state : App.state) =
         let answer =
           Jsont_brr.decode Data_repr.Api.answer_jsont json |> Result.get_ok
         in
-        let time = answer.deterministic_time in
-        let satisfaction = Api.satisfaction answer.solution in
-        let analysis =
-          Shared.Analysis.of_planning planning answer normalized_planning
-        in
-        Lwd.set App.last_answer (Some { data; answer; analysis });
-        Chartjs.Dataset.push_data d_objective
-          (mk_point time
-             (answer.objective_value -. answer.best_objective_bound));
-        Chartjs.Dataset.push_data d_satisfaction (mk_point time satisfaction);
-        Chartjs.Chart.update chart)
+        handle (fun () -> handle_new_solution answer))
       (Event_source.as_target event_source)
   in
   Console.error [ "DBG"; "HANDLE"; handle; event_source ]
