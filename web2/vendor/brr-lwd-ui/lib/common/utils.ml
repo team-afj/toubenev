@@ -13,50 +13,6 @@ let pure t = `P t
 let reactive t = `R t
 let sequence t = `S t
 
-module Unit = struct
-  (** Conversion between CSS units. Very early WIP. *)
-  type t = Px of float | Rem of float | Em of float
-
-  let of_string s =
-    (* TODO: proper parsing *)
-    match String.chop_suffix ~suf:"px" s with
-    | Some i -> (
-        match Int.of_string i with
-        | Some i -> Some (Px (float_of_int i))
-        | None -> Float.of_string_opt i |> Option.map (fun i -> Px i))
-    | None -> (
-        match String.chop_suffix ~suf:"rem" s with
-        | Some f -> Float.of_string_opt f |> Option.map (fun f -> Rem f)
-        | None -> (
-            match String.chop_suffix ~suf:"em" s with
-            | Some f -> Float.of_string_opt f |> Option.map (fun f -> Rem f)
-            | None -> None))
-
-  let to_string = function
-    | Px i -> Printf.sprintf "%fpx" i
-    | Rem f -> Printf.sprintf "%frem" f
-    | Em f -> Printf.sprintf "%fem" f
-
-  let to_px ?(parent = G.document |> Document.root) =
-    let get_font_size_in_px parent =
-      let font_size =
-        El.computed_style (Jstr.v "font-size") parent |> Jstr.to_string
-      in
-      match of_string font_size with
-      | None -> 16.
-      | Some (Px i) -> i
-      | Some _ -> failwith "not implemented"
-    in
-    function
-    | Px i -> i
-    | Rem f ->
-        let font_size = get_font_size_in_px (G.document |> Document.root) in
-        f *. font_size
-    | Em f ->
-        let font_size = get_font_size_in_px parent in
-        f *. font_size
-end
-
 let tap ?(initial_trigger = false) ~f t =
   let root = Lwd.observe t in
   Lwd.set_on_invalidate root (fun _ ->
@@ -64,6 +20,22 @@ let tap ?(initial_trigger = false) ~f t =
       Window.queue_micro_task G.window (fun () -> f (Lwd.quick_sample root)));
   let first_sample = Lwd.quick_sample root in
   if initial_trigger then f first_sample
+
+(* See https://github.com/let-def/lwd/issues/55 *)
+let cache_changes computation ~equal k =
+  let cache = ref None in
+  Lwd.bind computation ~f:(fun value ->
+      match !cache with
+      | None ->
+          let var = Lwd.var value in
+          let result = k (Lwd.get var) in
+          cache := Some (var, result);
+          result
+      | Some (var, result) ->
+          let value' = Lwd.peek var in
+          if not (equal value value') then
+            Window.queue_micro_task G.window (fun () -> Lwd.set var value);
+          result)
 
 let collect_into_var t =
   let root = Lwd.observe t in
@@ -74,10 +46,18 @@ let collect_into_var t =
           Lwd.set v (Lwd.quick_sample root)));
   v
 
+let set_if_different ?(equal = Equal.poly) var v =
+  if equal v @@ Lwd.peek var then () else Lwd.set var v
+
 let map3 ~f a b c =
   Lwd.map2 a b ~f:(fun a b -> (a, b)) |> Lwd.map2 c ~f:(fun c (a, b) -> f a b c)
 
+let map4 ~f a b c d =
+  map3 a b c ~f:(fun a b c -> (a, b, c))
+  |> Lwd.map2 d ~f:(fun d (a, b, c) -> f a b c d)
+
 let triple a b c = map3 a b c ~f:(fun a b c -> (a, b, c))
+let seq_is_empty s = Equal.poly Lwd_seq.Empty @@ Lwd_seq.view s
 
 module Forward_ref : sig
   type 'a t
@@ -123,3 +103,32 @@ let measure_execution_time name f () =
         (Brr.Performance.now_ms G.performance -. before);
     ];
   result
+
+module Sort = struct
+  type 'data compare =
+    | Compare : {
+        proj : 'data -> 'value;
+        compare : 'value -> 'value -> int;
+      }
+        -> 'data compare
+
+  let int ?(proj = Fun.id) () = Compare { proj; compare = Int.compare }
+  let string ?(proj = Fun.id) () = Compare { proj; compare = String.compare }
+  let compare (Compare sort) d1 d2 = sort.compare (sort.proj d1) (sort.proj d2)
+
+  let reverse (Compare { proj; compare }) =
+    let compare a b = compare b a in
+    Compare { proj; compare }
+
+  let lwd_seq compare t =
+    let compare (v1, i1) (v2, i2) =
+      let c = compare v1 v2 in
+      if c = 0 then Int.compare i1 i2 else c
+    in
+    let i = ref 0 in
+    t
+    |> Lwd_seq.map (fun v ->
+        incr i;
+        (v, !i))
+    |> Lwd_seq.sort_uniq compare |> Lwd_seq.map fst
+end

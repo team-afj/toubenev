@@ -14,7 +14,7 @@ type 'state handler_with_state =
   | Handler_with_state : {
       opts : Ev.listen_opts option;
       type' : 'a Ev.type';
-      func : 'state -> 'a Ev.t -> 'state update;
+      func : 'a Ev.t -> 'state -> 'state update;
     }
       -> 'state handler_with_state
 
@@ -27,21 +27,20 @@ module type State = sig
   val next : t -> t
 end
 
-let apply_state state f = f state
-
-let with_state ?(base = Attrs.empty) (type t) (module S : State with type t = t)
-    ?(state = S.default) ?d ?(at : (S.t -> Attrs.t) option)
-    ?(ev : t handler_with_state Elwd.col option)
-    (content : S.t -> El.t Elwd.col) =
-  let v_state = Lwd.var state in
+let with_state ?(base = []) (type t) (module S : State with type t = t)
+    ?state:(v_state = Lwd.var S.default) ?control ?d
+    ?(at : (S.t -> At.t) option) ?(ev : t handler_with_state Elwd.col option)
+    (content : S.t Lwd.t -> Elwd.t Elwd.col) =
+  let () =
+    Option.iter (Utils.tap ~initial_trigger:true ~f:(Lwd.set v_state)) control
+  in
   let get_state () = Lwd.get v_state in
   let set_state t = Lwd.set v_state t in
   let elt =
-    let open Lwd_infix in
-    let$* state = get_state () in
     let with_state (Handler_with_state { opts; type'; func }) =
       let func ev =
-        match func state ev with
+        let state = Lwd.peek v_state in
+        match func ev state with
         | None -> ()
         | Set s -> set_state s
         | Next -> set_state @@ S.next state
@@ -49,20 +48,21 @@ let with_state ?(base = Attrs.empty) (type t) (module S : State with type t = t)
       Elwd.handler ?opts type' func
     in
     let at =
-      Option.map_or ~default:base
-        (fun at -> Attrs.union base @@ apply_state state at)
-        at
+      match at with
+      | None -> base
+      | Some f -> `R (Lwd.map (get_state ()) ~f) :: base
     in
-    let at = Attrs.to_at at in
     let ev =
-      Option.map
-        (List.map ~f:(function
-          | `P h -> `P (with_state h)
-          | `R h -> `R (Lwd.map h ~f:with_state)
-          | `S h -> `S (Lwd_seq.map with_state h)))
-        ev
+      let default = [ `P (handler Ev.click (fun _ _ -> Next)) ] in
+      Option.get_or ev ~default
     in
-    Elwd.button ?d ~at ?ev (content state)
+    let ev =
+      List.map ev ~f:(function
+        | `P h -> `P (with_state h)
+        | `R h -> `R (Lwd.map h ~f:with_state)
+        | `S h -> `S (Lwd_seq.map with_state h))
+    in
+    Elwd.button ?d ~at ~ev (content (get_state ()))
   in
   (elt, get_state, set_state)
 

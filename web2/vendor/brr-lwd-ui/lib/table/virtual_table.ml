@@ -6,10 +6,12 @@
     having too large a lwd_table is probably a hard limit. *)
 
 open Import
+open Common
 open Brrer
 open Brr
 open Brr_lwd
 module FRef = Utils.Forward_ref
+module Sort = Utils.Sort
 
 let logger = Logger.for_section "virtual table"
 
@@ -30,18 +32,6 @@ let with_placeholder_or_error ?(placeholder = default_placeholder)
     | Some (Error err) -> error err
     | None -> placeholder i)
 
-type ('data, 'error) row_data = {
-  index : int;
-  content : ('data, 'error) Fut.result option;
-}
-
-type ('data, 'error) data_source =
-  | Lazy of {
-      total_items : int Lwd.t;
-      fetch : (int array -> ('data, 'error) Fut.result array) Lwd.t;
-          (** Fetched indices are always contiguous. *)
-    }
-
 let data_source_of_random_access_table (t : 'a Random_access_table.t) =
   let open Random_access_table in
   let fetch =
@@ -56,59 +46,61 @@ let data_source_of_random_access_table (t : 'a Random_access_table.t) =
             RAList.get index i |> Option.to_result error |> Fut.return)
           indices)
   in
-  Lazy { total_items = t.length; fetch }
+  Data_source.Lazy { total_items = t.length; fetch }
 
 (* The virtual table is a complex reactive component. Primarily, it reacts to
        changes of the [data_source] so that content in the table is properly
        refreshed when it does. Additionnaly it needs to react to multiple dom
        events, notably vertical resize of the container and scroll events, to ensure
        that the visible part of the talbe is always populated with rows. *)
-module Cache = FFCache.Make (Int)
 
-type ('data, 'error) state = {
-  layout : Layout.fixed_row_height;
-  (* The content_div ref should be initialized with the correct element as
-       soon as it is created. It is not reactive per se. *)
-  content_div : El.t Utils.Forward_ref.t;
-  (* The wrapper_div ref should be initialized with the correct element as
-     soon as it is created. It is not reactive per se. *)
-  wrapper_div : El.t Utils.Forward_ref.t;
-  (* The height of the window is a reactive value that might change during
-     execution when the browser is resized or other layout changes are made. *)
-  window_height : int option Lwd.var;
-  table_height : int option Lwd.var;
-  mutable last_scroll_y : float;
-  (* The cache is some sort of LRU to keep live the content of recently seen
-     rows *)
-  mutable cache : ('data, 'error) row_data Lwd_table.row Cache.t;
-  table : ('data, 'error) row_data Lwd_table.t;
-  (* The [row_index] table is used to provide fast random access to the table's
-     rows in the observer's callback *)
-  row_index : (int, ('data, 'error) row_data Lwd_table.row) Hashtbl.t;
-}
-
-let new_cache () = Cache.create ~size:50
-
-let prepare (state : ('data, 'error) state) ~total_items:total =
+let prepare (state : ('layout, 'data, 'error) state) ~total_items =
   let () = state.cache <- new_cache () in
-  let i = ref 0 in
-  let current_row = ref (Lwd_table.first state.table) in
-  while Option.is_some !current_row || !i <= total - 1 do
-    match !current_row with
-    | Some row ->
-        if !i <= total - 1 then
-          let () = Hashtbl.replace state.row_index !i row in
-          Lwd_table.set row { index = !i; content = None }
-        else Lwd_table.unset row;
-        incr i;
-        current_row := Lwd_table.next row
-    | None ->
-        let set = { index = !i; content = None } in
-        let row = Lwd_table.append ~set state.table in
-        Hashtbl.add state.row_index !i row;
-        incr i;
-        current_row := Lwd_table.next row
-  done
+  if state.table_length <> total_items then begin
+    state.table_length <- total_items;
+    let i = ref 0 in
+    let current_row = ref (Lwd_table.first state.table) in
+    while Option.is_some !current_row || !i <= total_items - 1 do
+      match !current_row with
+      | Some row ->
+          if !i <= total_items - 1 then
+            let () = Hashtbl.replace state.row_index !i row in
+            Lwd_table.set row { index = !i; content = None }
+          else Lwd_table.unset row;
+          incr i;
+          current_row := Lwd_table.next row
+      | None ->
+          let set = { index = !i; content = None } in
+          let row = Lwd_table.append ~set state.table in
+          Hashtbl.add state.row_index !i row;
+          incr i;
+          current_row := Lwd_table.next row
+    done
+  end
+
+module Spacer_monoid = struct
+  let empty = (0, Lwd_seq.empty, 0)
+
+  let concat dom (n, s, m) (p, s', q) =
+    match (Lwd_seq.view s, Lwd_seq.view s') with
+    | Empty, Empty ->
+        (* Since s is empty it does not matter on which
+             "side" of it the spaces are accumulated. *)
+        (n + m + p + q, s, 0)
+    | Empty, _ -> (n + m + p, s', q)
+    | _, Empty -> (n, s, m + p + q)
+    | _, _ ->
+        let s =
+          if m + p > 0 then
+            let spacer = Lwd.pure @@ Dom.make_spacer dom (m + p) in
+            Lwd_seq.(concat s @@ concat (element spacer) s')
+          else Lwd_seq.concat s s'
+        in
+        (n, s, q)
+
+  let v dom = (empty, concat dom)
+  let lwd_v dom = (Lwd.return empty, Lwd.map2 ~f:(concat dom))
+end
 
 (** Given the height of the wrapper element, the height of the table's rows and
     the scroll position, [compute_visible_rows] return the indices of currently
@@ -116,7 +108,7 @@ let prepare (state : ('data, 'error) state) ~total_items:total =
     ([bleeding]) so that they can be pre loaded to give the illusion to the user
     that they have always been there. The scroll direction is used to compute
     the scrolling speed and adjust bleeding consequently. *)
-let compute_visible_rows (state : ('data, 'error) state) =
+let compute_visible_rows (state : _ Dom.state) =
   let height elt =
     let jv = El.to_jv elt in
     Jv.get jv "offsetHeight" |> Jv.to_float
@@ -127,7 +119,7 @@ let compute_visible_rows (state : ('data, 'error) state) =
   let () = state.last_scroll_y <- scroll_y in
   let visible_height = height div in
   let parent = Utils.Forward_ref.get_exn state.content_div in
-  let row_height = Utils.Unit.to_px ~parent state.layout.row_height in
+  let row_height = Css_length.to_px' parent state.layout#row_height in
   let number_of_visible_rows =
     Int.of_float (ceil (visible_height /. row_height))
   in
@@ -145,10 +137,9 @@ let compute_visible_rows (state : ('data, 'error) state) =
     in
     last_visible_row + bleeding
   in
-  List.init ~len:(last - first) ~f:(fun i -> first + i)
+  (first, last - first)
 
-let load_or_bump_in_cache (state : ('data, 'error) state) ~fetch
-    ?(max_items = 200) rows =
+let load_or_bump_in_cache (state : ('layout, 'data, 'error) state) ~fetch rows =
   let load rows =
     (let data : ('data, _) Fut.result array = fetch (Array.map ~f:fst rows) in
      Array.iter2 rows data ~f:(fun (_, row) (data : ('data, _) Fut.result) ->
@@ -158,67 +149,156 @@ let load_or_bump_in_cache (state : ('data, 'error) state) ~fetch
          |> ignore))
     |> ignore
   in
-  let unload row =
-    Lwd_table.get row
-    |> Option.iter (fun row_data ->
-           Lwd_table.set row { row_data with content = None })
+  let to_load =
+    List.fold_left ~init:[] rows ~f:(fun acc (i, row) ->
+        let inserted = Lru.use' state.cache i row in
+        if inserted then (i, row) :: acc else acc)
   in
-  let cache, to_load =
-    List.fold_left ~init:(state.cache, []) rows ~f:(fun (cache, acc) (i, row) ->
-        ignore max_items (* cache is not configurable right now *);
-
-        let cache, inserted = Cache.insert ~on_evict:unload cache i row in
-        if inserted then (cache, (i, row) :: acc) else (cache, acc))
-  in
-  (* So much for the purely functionnal cache^^ *)
-  state.cache <- cache;
   match Array.of_list to_load with [||] -> () | to_load -> load to_load
 
 let update_visible_rows state fetch =
-  let visible_rows_indexes = compute_visible_rows state in
-  (* todo: We do way too much work and rebuild the queue each
-     time... it's very ineficient *)
+  let first, lenght = compute_visible_rows state.dom in
+  let visible_rows = List.init lenght ~f:(fun i -> first + i) in
   let visible_rows =
     List.filter_map
       ~f:(fun idx ->
         Hashtbl.get state.row_index idx |> Option.map (Pair.make idx))
-      visible_rows_indexes
+      visible_rows
   in
-  load_or_bump_in_cache state ~fetch
-    ~max_items:(4 * List.length visible_rows)
-    visible_rows
+  load_or_bump_in_cache state ~fetch visible_rows
 
-let make (type data error) ~(layout : Layout.fixed_row_height)
-    ?(scroll_target : int Lwd.t option) (render : (data, error) row_renderer)
-    (data_source : (data, error) data_source) =
-  let state =
-    {
-      layout;
-      content_div = Utils.Forward_ref.make ();
-      wrapper_div = Utils.Forward_ref.make ();
-      window_height = Lwd.var None;
-      table_height = Lwd.var None;
-      last_scroll_y = 0.;
-      cache = new_cache ();
-      table = Lwd_table.make ();
-      row_index = Hashtbl.create 2048;
-    }
+let index_of_row t row =
+  Lwd_table.map_reduce
+    (fun row _v -> (1, Some row, 0))
+    ( (0, None, 0),
+      fun (lb, lr, la) (rb, rr, ra) ->
+        match (lr, rr) with
+        | Some row', _ when Equal.physical row row' -> (lb, lr, la + rb + ra)
+        | _, Some row' when Equal.physical row row' -> (lb + la + rb, rr, ra)
+        | _ -> (lb + la + rb, rr, ra) )
+    t
+  |> Lwd.map ~f:(fun (i, _, _) -> (* todo check not found ? *) i)
+
+type 'a loaded_state = Loaded of 'a | Unloaded
+
+let make' ~(layout : 'data Layout.fixed_table) (data_source : 'data Lwd_table.t)
+    renderer =
+  let module RAList = CCRAL in
+  let dom =
+    Dom.
+      {
+        layout;
+        content_div = Utils.Forward_ref.make ();
+        wrapper_div = Utils.Forward_ref.make ();
+        wrapper_width = Lwd.var None;
+        wrapper_height = Lwd.var None;
+        last_scroll_y = 0.;
+      }
   in
-  let row_size = layout.row_height |> Utils.Unit.to_string in
-  let height_n n = Printf.sprintf "height: calc(%s * %i);" row_size n in
+  let cache =
+    Lru.create ~on_remove:(fun _i load_state -> Lwd.set load_state Unloaded) 20
+  in
+  let row_size = layout#row_height |> Css_length.to_string in
   let height = Printf.sprintf "height: %s !important;" row_size in
+  let row_count =
+    Lwd_table.map_reduce (fun _row _v -> 1) (0, ( + )) data_source
+  in
+  let internal_seq =
+    (* This counter is used to dedup rows when sorting *)
+    let i = ref 0 in
+    Lwd_table.map_reduce
+      (fun row v ->
+        incr i;
+        Lwd_seq.element ((Lwd.var 0, Lwd.var Unloaded, row, v), !i))
+      Lwd_seq.monoid data_source
+  in
+  let sorted_seq =
+    Lwd.bind (Lwd.get dom.layout#sort_state) ~f:(function
+      | None -> internal_seq
+      | Some { compare = Compare sort; _ } ->
+          let sort =
+            Sort.Compare
+              {
+                proj = (fun ((_, _, _, v), i) -> (sort.proj v, i));
+                compare =
+                  (fun (v1, i1) (v2, i2) ->
+                    let c = sort.compare v1 v2 in
+                    if c = 0 then Int.compare i1 i2 else c);
+              }
+          in
+          Lwd_seq.sort_uniq (Sort.compare sort) internal_seq)
+  in
+  let seq_index =
+    Lwd_seq.fold_monoid
+      (fun (v, _) -> RAList.(cons v empty))
+      (RAList.empty, RAList.append)
+      sorted_seq
+  in
+  let scroll_handler =
+    let on_scroll index () =
+      let first, lenght = compute_visible_rows dom in
+      for i = first to first + lenght do
+        let row_index, load_state, _row, _value =
+          (* Allocs less, but is it safe ? *) RAList.get_exn index i
+        in
+        let () = Utils.set_if_different row_index i in
+        (* TODO for both implementations: actually visible rows should be
+                 refreshed last in the cache and not bleeding ones. *)
+        Lru.use cache i load_state;
+        match Lwd.peek load_state with
+        | Loaded () -> ()
+        | _ -> Lwd.set load_state (Loaded ())
+      done
+    in
+    Lwd.map2 (Lwd.get dom.wrapper_height) seq_index ~f:(fun h index ->
+        let () =
+          Option.iter
+            (fun h ->
+              (* TODO: that's not a very thougtful heuristic. We could take the
+                 bleeding into account.  *)
+              2 * (Dom.number_of_fitting_rows_in dom h + 10)
+              |> Lru.set_max_length cache)
+            h
+        in
+        let () =
+          (* We execute the handle once each time it changes to make sure the
+             table is always up-to-date. *)
+          (* Queuing prevents illegal updates during invalidation *)
+          Window.queue_micro_task G.window (on_scroll index)
+        in
+        let on_scroll = Limiter.limit ~interval_ms:25 (on_scroll index) in
+        Elwd.handler Ev.scroll (fun _ev -> on_scroll ()))
+  in
+  let render ((row_index, load_state, row, value), _) =
+    let at = Attrs.add At.Name.class' (`P "lwdui-virtual-table-row") [] in
+    let style = `P (At.style (Jstr.v height)) in
+    Lwd.map (Lwd.get load_state) ~f:(function
+      | Unloaded -> (1, Lwd_seq.empty, 0)
+      | Loaded () ->
+          let rendered_row = renderer row_index row value in
+          ( 0,
+            Lwd_seq.element
+            @@ Elwd.div ~at:(style :: at) [ `S (Lwd_seq.lift rendered_row) ],
+            0 ))
+  in
+  let rows = Lwd_seq.fold_monoid render (Spacer_monoid.lwd_v dom) sorted_seq in
+  let rows = Dom.make_rows dom ~row_count (Lwd.join rows) in
+  Dom.make dom scroll_handler rows
+
+let make_lazy' (type data error) state ?(scroll_target : int Lwd.t option)
+    (render : (data, error) row_renderer)
+    (data_source : (data, error) Data_source.t) =
   let total_items, fetch =
     match data_source with Lazy { total_items; fetch } -> (total_items, fetch)
   in
-  let make_spacer n =
-    let at = [ At.class' (Jstr.v "row_spacer") ] in
-    let style = At.style (Jstr.v @@ height_n n) in
-    El.div ~at:(style :: at) []
-  in
-  let table_body =
+  let rows =
+    let style =
+      let row_size = state.dom.layout#row_height |> Css_length.to_string in
+      let height = Printf.sprintf "height: %s !important;" row_size in
+      `P (At.style (Jstr.v height))
+    in
     let render _row { content; index } =
       let at = Attrs.add At.Name.class' (`P "lwdui-virtual-table-row") [] in
-      let style = `P (At.style (Jstr.v height)) in
       match content with
       | Some data ->
           let rendered_row = render index data in
@@ -229,114 +309,49 @@ let make (type data error) ~(layout : Layout.fixed_row_height)
       | None -> (1, Lwd_seq.empty, 0)
     in
     let rows =
-      Lwd_table.map_reduce render
-        ( (0, Lwd_seq.empty, 0),
-          fun (n, s, m) (p, s', q) ->
-            match (Lwd_seq.view s, Lwd_seq.view s') with
-            | Empty, Empty ->
-                (* Since s is empty it does not matter on which
-                       "side" of it the spaces are accumulated. *)
-                (n + m + p + q, s, 0)
-            | Empty, _ -> (n + m + p, s', q)
-            | _, Empty -> (n, s, m + p + q)
-            | _, _ ->
-                let s =
-                  if m + p > 0 then
-                    let spacer = Lwd.pure @@ make_spacer (m + p) in
-                    Lwd_seq.(concat s @@ concat (element spacer) s')
-                  else Lwd_seq.concat s s'
-                in
-                (n, s, q) )
-        state.table
+      Lwd_table.map_reduce render (Spacer_monoid.v state.dom) state.table
     in
-    Lwd.map rows ~f:(fun (n, s, m) ->
-        let result =
-          if n > 0 then
-            let first_spacer = Lwd.pure @@ make_spacer n in
-            Lwd_seq.(concat (element first_spacer) s)
-          else s
-        in
-        if m > 0 then
-          let last_spacer = Lwd.pure @@ make_spacer m in
-          Lwd_seq.(concat result (element last_spacer))
-        else result)
+    Dom.make_rows state.dom ~row_count:total_items rows
   in
-  let table_header = Layout.header layout in
-  let table_status = Layout.status layout in
-  let observer =
-    (* We observe the size of the table to re-populate if necessary *)
-    Resize_observer.create ~callback:(fun entries _ ->
-        let entry = List.hd entries in
-        let rect = Resize_observer.Entry.content_rect entry in
-        let height = Dom_rect_read_only.height rect in
-        match Lwd.peek state.table_height with
-        | Some h when h <> height -> Lwd.set state.table_height (Some height)
-        | None -> Lwd.set state.table_height (Some height)
-        | _ -> ())
-  in
-  let rows =
-    let at = Attrs.O.(v (`P (C "lwdui-lazy-table-content"))) in
-    let on_create el = Utils.Forward_ref.set_exn state.content_div el in
-    Elwd.div ~at ~on_create [ `S (Lwd_seq.lift table_body) ]
-  in
-  let wrapper =
-    let at = Attrs.O.(v (`P (C "lwdui-lazy-table-content-wrapper"))) in
-    let scroll_handler =
-      Lwd.map fetch ~f:(fun fetch ->
-          (* We use [last_update] to have regular debounced updates and the
-             [timeout] to ensure that the last scroll event is always taken into
-             account even it it happens during the debouncing interval. *)
-          Console.log [ "POP ON SCROLL UPD" ];
-          let update () = update_visible_rows state fetch in
-          let last_update = ref 0. in
-          let timeout = ref (-1) in
-          Elwd.handler Ev.scroll (fun _ev ->
-              let debouncing_interval = 50 in
-              let now = Performance.now_ms G.performance in
-              if !timeout >= 0 then G.stop_timer !timeout;
-              timeout := G.set_timeout ~ms:debouncing_interval update;
-              if now -. !last_update >. float_of_int debouncing_interval then (
-                last_update := now;
-                update ())))
-    in
-    let ev = [ `R scroll_handler ] in
-    let on_create el =
-      Utils.Forward_ref.set_exn state.wrapper_div el;
-      Utils.tap ~initial_trigger:true (Lwd.pair total_items fetch) ~f:(function
-          | total_items, fetch ->
-          Console.log [ "Full refresh" ];
-          prepare state ~total_items;
-          update_visible_rows state fetch);
-      Utils.tap ~initial_trigger:false
-        (Lwd.pair fetch (Lwd.get state.table_height))
-        ~f:(function
-          | fetch, _ ->
-          Console.log [ "Height refresh" ];
-          update_visible_rows state fetch)
-    in
-    (match scroll_target with
-    | Some scroll_target ->
-        let scroll_target =
-          Lwd.map scroll_target ~f:(fun i ->
-              let row_height =
-                let parent = Utils.Forward_ref.get_exn state.content_div in
-                Int.of_float (Utils.Unit.to_px ~parent layout.row_height)
+  let scroll_handler =
+    let on_scroll fetch () = update_visible_rows state fetch in
+    Lwd.map2 fetch (Lwd.get state.dom.wrapper_height) ~f:(fun fetch h ->
+        (* We use [last_update] to have regular debounced updates and the
+           [timeout] to ensure that the last scroll event is always taken into
+           account even it it happens during the debouncing interval. *)
+        let () =
+          Option.iter
+            (fun h ->
+              (* TODO: that's not a very thougtful heuristic *)
+              let new_cache_size =
+                4 * (1 + Dom.number_of_fitting_rows_in state.dom h)
               in
-              Some (Controlled_scroll.Pos (i * row_height)))
+              Console.log [ "New cache size: "; new_cache_size ];
+              Lru.set_max_length state.cache new_cache_size)
+            h
         in
-        Controlled_scroll.make ~at ~ev ~scroll_target
-          (Elwd.div ~at ~ev ~on_create [ `R rows ])
-    | None -> Elwd.div ~at ~ev ~on_create [ `R rows ])
-    |> Lwd.map ~f:(tee (fun el -> Resize_observer.observe observer el))
+        let () =
+          (* We execute the handle once each time it changes to make sure the
+             table is always up-to-date. *)
+          (* Queuing prevents illegal updates during invalidation *)
+          Window.queue_micro_task G.window (on_scroll fetch)
+        in
+        let on_scroll = Limiter.limit ~interval_ms:75 (on_scroll fetch) in
+        Elwd.handler Ev.scroll (fun _ev -> on_scroll ()))
   in
-  let table =
-    let at = Attrs.to_at @@ Attrs.classes [ "lwdui-lazy-table" ] in
-    let grid_style = Layout.style layout in
-    let s = Lwd.map grid_style ~f:(fun s -> At.style (Jstr.v s)) in
-    let at = `R s :: at in
-    Elwd.div ~at [ `R table_header; `R wrapper; `R table_status ]
+  let wrapper = Dom.make_wrapper state.dom ?scroll_target scroll_handler rows in
+  let () =
+    Utils.tap ~initial_trigger:true total_items ~f:(function total_items ->
+        Console.log [ "Full refresh"; total_items ];
+        prepare state ~total_items)
   in
-  table
+  Dom.make_table state.dom wrapper
+
+let make (type data error) ~layout ?(scroll_target : int Lwd.t option)
+    (render : (data, error) row_renderer)
+    (data_source : (data, error) Data_source.t) =
+  let state = new_state layout in
+  make_lazy' state ?scroll_target render data_source
 
 (** #######**#******#%%#===+++*###%###########*+##=###++++++++++++++++++++++++++
     ###########*####****%%##===========+#===-=======*#=###++++++++++++++++++++++++++

@@ -80,6 +80,7 @@ html {
     max-height: 100%;
     grid-template-rows: [header] auto [content] 1fr [status] auto;
     align-content: start;
+    justify-content: space-between;
     border-top: 1px solid black;
     border-left: 1px solid black;
     border-right: 1px solid black;
@@ -89,6 +90,7 @@ html {
         overflow-y: hidden;
     }
     & .lwdui-lazy-table-content,
+    & .lwdui-controlled-scroll-wrapper:has(> .lwdui-lazy-table-content-wrapper),
     & .lwdui-lazy-table-content-wrapper,
     & .lwdui-virtual-table-row {
         display: grid;

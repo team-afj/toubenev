@@ -15,7 +15,7 @@ type 'state handler_with_state
 val handler :
   ?opts:Ev.listen_opts ->
   'a Ev.type' ->
-  ('b -> 'a Ev.t -> 'b update) ->
+  ('a Ev.t -> 'b -> 'b update) ->
   'b handler_with_state
 
 module type State = sig
@@ -26,13 +26,14 @@ module type State = sig
 end
 
 val with_state :
-  ?base:Attrs.t ->
+  ?base:At.t Elwd.col ->
   (module State with type t = 't) ->
-  ?state:'t ->
+  ?state:'t Lwd.var ->
+  ?control:'t Lwd.t ->
   ?d:El.document ->
-  ?at:('t -> Attrs.t) ->
+  ?at:('t -> At.t) ->
   ?ev:'t handler_with_state Elwd.col ->
-  ('t -> El.t Elwd.col) ->
+  ('t Lwd.t -> El.t Elwd.col) ->
   El.t Lwd.t * (unit -> 't Lwd.t) * ('t -> unit)
 
 type two_state = On | Off
@@ -40,10 +41,11 @@ type two_state = On | Off
 module Two_state : State with type t = two_state
 
 val two_state :
-  ?base:Attrs.t ->
-  ?state:Two_state.t ->
+  ?base:At.t Elwd.col ->
+  ?state:Two_state.t Lwd.var ->
+  ?control:Two_state.t Lwd.t ->
   ?d:El.document ->
-  ?at:(Two_state.t -> Attrs.t) ->
+  ?at:(Two_state.t -> At.t) ->
   ?ev:Two_state.t handler_with_state Elwd.col ->
-  (Two_state.t -> El.t Elwd.col) ->
+  (Two_state.t Lwd.t -> El.t Elwd.col) ->
   El.t Lwd.t * (unit -> Two_state.t Lwd.t) * (Two_state.t -> unit)
