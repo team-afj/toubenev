@@ -1,0 +1,3 @@
+(test
+ (name expand_time_spec_test)
+ (libraries alcotest shared))
