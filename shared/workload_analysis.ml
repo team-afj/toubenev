@@ -3,19 +3,11 @@ open Data_repr
 open! Rich
 open Normal
 
-(** Utilites *)
-let total_quest_time (q : Quest.t) =
-  if Rich.Quest.is_free q.initial then Duration.zero
-  else Duration.(q.slot.duration * q.initial.required_volunteers)
-
-let total_quests_time =
-  (* TODO We should not count quest time for assigned volunteers that are manually
-     assigned. If their time is 0 or the length of the quest, applying the
-     proportional coefficient will biased them. *)
-  Quests.fold ~init:Duration.zero ~f:(fun acc q ->
-      Duration.(acc + total_quest_time q))
-
 (** Theoretical targets *)
+let total_quests_time quests =
+  Quests.fold quests ~init:0 ~f:(fun acc q ->
+      acc + Quest.weighted_duration ~unit:`Minutes q)
+  |> Duration.from_minutes
 
 let theoretical_load ~of_:(volunteer : Volunteer.t) ~on:date =
   (* TODO Maybe check other factors ? Pro rata of arrival time ? *)

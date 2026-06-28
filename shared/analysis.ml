@@ -38,9 +38,10 @@ let empty = { daily = Date.Map.empty; volunteers = Volunteer.Map.empty }
 
 let day_stats (_planning : Planning.t) (normalized : Api.data) day quests =
   let total_quest_time =
-    Quests.fold quests ~init:Duration.zero ~f:(fun acc q ->
-        if Rich.Quest.is_free q.initial then acc
-        else Duration.(acc + (q.slot.duration * q.initial.required_volunteers)))
+    Quests.fold ~init:0
+      ~f:(fun acc q -> acc + Normal.Quest.weighted_duration ~unit:`Minutes q)
+      quests
+    |> Duration.from_minutes
   in
   let max_concurrent_volunteers =
     (* Classical two-steps algorithm for max interval overlap. Sort the list by
@@ -108,10 +109,9 @@ let group_assignations_by_date_and_volunteer infos assignations =
             acc))
 
 let volunteer_load (assignations : Api.assignation list) =
-  List.fold_left assignations ~init:Duration.zero
-    ~f:(fun acc { Api.quest; _ } ->
-      if Rich.Quest.is_free quest.initial then acc
-      else Duration.(acc + quest.slot.duration))
+  List.fold_left assignations ~init:0 ~f:(fun acc { Api.quest; _ } ->
+      acc + Quest.real_duration ~unit:`Minutes quest)
+  |> Duration.from_minutes
 
 let volunteer_analyses (planning : Planning.t) (answer : Api.answer)
     (normalized : Api.data) =

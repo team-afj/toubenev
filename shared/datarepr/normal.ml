@@ -122,12 +122,19 @@ module Quest = struct
     | `N_minutes n -> Float.(t / of_int n |> round)
 
   (** The "real" quest duration. Free quests last 0 minutes. *)
-  let real_duration ?(unit = `Five_minutes) q =
+  let real_duration ?(unit = `Minutes) q =
     let duration_m =
       if Rich.Quest.is_free q.initial then 0
       else Duration.to_minutes q.slot.duration (* Resolution 15 ? *)
     in
     Float.to_int (minutes_conv ~unit (Float.of_int duration_m))
+
+  let weighted_duration ?(unit = `Minutes) q =
+    (* TODO We should not count quest time for assigned volunteers that are manually
+     assigned. If their time is 0 or the length of the quest, applying the
+     proportional coefficient will biased them. *)
+    let duration = real_duration ~unit q in
+    duration * q.initial.required_volunteers
 
   (** Check if two quests are overlapping. If they are in separate places they
       must be separated by at least [Options.minimum_transfer_time]. *)
