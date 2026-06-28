@@ -12,25 +12,25 @@ let expand_time_spec
       day_start_local;
       _;
     } (spec : Rich.Time_spec.t) =
-  let first_day =
+  let first_day, first_day_offset =
     match spec.first_day with
-    | None -> start_date
-    | Some date -> Date.max start_date date
+    | None -> (start_date, day_start_local)
+    | Some date -> (Date.max start_date date, Time.midnight)
   in
-  let last_day =
+  let last_day, last_day_offset =
     match spec.last_day with
-    | None -> end_date
-    | Some date -> Date.min end_date date
+    | None -> (end_date, day_start_local)
+    | Some date -> (Date.min end_date date, Time.midnight)
   in
   let start_time = spec.start in
   let first =
     (* FIXME: this work only for quests with no boundary ?? *)
-    Zoned_datetime.(from_date ~tz first_day + Time.to_duration day_start_local)
+    Zoned_datetime.(from_date ~tz first_day + Time.to_duration first_day_offset)
   in
   let last =
     Zoned_datetime.(
       from_date ~tz (Date.add_days 1 last_day)
-      + Time.to_duration day_start_local)
+      + Time.to_duration last_day_offset)
   in
   (* Logs.debug (fun m ->
       m "First: %s Last: %s (%s)"
