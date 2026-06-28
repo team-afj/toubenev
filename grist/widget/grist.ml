@@ -163,3 +163,8 @@ module Doc_API = struct
 end
 
 let doc_Api = Doc_API.g
+let get_table ?table_id () =
+  let args =
+    match table_id with None -> [||] | Some id -> [| Jv.of_jstr id |]
+  in
+  Jv.call g "getTable" args |> Table_operations.of_jv

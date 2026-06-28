@@ -94,3 +94,4 @@ module Doc_API : sig
 end
 
 val doc_Api : Doc_API.t
+val get_table : ?table_id:Jstr.t -> unit -> Table_operations.t
