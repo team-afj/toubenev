@@ -29,7 +29,8 @@ jobs:
       - name: Install wasm toolchain
         run: brew install zlib bzip2 binaryen
 
-      - name: Install or-tools toolchain
+      - name: Install or-tools toolchain (macOS only)
+        if: runner.os == 'macOS'
         run: brew install --only-dependencies or-tools
 
       - name: Set-up OCaml
