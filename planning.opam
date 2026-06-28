@@ -31,6 +31,8 @@ depends: [
   "hector"
   "containers-data"
   "base64"
+  "alcotest" {with-test}
+  "bimage-unix" {with-test}
   "odoc" {with-doc}
 ]
 build: [

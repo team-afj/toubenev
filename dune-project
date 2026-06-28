@@ -46,4 +46,8 @@
   ; OR Tools
   ; ortools
   ; ortools_solvers
+  (alcotest
+   :with-test)
+  (bimage-unix
+   :with-test)
   ))
