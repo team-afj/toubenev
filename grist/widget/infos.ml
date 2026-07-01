@@ -47,13 +47,26 @@ let date_select ~first ~last () =
   in
   Forms.Field_select.make field_desc (Lwd.return (Lwd_seq.of_list options))
 
+let on_site_and_available_volunteers_on_date datetime volunteers =
+  Normal.Volunteers.fold volunteers ~init:(0, 0)
+    ~f:(fun (acc, acc') volunteer ->
+      let acc =
+        if Normal.Volunteer.is_on_site_at datetime volunteer then acc + 1
+        else acc
+      in
+      let acc' =
+        if Normal.Volunteer.is_available_at datetime volunteer then acc' + 1
+        else acc'
+      in
+      (acc, acc'))
+
 let available_volunteers_widget (data : Rich.Planning.t) =
   let normalized = Conv.normalize data in
-  let first, last =
+  let first', last =
     match data.infos.kind with
     | Finite dates -> (dates.start_date, dates.end_date)
   in
-  let first, last = Date.(sub_days 3 first, add_days 3 last) in
+  let first, last = Date.(sub_days 3 first', add_days 3 last) in
   let date = date_select ~first ~last () in
   let time = time_select () in
   let result =
@@ -63,18 +76,7 @@ let available_volunteers_widget (data : Rich.Planning.t) =
         let datetime =
           Zoned_datetime.(from ~tz:data.infos.timezone date time)
         in
-        Normal.Volunteers.fold normalized.volunteers ~init:(0, 0)
-          ~f:(fun (acc, acc') volunteer ->
-            let acc =
-              if Normal.Volunteer.is_on_site_at datetime volunteer then acc + 1
-              else acc
-            in
-            let acc' =
-              if Normal.Volunteer.is_available_at datetime volunteer then
-                acc' + 1
-              else acc'
-            in
-            (acc, acc')))
+        on_site_and_available_volunteers_on_date datetime normalized.volunteers)
   in
   let result =
     let$ on_site, disponible = result in
@@ -84,6 +86,52 @@ let available_volunteers_widget (data : Rich.Planning.t) =
     in
     El.txt' txt
   in
+  let color_grad_test date =
+    let date = Date.from_string_exn date in
+    let color ratio =
+      let b =
+        Float.round ((1. -. ratio) *. 255.) |> Float.to_int |> string_of_int
+      in
+      "rgb(128 225 " ^ b ^ ")"
+    in
+    let first =
+      Zoned_datetime.(
+        from date data.infos.day_start_local
+        |> change_timezone ~tz:data.infos.timezone)
+    in
+    let last = Zoned_datetime.add_days 1 first in
+    let range = Zoned_datetime.Range.make ~first ~last in
+    let iterator =
+      Zoned_datetime.(
+        Range.iterator ~pred:(sub_minutes 15) ~succ:(add_minutes 15))
+    in
+    let ratio datetime =
+      let max_v = Normal.Volunteers.cardinal normalized.volunteers in
+      let _on_site, available =
+        on_site_and_available_volunteers_on_date datetime normalized.volunteers
+      in
+      Float.(of_int available / of_int max_v)
+    in
+    let colors =
+      let open Zoned_datetime in
+      Range.fold_left ~include_boundaries:false ~iterator
+        (fun t acc ->
+          let ratio = ratio t in
+          color ratio :: acc)
+        [] range
+      |> List.rev
+    in
+    let ccs_gradient =
+      "background: linear-gradient(to right, "
+      ^ String.concat ~sep:", " colors
+      ^ ")"
+    in
+    Elwd.div
+      ~at:
+        [ `P (At.style (Jstr.v ("width:100%; height: 1rem;" ^ ccs_gradient))) ]
+      [ `P (El.nbsp ()) ]
+  in
+  let color_grad_test = Lwd.bind (Lwd.get date.value) ~f:color_grad_test in
   Elwd.div
     [
       `R
@@ -91,6 +139,7 @@ let available_volunteers_widget (data : Rich.Planning.t) =
            ~at:[ `P (At.v (Jstr.v "role") (Jstr.v "group")) ]
            [ `R date.field; `R time.field ]);
       `R result;
+      `R color_grad_test;
     ]
 
 let capacity_table ({ daily; _ } : Analysis.t) =
