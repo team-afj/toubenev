@@ -61,8 +61,7 @@ let available_volunteers_widget (data : Rich.Planning.t) =
         let date = Date.from_string_exn date in
         let time = Time.from_string_exn time in
         let datetime =
-          Zoned_datetime.(
-            from date time |> change_timezone ~tz:data.infos.timezone)
+          Zoned_datetime.(from ~tz:data.infos.timezone date time)
         in
         Normal.Volunteers.fold normalized.volunteers ~init:(0, 0)
           ~f:(fun (acc, acc') volunteer ->
