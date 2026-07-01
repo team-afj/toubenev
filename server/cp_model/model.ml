@@ -382,7 +382,7 @@ let minimize_f (ctx : Context.t) =
   ]
   |> sum |> Sat.minimize ctx.model
 
-let make ~with_assumptions (data : Planning.t) =
+let make ?(no_optim = false) ~with_assumptions (data : Planning.t) =
   let start_time = Unix.gettimeofday () in
   let model = Sat.make ~name:"Toubenev" () in
   let context = Context.prepare ~with_assumptions model data in
@@ -396,7 +396,7 @@ let make ~with_assumptions (data : Planning.t) =
   let () = enforce_bans context in
   let () = know_your_ennemy context in
 
-  let () = if not with_assumptions then minimize_f context in
+  let () = if not (with_assumptions || no_optim) then minimize_f context in
 
   Logs.debug (fun m ->
       m "Model building took %fs" (Unix.gettimeofday () -. start_time));

@@ -1,6 +1,8 @@
 (** Run the model without the optimizer to check feasibility *)
 let sat_check planning =
-  let context = Cp_model.Model.make ~with_assumptions:false planning in
+  let context =
+    Cp_model.Model.make ~no_optim:true ~with_assumptions:false planning
+  in
   let parameters =
     Ortools.Sat_parameters.make_sat_parameters ~stop_after_first_solution:true
       ~log_search_progress:false ~num_workers:8l ()
