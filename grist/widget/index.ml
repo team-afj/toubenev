@@ -664,7 +664,7 @@ let app =
   in
   let analyses =
     Pico_ui.accordion ~name:"analyses"
-      ~title:(Lwd.return (El.txt' "Analyses"))
+      ~title:(Lwd.return (El.txt' "Outils et analyses"))
       [
         `P
           (El.blockquote
