@@ -66,7 +66,7 @@ let available_volunteers_widget (data : Rich.Planning.t) =
     match data.infos.kind with
     | Finite dates -> (dates.start_date, dates.end_date)
   in
-  let first, last = Date.(sub_days 3 first', add_days 3 last) in
+  let first, last = Date.(sub_days 5 first', add_days 4 last) in
   let date = date_select ~first ~last () in
   let time = time_select () in
   let result =
