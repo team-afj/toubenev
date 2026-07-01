@@ -29,6 +29,9 @@ let expand_time_spec
   in
   let last =
     Zoned_datetime.(
+      (* TODO FIXME Is this wrong ? I suspect this would lead to one additional
+         occurrence after the last_day. This should maybe de done only if the
+         last_day corresponds to the last event day ? *)
       from_date ~tz (Date.add_days 1 last_day)
       + Time.to_duration last_day_offset)
   in
