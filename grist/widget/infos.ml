@@ -62,6 +62,7 @@ let on_site_and_available_volunteers_on_date datetime volunteers =
 
 let available_volunteers_widget (data : Rich.Planning.t) =
   let normalized = Conv.normalize data in
+  let max_v = Normal.Volunteers.cardinal normalized.volunteers in
   let first', last =
     match data.infos.kind with
     | Finite dates -> (dates.start_date, dates.end_date)
@@ -76,13 +77,17 @@ let available_volunteers_widget (data : Rich.Planning.t) =
         let datetime =
           Zoned_datetime.(from ~tz:data.infos.timezone date time)
         in
-        on_site_and_available_volunteers_on_date datetime normalized.volunteers)
+        ( time,
+          on_site_and_available_volunteers_on_date datetime
+            normalized.volunteers ))
   in
   let result =
-    let$ on_site, disponible = result in
+    let$ time, (on_site, disponible) = result in
     let txt =
       "Bénévoles: " ^ string_of_int on_site ^ " sur site dont "
-      ^ string_of_int disponible ^ " disponibles."
+      ^ string_of_int disponible ^ " disponibles à "
+      ^ Time.to_string ~format:`HHMM time
+      ^ "."
     in
     El.txt' txt
   in
@@ -96,8 +101,7 @@ let available_volunteers_widget (data : Rich.Planning.t) =
     in
     let first =
       Zoned_datetime.(
-        from date data.infos.day_start_local
-        |> change_timezone ~tz:data.infos.timezone)
+        from ~tz:data.infos.timezone date data.infos.day_start_local)
     in
     let last = Zoned_datetime.add_days 1 first in
     let range = Zoned_datetime.Range.make ~first ~last in
@@ -106,7 +110,6 @@ let available_volunteers_widget (data : Rich.Planning.t) =
         Range.iterator ~pred:(sub_minutes 15) ~succ:(add_minutes 15))
     in
     let ratio datetime =
-      let max_v = Normal.Volunteers.cardinal normalized.volunteers in
       let _on_site, available =
         on_site_and_available_volunteers_on_date datetime normalized.volunteers
       in
@@ -119,17 +122,49 @@ let available_volunteers_widget (data : Rich.Planning.t) =
           let ratio = ratio t in
           color ratio :: acc)
         [] range
-      |> List.rev
+    in
+    let values =
+      let open Zoned_datetime in
+      let style = Jstr.v {css| flex: 1 1 auto; |css} in
+      let tooltip placement txt =
+        [
+          At.v (Jstr.v "data-tooltip") (Jstr.v txt);
+          At.v (Jstr.v "data-placement") (Jstr.v placement);
+        ]
+      in
+      Range.fold_right ~include_boundaries:false ~iterator
+        (fun t acc ->
+          let on_site, available =
+            on_site_and_available_volunteers_on_date t normalized.volunteers
+          in
+          let txt =
+            Time.to_string ~format:`HHMM (Zoned_datetime.local_time t)
+            ^ ": " ^ string_of_int on_site ^ " (" ^ string_of_int available
+            ^ " dispo.) sur " ^ string_of_int max_v
+          in
+          let placement =
+            if Zoned_datetime.(t < add_hours 6 first) then "right"
+            else if Zoned_datetime.(t < add_hours 18 first) then "bottom"
+            else "left"
+          in
+          `P (El.div ~at:(At.style style :: tooltip placement txt) []) :: acc)
+        [] range
     in
     let ccs_gradient =
-      "background: linear-gradient(to right, "
+      "background: linear-gradient(to left, "
       ^ String.concat ~sep:", " colors
-      ^ ")"
+      ^ ");"
     in
-    Elwd.div
-      ~at:
-        [ `P (At.style (Jstr.v ("width:100%; height: 1rem;" ^ ccs_gradient))) ]
-      [ `P (El.nbsp ()) ]
+    let style =
+      {css|
+      display: flex;
+      flex-flow: row nowrap;
+
+      width:100%;
+      height: 1rem;
+      |css}
+    in
+    Elwd.div ~at:[ `P (At.style (Jstr.v (style ^ ccs_gradient))) ] values
   in
   let color_grad_test = Lwd.bind (Lwd.get date.value) ~f:color_grad_test in
   Elwd.div
@@ -139,6 +174,8 @@ let available_volunteers_widget (data : Rich.Planning.t) =
            ~at:[ `P (At.v (Jstr.v "role") (Jstr.v "group")) ]
            [ `R date.field; `R time.field ]);
       `R result;
+      `P (El.br ());
+      `P (El.txt' "Résumé sur la journée:");
       `R color_grad_test;
     ]
 
