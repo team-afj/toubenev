@@ -72,6 +72,18 @@ module Volunteer = struct
   end
 
   let to_string t = "V: [" ^ t.id ^ "] " ^ t.name
+
+  let is_on_site_at time t =
+    match (t.initial.arrival, t.initial.departure) with
+    | Some arrival, _ when Zoned_datetime.(time < arrival) -> false
+    | _, Some departure when Zoned_datetime.(departure < time) -> false
+    | _ -> true
+
+  let is_available_at time t =
+    is_on_site_at time t
+    && not
+         (List.exists t.unavailabilities ~f:(fun (slot : Time_slot.t) ->
+              Zoned_datetime.(slot.start <= time && time < Time_slot.end_ slot)))
 end
 
 module Volunteers = Volunteer.Set

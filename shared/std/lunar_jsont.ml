@@ -175,6 +175,14 @@ module Time = struct
 
   let jsont : t Jsont.t =
     Jsont.map ~dec:from_string_exn ~enc:to_string Jsont.string
+
+  let to_string ?(format = `HHMMSS) t =
+    match format with
+    | `HHMMSS -> to_string t
+    | `HHMM ->
+        let hour = hour t |> Utils.lpad ~size:2 in
+        let minute = minute t |> Utils.lpad ~size:2 in
+        hour ^ ":" ^ minute
 end
 
 module Datetime = struct

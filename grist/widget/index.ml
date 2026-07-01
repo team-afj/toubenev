@@ -3,7 +3,6 @@ open Brr
 open Brr_lwd
 open Fut.Result_syntax
 open Lunar_jsont
-open Shared
 open! Data_repr
 
 (* TODO: There might be more efficient way to do some tthings by using the REST
@@ -655,88 +654,13 @@ let app =
     let$ results = Lwd.get App.last_answer in
     match results with
     | None -> El.nbsp ()
-    | Some { analysis = { daily; _ }; _ } ->
-        let th ?tooltip v =
-          let el =
-            let txt = El.txt' v in
-            match tooltip with
-            | None -> txt
-            | Some tip -> El.abbr ~at:[ At.title (Jstr.v tip) ] [ txt ]
-            (* El.em ~at:[ At.v (Jstr.v "data-tooltip") (Jstr.v tip) ] [ txt ] *)
-          in
-          El.th [ el ]
-        in
-        let td ?at v = El.td ?at [ El.txt' v ] in
-        let d_to_string d =
-          let h, m, s = Duration.hms d in
-          Printf.sprintf "%02d:%02d:%02d" h m s
-        in
-        let jours =
-          List.rev
-          @@ Date.Map.fold
-               (fun d
-                    {
-                      Analysis.total_quest_time;
-                      total_volunteer_time;
-                      max_concurrent_volunteers;
-                      available_volunteers;
-                    } acc ->
-                 let at =
-                   if Duration.(total_volunteer_time < total_quest_time) then
-                     Some [ At.class' (Jstr.v "warn") ]
-                   else None
-                 in
-                 let at_av =
-                   if available_volunteers < max_concurrent_volunteers then
-                     Some [ At.class' (Jstr.v "error") ]
-                   else None
-                 in
-                 El.tr
-                   [
-                     td (Date.to_string d);
-                     td (d_to_string total_quest_time);
-                     td ?at (d_to_string total_volunteer_time);
-                     td (Int.to_string max_concurrent_volunteers);
-                     td ?at:at_av (Int.to_string available_volunteers);
-                   ]
-                 :: acc)
-               daily []
-        in
-        let totals =
-          let total_q, total_v =
-            Date.Map.fold
-              (fun _d { Analysis.total_quest_time; total_volunteer_time; _ }
-                   (acc_q, acc_v) ->
-                Duration.(acc_q + total_quest_time, acc_v + total_volunteer_time))
-              daily
-              (Duration.zero, Duration.zero)
-          in
-          [ td "Total"; td (d_to_string total_q); td (d_to_string total_v) ]
-        in
-        Pico_ui.El.section
-          [
-            El.thead
-              [
-                El.tr
-                  [
-                    th "Jour";
-                    th ~tooltip:"Durée totale des quêtes à accomplir" "⏱️ quêtes";
-                    th ~tooltip:"Temps de bénévolat disponible" "⏱️👷‍♀️";
-                    th
-                      ~tooltip:
-                        "Nombre maximum de bénévoles devant effecter une tâche \
-                         au même moment."
-                      "Max 👷‍♀️";
-                    th
-                      ~tooltip:
-                        "Nombre de bénévoles disponibles. Si < à \"Max 👷‍♀️\",\n\
-                         le planning est impossible à résoudre."
-                      "#👷‍♀️";
-                  ];
-              ];
-            El.tbody jours;
-            El.tfoot totals;
-          ]
+    | Some { analysis; _ } -> Infos.capacity_table analysis
+  in
+  let available_volunteers =
+    let$* results = Lwd.get App.last_answer in
+    match results with
+    | None -> Lwd.return (El.nbsp ())
+    | Some { data_rich; _ } -> Infos.available_volunteers_widget data_rich
   in
   let analyses =
     Pico_ui.accordion ~name:"analyses"
@@ -746,13 +670,16 @@ let app =
           (El.blockquote
              [
                El.txt'
-                 "Ces données sont approximatives et d'autres contraintes \
-                  peuvent empêcher de trouver un planning.";
+                 "Ces données sont approximatives et ne tiennent pas compte de \
+                  toutes les contraintes.";
              ]);
+        `P (El.h4 [ El.txt' "Compteur de bénévoles" ]);
+        `R available_volunteers;
+        `P (El.h4 [ El.txt' "Main d'oeuvre requise / disponible" ]);
         `R analyses;
       ]
   in
-  Elwd.div [ `R controls; `R results; `R diagnostics; `R analyses ]
+  Elwd.div [ `R controls; `R analyses; `R results; `R diagnostics ]
 
 let _ =
   let on_load _ =
