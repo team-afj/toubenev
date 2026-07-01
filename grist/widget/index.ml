@@ -20,6 +20,7 @@ API with short-live tokens. *)
 module App = struct
   type state = {
     data : Grist_import.data;
+    data_rich : Rich.Planning.t;
     answer : Api.answer;
     analysis : Shared.Analysis.t;
   }
@@ -327,7 +328,7 @@ let sat =
             let analysis =
               Shared.Analysis.of_planning planning answer normalized_planning
             in
-            let state = { App.data; answer; analysis } in
+            let state = { App.data; data_rich = planning; answer; analysis } in
             Lwd.set App.last_answer (Some state);
             let* () = Solutions.upsert_solution_1 state in
             Fut.ok (Console.error [ jv ])
@@ -346,7 +347,7 @@ let sat =
             let analysis =
               Shared.Analysis.of_planning planning answer normalized_planning
             in
-            let state = { App.data; answer; analysis } in
+            let state = { App.data; data_rich = planning; answer; analysis } in
             let () =
               match answer.status with
               | Feasible | Optimal -> Lwd.set App.optimize_state (Ready state)
@@ -410,10 +411,12 @@ let init_optimization_chart =
     (chart, d_objective, d_satisfaction)
 
 let optimize ~(chart_canvas : El.t) (current_state : App.state) =
-  let data = current_state.data in
+  let planning = current_state.data_rich in
   let+ handle =
     let open Brr_io.Fetch in
-    let* json = Fut.return @@ Jsont_brr.encode Grist_import.data_jsont data in
+    let* json =
+      Fut.return @@ Jsont_brr.encode Grist_import.data_jsont current_state.data
+    in
     let body = Body.of_jstr json in
     let method' = Jstr.v "PUT" in
     let uri = Jstr.v "http://localhost:1357/grist/optim" in
@@ -435,7 +438,6 @@ let optimize ~(chart_canvas : El.t) (current_state : App.state) =
     Jv.obj
       [| ("x", Jv.of_string (Float.to_string time)); ("y", Jv.of_float value) |]
   in
-  let _id_map, planning = Grist_import.to_planning data in
   let normalized_planning = Conv.normalize planning in
   let _ =
     let first = ref true in
@@ -445,7 +447,7 @@ let optimize ~(chart_canvas : El.t) (current_state : App.state) =
           first := false;
           match Lwd.peek App.last_answer with
           | None -> ()
-          | Some ({ answer; data; _ } as state) ->
+          | Some ({ answer; _ } as state) ->
               ignore
               @@
               let* () = Solutions.upsert_solution_1 state in
@@ -456,7 +458,7 @@ let optimize ~(chart_canvas : El.t) (current_state : App.state) =
               let analysis =
                 Shared.Analysis.of_planning planning answer normalized_planning
               in
-              Lwd.set App.last_answer (Some { data; answer; analysis });
+              Lwd.set App.last_answer (Some { state with answer; analysis });
               Assignations.insert_assignations assignations
         end)
       (Event_source.as_target event_source)
@@ -467,7 +469,7 @@ let optimize ~(chart_canvas : El.t) (current_state : App.state) =
     let analysis =
       Shared.Analysis.of_planning planning answer normalized_planning
     in
-    Lwd.set App.last_answer (Some { data; answer; analysis });
+    Lwd.set App.last_answer (Some { current_state with answer; analysis });
     Chartjs.Dataset.push_data d_objective
       (mk_point time (answer.objective_value -. answer.best_objective_bound));
     Chartjs.Dataset.push_data d_satisfaction (mk_point time satisfaction);
