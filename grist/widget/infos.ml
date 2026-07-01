@@ -85,7 +85,14 @@ let available_volunteers_widget (data : Rich.Planning.t) =
     in
     El.txt' txt
   in
-  Elwd.div [ `R date.field; `R time.field; `R result ]
+  Elwd.div
+    [
+      `R
+        (Elwd.fieldset
+           ~at:[ `P (At.v (Jstr.v "role") (Jstr.v "group")) ]
+           [ `R date.field; `R time.field ]);
+      `R result;
+    ]
 
 let capacity_table ({ daily; _ } : Analysis.t) =
   let th ?tooltip v =
