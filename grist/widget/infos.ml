@@ -169,7 +169,33 @@ let available_volunteers_widget (data : Rich.Planning.t) =
     in
     Elwd.div ~at:[ `P (At.style (Jstr.v (style ^ ccs_gradient))) ] values
   in
-  let color_grad_test = Lwd.bind (Lwd.get date.value) ~f:color_grad_test in
+  let legend =
+    let style =
+      {css|
+      display: flex;
+      flex-flow: row nowrap;
+      justify-content: center;
+
+      width:100%;
+
+      font-size: 0.75em;
+      padding: 0.5em;
+      |css}
+    in
+    let grad_style =
+      "flex: 0 1 auto; width:33%; margin: 0.25em;"
+      ^ "background: linear-gradient(to left, " ^ Color.to_css c_indispo ^ ", "
+      ^ Color.to_css c_dispo ^ ");"
+    in
+    let txt_style = Jstr.v {css| flex: 0 1 auto; |css} in
+    let left =
+      El.div ~at:[ At.style txt_style ] [ El.txt' "Disponibilité: 0%" ]
+    in
+    let right = El.div ~at:[ At.style txt_style ] [ El.txt' "100%" ] in
+    let grad = El.div ~at:[ At.style (Jstr.v grad_style) ] [] in
+    El.div ~at:[ At.style (Jstr.v style) ] [ left; grad; right ]
+  in
+  let color_grad = Lwd.bind (Lwd.get date.value) ~f:color_grad_test in
   Elwd.div
     [
       `R
@@ -179,7 +205,8 @@ let available_volunteers_widget (data : Rich.Planning.t) =
       `R result;
       `P (El.br ());
       `P (El.txt' "Résumé sur la journée:");
-      `R color_grad_test;
+      `R color_grad;
+      `P legend;
     ]
 
 let capacity_table ({ daily; _ } : Analysis.t) =
