@@ -91,13 +91,14 @@ let available_volunteers_widget (data : Rich.Planning.t) =
     in
     El.txt' txt
   in
+  let module Color = Brr.El.Style.Color in
+  let c_indispo = Color.make 232 57 41 in
+  let c_dispo = Color.make 140 247 93 in
   let color_grad_test date =
     let date = Date.from_string_exn date in
-    let color ratio =
-      let b =
-        Float.round ((1. -. ratio) *. 255.) |> Float.to_int |> string_of_int
-      in
-      "rgb(128 225 " ^ b ^ ")"
+    let color =
+      let grad = Color.mark_mix c_indispo c_dispo in
+      fun ratio -> Color.to_css (grad ratio)
     in
     let first =
       Zoned_datetime.(
@@ -125,7 +126,9 @@ let available_volunteers_widget (data : Rich.Planning.t) =
     in
     let values =
       let open Zoned_datetime in
-      let style = Jstr.v {css| flex: 1 1 auto; |css} in
+      let style =
+        Jstr.v {css| flex: 1 1 auto; border-bottom: none; cursor: crosshair|css}
+      in
       let tooltip placement txt =
         [
           At.v (Jstr.v "data-tooltip") (Jstr.v txt);
