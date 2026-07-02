@@ -14,6 +14,8 @@ module Color = struct
     "rgb(" ^ string_of_int r ^ " " ^ string_of_int g ^ " " ^ string_of_int b
     ^ ")"
 
+  (* See https://stackoverflow.com/a/49321304  *)
+
   (** Algorithm MarkMix Input: color1: Color, (rgb) The first color to mix
       color2: Color, (rgb) The second color to mix mix: Number, (0..1) The mix
       ratio. 0 ==> pure Color1, 1 ==> pure Color2 Output: color: Color, (rgb)
