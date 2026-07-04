@@ -679,7 +679,7 @@ let app =
         `R analyses;
       ]
   in
-  Elwd.div [ `R controls; `R analyses; `R results; `R diagnostics ]
+  Elwd.div [ `R controls; `R diagnostics; `R analyses; `R results ]
 
 let _ =
   let on_load _ =
