@@ -111,10 +111,10 @@ let available_volunteers_widget (data : Rich.Planning.t) =
         Range.iterator ~pred:(sub_minutes 15) ~succ:(add_minutes 15))
     in
     let ratio datetime =
-      let _on_site, available =
+      let on_site, available =
         on_site_and_available_volunteers_on_date datetime normalized.volunteers
       in
-      Float.(of_int available / of_int max_v)
+      Float.(of_int available / of_int on_site)
     in
     let colors =
       let open Zoned_datetime in
