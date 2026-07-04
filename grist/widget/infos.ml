@@ -68,6 +68,7 @@ let available_volunteers_widget (data : Rich.Planning.t) =
     | Finite dates -> (dates.start_date, dates.end_date)
   in
   let first, last = Date.(sub_days 5 first', add_days 4 last) in
+  let _dates_range = Date.Range.make ~first ~last in
   let date = date_select ~first ~last () in
   let time = time_select () in
   let result =
@@ -94,108 +95,44 @@ let available_volunteers_widget (data : Rich.Planning.t) =
   let module Color = Brr.El.Style.Color in
   let c_indispo = Color.make 232 57 41 in
   let c_dispo = Color.make 140 247 93 in
-  let color_grad_test date =
-    let date = Date.from_string_exn date in
-    let color =
-      let grad = Color.mark_mix c_indispo c_dispo in
-      fun ratio -> Color.to_css (grad ratio)
-    in
-    let first =
-      Zoned_datetime.(
-        from ~tz:data.infos.timezone date data.infos.day_start_local)
-    in
-    let last = Zoned_datetime.add_days 1 first in
-    let range = Zoned_datetime.Range.make ~first ~last in
-    let iterator =
-      Zoned_datetime.(
-        Range.iterator ~pred:(sub_minutes 15) ~succ:(add_minutes 15))
-    in
-    let ratio datetime =
-      let on_site, available =
-        on_site_and_available_volunteers_on_date datetime normalized.volunteers
+  let make_day_gradient date =
+    let data =
+      let date = Date.from_string_exn date in
+      let first =
+        Zoned_datetime.(
+          from ~tz:data.infos.timezone date data.infos.day_start_local)
       in
-      Float.(of_int available / of_int on_site)
-    in
-    let colors =
-      let open Zoned_datetime in
-      Range.fold_left ~include_boundaries:false ~iterator
+      let last = Zoned_datetime.add_days 1 first in
+      let ratio datetime =
+        let on_site, available =
+          on_site_and_available_volunteers_on_date datetime
+            normalized.volunteers
+        in
+        Float.(of_int available / of_int on_site)
+      in
+      let iterator =
+        Zoned_datetime.(
+          Range.iterator ~pred:(sub_minutes 15) ~succ:(add_minutes 15))
+      in
+      let range = Zoned_datetime.Range.make ~first ~last in
+      Zoned_datetime.Range.fold_right ~include_boundaries:false ~iterator
         (fun t acc ->
           let ratio = ratio t in
-          color ratio :: acc)
-        [] range
-    in
-    let values =
-      let open Zoned_datetime in
-      let style =
-        Jstr.v {css| flex: 1 1 auto; border-bottom: none; cursor: crosshair|css}
-      in
-      let tooltip placement txt =
-        [
-          At.v (Jstr.v "data-tooltip") (Jstr.v txt);
-          At.v (Jstr.v "data-placement") (Jstr.v placement);
-        ]
-      in
-      Range.fold_right ~include_boundaries:false ~iterator
-        (fun t acc ->
           let on_site, available =
             on_site_and_available_volunteers_on_date t normalized.volunteers
           in
-          let txt =
+          let label =
             Time.to_string ~format:`HHMM (Zoned_datetime.local_time t)
             ^ ": " ^ string_of_int on_site ^ " (" ^ string_of_int available
             ^ " dispo.) sur " ^ string_of_int max_v
           in
-          let placement =
-            if Zoned_datetime.(t < add_hours 6 first) then "right"
-            else if Zoned_datetime.(t < add_hours 18 first) then "bottom"
-            else "left"
-          in
-          `P (El.div ~at:(At.style style :: tooltip placement txt) []) :: acc)
+          (ratio, label) :: acc)
         [] range
     in
-    let ccs_gradient =
-      "background: linear-gradient(to left, "
-      ^ String.concat ~sep:", " colors
-      ^ ");"
-    in
-    let style =
-      {css|
-      display: flex;
-      flex-flow: row nowrap;
-
-      width:100%;
-      height: 1rem;
-      |css}
-    in
-    Elwd.div ~at:[ `P (At.style (Jstr.v (style ^ ccs_gradient))) ] values
+    Data_viz.Linear_gradient.make ~low_color:c_indispo ~high_color:c_dispo
+      ~legend:"Disponibilité" data
   in
-  let legend =
-    let style =
-      {css|
-      display: flex;
-      flex-flow: row nowrap;
-      justify-content: center;
-
-      width:100%;
-
-      font-size: 0.75em;
-      padding: 0.5em;
-      |css}
-    in
-    let grad_style =
-      "flex: 0 1 auto; width:33%; margin: 0.25em;"
-      ^ "background: linear-gradient(to left, " ^ Color.to_css c_indispo ^ ", "
-      ^ Color.to_css c_dispo ^ ");"
-    in
-    let txt_style = Jstr.v {css| flex: 0 1 auto; |css} in
-    let left =
-      El.div ~at:[ At.style txt_style ] [ El.txt' "Disponibilité: 0%" ]
-    in
-    let right = El.div ~at:[ At.style txt_style ] [ El.txt' "100%" ] in
-    let grad = El.div ~at:[ At.style (Jstr.v grad_style) ] [] in
-    El.div ~at:[ At.style (Jstr.v style) ] [ left; grad; right ]
-  in
-  let color_grad = Lwd.bind (Lwd.get date.value) ~f:color_grad_test in
+  let color_grad = Lwd.map (Lwd.get date.value) ~f:make_day_gradient in
   Elwd.div
     [
       `R
@@ -206,7 +143,6 @@ let available_volunteers_widget (data : Rich.Planning.t) =
       `P (El.br ());
       `P (El.txt' "Résumé sur la journée:");
       `R color_grad;
-      `P legend;
     ]
 
 let capacity_table ({ daily; _ } : Analysis.t) =
