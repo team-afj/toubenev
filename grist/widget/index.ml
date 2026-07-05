@@ -474,7 +474,7 @@ let optimize ~(chart_canvas : El.t) (current_state : App.state) =
     Chartjs.Dataset.push_data d_satisfaction (mk_point time satisfaction);
     Chartjs.Chart.update chart
   in
-  let handle = Brrer.Limiter.throttle ~delay_ms:500 in
+  let handle = Brrer.Limiter.throttle ~delay_ms:2000 in
   let _ =
     Ev.listen Brr_io.Message.Ev.message
       (fun ev ->
