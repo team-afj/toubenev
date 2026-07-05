@@ -92,7 +92,10 @@ let check_unavailabilities (ctx : Context.t) =
           add ctx.model ~name ?only_enforce_if (is_false (ctx.assignations v q))))
     v.initial.departure;
   List.iter v.unavailabilities ~f:(fun (slot : Time_slot.t) ->
-      if Time_slot.overlaps slot q.slot then
+      if
+        Time_slot.overlaps slot q.slot
+        && not (Quest.is_manually_assigned_to v q)
+      then
         let name = Format.sprintf "%s_unavailable_for_%s" v.name q.name in
         let only_enforce_if =
           let name = Format.sprintf "%s not available for %s" v.name q.name in
@@ -109,7 +112,10 @@ let required_specialists (ctx : Context.t) =
      if task_type.Task_type.specialist_only then
        ctx.for_all_volunteers @@ fun v ->
        let skills = CCRAL.to_list v.initial.proficiencies in
-       if not (List.mem ~eq:Task_type.equal task_type skills) then
+       if
+         (not (List.mem ~eq:Task_type.equal task_type skills))
+         && not (Quest.is_manually_assigned_to v q)
+       then
          let name =
            Format.sprintf "%s_does_not_have_the_skill_for_%s" v.name q.name
          in
@@ -150,8 +156,14 @@ let enforce_assignations (ctx : Context.t) =
     ctx.for_all_quests @@ fun q ->
     Volunteers.iter q.assigned_volunteers ~f:(fun (v : Volunteer.t) ->
         let name = Format.sprintf "%s_assigned_to_%s" v.name q.name in
+        let only_enforce_if =
+          assume ctx
+          @@ Format.sprintf "%s is manually assigned to %s" v.initial.name
+               q.name
+        in
         Hashtbl.add assigned (q.id, v.id) ();
-        Sat.(add ctx.model ~name (is_true (ctx.assignations v q))))
+        Sat.(
+          add ctx.model ~name ?only_enforce_if (is_true (ctx.assignations v q))))
   in
   ctx.for_all_volunteers @@ fun v ->
   if v.initial.manually_assigned then
@@ -366,17 +378,85 @@ let appreciation_of_planning opts (ctx : Context.t) =
           Logs.debug (fun msg -> msg "%s + %s = %i" v.name q.name appreciation);
           Sat.scale appreciation (Sat.LinearExpr.var (ctx.assignations v q))
           :: acc))
-  |> Sat.LinearExpr.sum
+  |> Sat.LinearExpr.sum (* maybe weighted sum *)
+
+(* Amplitudes: daily work time span *)
+
+let quest_time_range (ctx : Context.t) (v : Volunteer.t) (quests : Quests.t) =
+  (* To reduce the domain, we don't count every minutes *)
+  let granulatity_m = 60. in
+  let approx minutes =
+    Float.(of_int minutes / granulatity_m |> round |> to_int)
+  in
+  (* let first_starting_quest =
+    Quests.fold quests ~init:None ~f:(fun acc q ->
+        match acc with
+        | None -> Some q
+        | Some q' ->
+            if Zoned_datetime.(q.slot.start < q'.slot.start) then Some q
+            else Some q')
+    |> Option.get
+  in *)
+  let last_ending_quest =
+    Quests.fold quests ~init:None ~f:(fun acc q ->
+        match acc with
+        | None -> Some q
+        | Some q' ->
+            if Zoned_datetime.(Time_slot.end_ q.slot > Time_slot.end_ q'.slot)
+            then Some q
+            else Some q')
+    |> Option.get
+  in
+  let lb = 0 in
+  let ub =
+    approx
+    @@ Zoned_datetime.to_local_minutes (Time_slot.end_ last_ending_quest.slot)
+  in
+  let start = Sat.Var.new_int ctx.model ~lb ~ub (v.name ^ "_day_start") in
+  let end_ = Sat.Var.new_int ctx.model ~lb ~ub (v.name ^ "_day_end") in
+  let v_day_quests_start =
+    Quests.to_list_map quests ~f:(fun q ->
+        let start_stamp =
+          approx @@ Zoned_datetime.to_local_minutes q.slot.start
+        in
+        Sat.scale start_stamp (Sat.var (ctx.assignations v q)))
+  in
+  let v_day_quests_end =
+    Quests.to_list_map quests ~f:(fun q ->
+        let start_stamp =
+          approx @@ Zoned_datetime.to_local_minutes (Time_slot.end_ q.slot)
+        in
+        Sat.scale start_stamp (Sat.var (ctx.assignations v q)))
+  in
+  let min_equality = Sat.Constraint.min_equality start v_day_quests_start in
+  let max_equality = Sat.Constraint.max_equality end_ v_day_quests_end in
+  let () =
+    Sat.add ctx.model ~name:(v.name ^ "min_quest_time_range") min_equality;
+    Sat.add ctx.model ~name:(v.name ^ "max_quest_time_range") max_equality
+  in
+  Sat.(var end_ - var start)
+
+let amplitudes (ctx : Context.t) =
+  Volunteers.fold ctx.vs ~init:(Sat.of_int 0) ~f:(fun acc v ->
+      Date.Map.fold
+        (fun _day day_quests acc ->
+          Sat.(acc + quest_time_range ctx v day_quests))
+        ctx.by_day acc)
 
 let minimize_f (ctx : Context.t) =
   let options = ctx.data.options in
   let event_bounds_coef = options.event_equilibrium_malus in
   let daily_bounds_coef = options.daily_equilibrium_malus in
+  let amplitude_coef =
+    0
+    (*options.large_amplitude_malus*)
+  in
   let friendship_coef = options.friendship_bonus in
   let open Sat.LinearExpr in
   [
     scale (10 * event_bounds_coef) @@ Workload_balance.event_bounds ctx;
     scale (10 * daily_bounds_coef) @@ Workload_balance.daily_bounds ctx;
+    scale amplitude_coef @@ amplitudes ctx;
     scale (-1 * friendship_coef) @@ friendship_bonus ctx;
     scale (-1) @@ appreciation_of_planning options ctx;
   ]
