@@ -49,9 +49,9 @@ let max_daily_load (ctx : Context.t) =
 
 let bounds (ctx : Context.t) day day_quests =
   let s_date = Date.to_string day in
-  (* let max_daily_load = max_daily_load ctx in *)
-  let lb = -2 * one_hour in
-  let ub = 2 * one_hour in
+  let max_daily_load = max_daily_load ctx in
+  let lb = -2 * max_daily_load in
+  let ub = 2 * max_daily_load in
   let lower_bound =
     Printf.sprintf "diff_lower_bound_day_%s" s_date
     |> Sat.Var.new_int ctx.model ~lb ~ub
@@ -74,9 +74,9 @@ let daily_bounds (ctx : Context.t) =
   |> Sat.LinearExpr.sum
 
 let event_bounds (ctx : Context.t) =
-  (* let max_daily_load = max_daily_load ctx in *)
-  let lb = -2 * one_hour in
-  let ub = 2 * one_hour in
+  let max_daily_load = max_daily_load ctx in
+  let lb = -2 * max_daily_load in
+  let ub = 2 * max_daily_load in
   let lower_bound =
     Printf.sprintf "diff_lower_bound_event" |> Sat.Var.new_int ctx.model ~lb ~ub
   in
