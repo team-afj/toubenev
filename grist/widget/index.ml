@@ -655,6 +655,12 @@ let app =
         `R analyses;
       ]
   in
+  (* let dbg_planning =
+    Lwd.map (Lwd.get App_state.last_answer) ~f:(function
+      | Some { App_state.data_rich; answer; _ } ->
+          Render.make_plannings data_rich answer [ `By_place ]
+      | None -> El.nbsp ())
+  in *)
   Elwd.div [ `R controls; `R diagnostics; `R analyses; `R results ]
 
 let _ =
