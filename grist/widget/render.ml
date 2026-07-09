@@ -12,14 +12,14 @@ let scope s = At.v (Jstr.v "scope") (Jstr.v s)
 let place_of_assignation (assignation : Api.assignation) =
   assignation.quest.initial.Rich.Quest.place
 
-let make_assignation_cell ?tdq el =
-  match tdq with
+let make_assignation_cell ?tags el =
+  match tags with
   | None -> El.td [ el ]
-  | Some tdq ->
-      El.td [ El.span ~at:[ cls "planning-cell-tdq" ] [ El.txt' tdq ]; el ]
+  | Some tags ->
+      El.td [ El.span ~at:[ cls "planning-cell-tags" ] [ El.txt' tags ]; el ]
 
-let make_empty_cell ?tdq () = make_assignation_cell ?tdq (El.nbsp ())
-let make_assigned_cell ?tdq name = make_assignation_cell ?tdq (El.txt' name)
+let make_empty_cell ?tags () = make_assignation_cell ?tags (El.nbsp ())
+let make_assigned_cell ?tags name = make_assignation_cell ?tags (El.txt' name)
 
 let make_day_table ~with_types (date : Date.t) assignations =
   let head =
@@ -56,24 +56,24 @@ let make_day_table ~with_types (date : Date.t) assignations =
                let n_missing =
                  max 0 (n - Normal.Volunteers.cardinal volunteers - 1)
                in
-               let tdq =
+               let tags =
                  match (with_types, quest.initial.task_type) with
                  | true, Some tdq -> Some tdq.slug
                  | _, _ -> None
                in
                let first, rest =
                  match Normal.Volunteers.to_list volunteers with
-                 | [] -> (make_empty_cell ?tdq (), [])
-                 | hd :: tl -> (make_assigned_cell ?tdq hd.name, tl)
+                 | [] -> (make_empty_cell ?tags (), [])
+                 | hd :: tl -> (make_assigned_cell ?tags hd.name, tl)
                in
                let missing =
                  List.init ~len:n_missing ~f:(fun _ ->
-                     El.tr [ make_empty_cell ?tdq () ])
+                     El.tr [ make_empty_cell ?tags () ])
                in
                let rest =
                  List.fold_left rest ~init:(List.rev_append missing acc)
                    ~f:(fun acc (v : Normal.Volunteer.t) ->
-                     El.tr [ make_assigned_cell ?tdq v.name ] :: acc)
+                     El.tr [ make_assigned_cell ?tags v.name ] :: acc)
                in
                El.tr [ El.th ~at:[ rowspan n ] [ El.txt' slot ]; first ] :: rest))
          []
@@ -84,18 +84,21 @@ let make_day_table ~with_types acc (d, a) =
   let el = make_day_table ~with_types d a in
   el :: acc
 
-let make_task_type_legend types =
+let make_legend v =
   let lis =
-    Task_type.Set.fold types ~init:[] ~f:(fun acc tdq ->
-        let txt =
-          match tdq.slug with "" -> tdq.name | slug -> slug ^ " " ^ tdq.name
-        in
+    List.fold_left v ~init:[] ~f:(fun acc (slug, name) ->
+        let txt = match slug with "" -> name | slug -> slug ^ " " ^ name in
         El.span [ El.txt' txt ] :: acc)
   in
   Pico_ui.El.section [ El.div ~at:[ cls "planning-legend" ] lis ]
 
+let make_layout ~title ~legend content =
+  let title = El.h1 [ El.txt' ("Planning " ^ title) ] in
+  El.section
+    ~at:[ At.class' (Jstr.v "planning-place") ]
+    [ title; legend; content ]
+
 let make_place_planning (place : Place.t) assignations =
-  let title = El.h1 [ El.txt' ("Planning " ^ place.name) ] in
   let types =
     Date.Map.fold
       (fun _date v acc ->
@@ -116,9 +119,14 @@ let make_place_planning (place : Place.t) assignations =
          (make_day_table ~with_types:(Task_type.Set.cardinal types > 1))
          []
   in
-  let legend = make_task_type_legend types in
-  let days = El.div ~at:[ cls "day-grid" ] days in
-  El.section ~at:[ At.class' (Jstr.v "planning-place") ] [ title; legend; days ]
+  let legend =
+    types
+    |> Task_type.Set.to_list_map ~f:(fun { Task_type.slug; name; _ } ->
+        (slug, name))
+    |> make_legend
+  in
+  let content = El.div ~at:[ cls "day-grid" ] days in
+  make_layout ~title:place.name ~legend content
 
 type grouping = By_place | By_quest_kind
 
