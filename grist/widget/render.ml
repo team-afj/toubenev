@@ -122,15 +122,14 @@ let make_place_planning (place : Place.t) assignations =
 
 type grouping = By_place | By_quest_kind
 
-let group_by_place (infos : Event_infos.t) (assignations : Api.assignation list)
-    =
-  List.fold_left assignations ~init:Place.Map.empty
+let group (infos : Event_infos.t) (assignations : Api.assignation list) ~empty
+    ~update =
+  List.fold_left assignations ~init:empty
     ~f:(fun acc ({ Api.quest; _ } as ass) ->
-      let place = Option.value ~default:Place.dummy quest.initial.place in
       let date = Normal.to_event_local_date infos quest.slot.start in
       let time = quest.slot.start in
       (* let end_time = Normal.Time_slot.end_ quest.slot in *)
-      Place.Map.update place
+      update quest
         (function
           | None ->
               Some
@@ -150,6 +149,14 @@ let group_by_place (infos : Event_infos.t) (assignations : Api.assignation list)
                               times))
                    dates))
         acc)
+
+let group_by_place (infos : Event_infos.t) (assignations : Api.assignation list)
+    =
+  let update (q : Normal.Quest.t) f acc =
+    let place = Option.value ~default:Place.dummy q.initial.place in
+    Place.Map.update place f acc
+  in
+  group infos assignations ~empty:Place.Map.empty ~update
 
 let make_plannings (data : Rich.Planning.t) (answer : Api.answer) =
   let assignations = group_by_place data.infos answer.solution in
