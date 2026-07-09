@@ -131,6 +131,7 @@ let find_all (type a) (module Set : Set.S with type elt = a)
     assignations Set.empty *)
 
 let make_place_planning (place : Place.t) assignations =
+  let title = "lieu " ^ place.name in
   let types =
     Date.Map.fold
       (fun _date v acc ->
@@ -161,9 +162,10 @@ let make_place_planning (place : Place.t) assignations =
     |> make_legend
   in
   let content = El.div ~at:[ cls "day-grid" ] days in
-  make_layout ~title:place.name ~legend content
+  make_layout ~title ~legend content
 
 let make_tdq_planning (task_type : Task_type.t) assignations =
+  let title = "quête " ^ task_type.name in
   let places =
     Date.Map.fold
       (fun _date v acc ->
@@ -192,7 +194,7 @@ let make_tdq_planning (task_type : Task_type.t) assignations =
     |> make_legend
   in
   let content = El.div ~at:[ cls "day-grid" ] days in
-  make_layout ~title:task_type.name ~legend content
+  make_layout ~title ~legend content
 
 type grouping = By_place | By_quest_kind
 
