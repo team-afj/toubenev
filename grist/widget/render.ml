@@ -120,37 +120,39 @@ let make_place_planning (place : Place.t) assignations =
   let days = El.div ~at:[ cls "day-grid" ] days in
   El.section ~at:[ At.class' (Jstr.v "planning-place") ] [ title; legend; days ]
 
+type grouping = By_place | By_quest_kind
+
+let group_by_place (infos : Event_infos.t) (assignations : Api.assignation list)
+    =
+  List.fold_left assignations ~init:Place.Map.empty
+    ~f:(fun acc ({ Api.quest; _ } as ass) ->
+      let place = Option.value ~default:Place.dummy quest.initial.place in
+      let date = Normal.to_event_local_date infos quest.slot.start in
+      let time = quest.slot.start in
+      (* let end_time = Normal.Time_slot.end_ quest.slot in *)
+      Place.Map.update place
+        (function
+          | None ->
+              Some
+                (Date.Map.singleton date
+                   (Zoned_datetime.Map.singleton time [ ass ]))
+          | Some dates ->
+              Some
+                (Date.Map.update date
+                   (function
+                     | None -> Some (Zoned_datetime.Map.singleton time [ ass ])
+                     | Some times ->
+                         Some
+                           (Zoned_datetime.Map.update time
+                              (function
+                                | None -> Some [ ass ]
+                                | Some assignations -> Some (ass :: assignations))
+                              times))
+                   dates))
+        acc)
+
 let make_plannings (data : Rich.Planning.t) (answer : Api.answer) =
-  let assignations =
-    List.fold_left answer.solution ~init:Place.Map.empty
-      ~f:(fun acc ({ Api.quest; _ } as ass) ->
-        let place = Option.value ~default:Place.dummy quest.initial.place in
-        let date = Normal.to_event_local_date data.infos quest.slot.start in
-        let time = quest.slot.start in
-        (* let end_time = Normal.Time_slot.end_ quest.slot in *)
-        Place.Map.update place
-          (function
-            | None ->
-                Some
-                  (Date.Map.singleton date
-                     (Zoned_datetime.Map.singleton time [ ass ]))
-            | Some dates ->
-                Some
-                  (Date.Map.update date
-                     (function
-                       | None ->
-                           Some (Zoned_datetime.Map.singleton time [ ass ])
-                       | Some times ->
-                           Some
-                             (Zoned_datetime.Map.update time
-                                (function
-                                  | None -> Some [ ass ]
-                                  | Some assignations ->
-                                      Some (ass :: assignations))
-                                times))
-                     dates))
-          acc)
-  in
+  let assignations = group_by_place data.infos answer.solution in
   let make_place_planning p v acc = make_place_planning p v :: acc in
   let place_sections = Place.Map.fold make_place_planning assignations [] in
   El.section
