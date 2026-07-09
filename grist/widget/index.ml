@@ -16,29 +16,6 @@ API with short-live tokens. *)
      -- Used for "Dummy assignations" -> [Grist_import.Assignation.t list]
 *)
 
-module App = struct
-  type state = {
-    data : Grist_import.data;
-    data_rich : Rich.Planning.t;
-    answer : Api.answer;
-    analysis : Shared.Analysis.t;
-  }
-  [@@deriving jsont]
-
-  let last_answer : state option Lwd.var = Lwd.var None
-  let check_btn : [ `Ready | `In_progress ] Lwd.var = Lwd.var `Ready
-
-  type optimize_state = Not_ready | Ready of state | Running
-
-  let optimize_state : optimize_state Lwd.var = Lwd.var Not_ready
-
-  type server_status = Offline | Working | Done
-
-  let to_fr_slug = function Offline -> "⛓️‍💥" | Working -> "🤖" | Done -> "🔗"
-
-  let server_status : server_status Lwd.var = Lwd.var Offline
-end
-
 module Data = struct
   let infos_tbl_id = Jstr.v "Infos_generales"
   let options_tbl_id = Jstr.v "Options_du_solveur"
@@ -128,7 +105,7 @@ module Solutions = struct
     Lazy.force (lazy (Grist.get_table ~table_id:Data.solutions_tbl_id ()))
 
   let upsert_solution_1 state =
-    let* json = Fut.return @@ Jsont_brr.encode App.state_jsont state in
+    let* json = Fut.return @@ Jsont_brr.encode App_state.jsont state in
     let records =
       [
         Grist.Record.v ~id:1
@@ -142,7 +119,7 @@ module Solutions = struct
     let* solutions = Data.fetch Data.solutions_tbl_id in
     let first = Jv.call solutions "at" [| Jv.of_int 0 |] in
     let answer = Jv.get first "last_answer" in
-    Fut.return @@ Jsont_brr.decode App.state_jsont (Jv.to_jstr answer)
+    Fut.return @@ Jsont_brr.decode App_state.jsont (Jv.to_jstr answer)
 end
 
 module Assignations = struct
@@ -229,15 +206,15 @@ let sat =
         Fut.return (Ok ())
     | Ok data, Some last when Equal.poly last data ->
         let () = Console.info [ "TBN"; "Nothing to do, data didn't change" ] in
-        let last = Lwd.peek App.last_answer in
+        let last = Lwd.peek App_state.last_answer in
         Option.iter
-          (fun (data : App.state) ->
+          (fun (data : App_state.t) ->
             if Equal.poly data.answer.status Feasible then
-              Lwd.set App.optimize_state (Ready data))
+              Lwd.set App_state.optimize_state (Ready data))
           last;
         Fut.return (Ok ())
     | Ok data, _ -> begin
-        let () = Lwd.set App.optimize_state Not_ready in
+        let () = Lwd.set App_state.optimize_state Not_ready in
         let () = Console.info [ "TBN"; "Data changed" ] in
         let () = last_data := Some data in
         let _id_map, planning = Grist_import.to_planning data in
@@ -299,17 +276,17 @@ let sat =
             in
             let init = Request.init ~body ~method' ~headers () in
             let open Fut.Syntax in
-            let () = Lwd.set App.server_status Working in
+            let () = Lwd.set App_state.server_status Working in
             let* response = url ~init uri in
             match response with
             | Error err ->
                 Console.info [ "TBN"; "Error querying server" ];
                 let* _ = Titles.update_prefixes "⛓️‍💥" in
-                let () = Lwd.set App.server_status Offline in
+                let () = Lwd.set App_state.server_status Offline in
                 Fut.error err
             | Ok resp ->
                 Console.info [ "TBN"; "Got server response" ];
-                let () = Lwd.set App.server_status Done in
+                let () = Lwd.set App_state.server_status Done in
                 Response.as_body resp |> Body.json
           in
           Fut.return
@@ -327,8 +304,10 @@ let sat =
             let analysis =
               Shared.Analysis.of_planning planning answer normalized_planning
             in
-            let state = { App.data; data_rich = planning; answer; analysis } in
-            Lwd.set App.last_answer (Some state);
+            let state =
+              { App_state.data; data_rich = planning; answer; analysis }
+            in
+            Lwd.set App_state.last_answer (Some state);
             let* () = Solutions.upsert_solution_1 state in
             Fut.ok (Console.error [ jv ])
         | Ok answer ->
@@ -346,20 +325,23 @@ let sat =
             let analysis =
               Shared.Analysis.of_planning planning answer normalized_planning
             in
-            let state = { App.data; data_rich = planning; answer; analysis } in
+            let state =
+              { App_state.data; data_rich = planning; answer; analysis }
+            in
             let () =
               match answer.status with
-              | Feasible | Optimal -> Lwd.set App.optimize_state (Ready state)
+              | Feasible | Optimal ->
+                  Lwd.set App_state.optimize_state (Ready state)
               | Api.Unknown | Api.ModelInvalid | Api.Infeasible ->
-                  Lwd.set App.optimize_state Not_ready
+                  Lwd.set App_state.optimize_state Not_ready
             in
             let* () = Solutions.upsert_solution_1 state in
-            Fut.ok @@ Lwd.set App.last_answer (Some state)
+            Fut.ok @@ Lwd.set App_state.last_answer (Some state)
       end
 
 let fetch_last () =
   let+ last_answer = Solutions.get_solution_1 () in
-  Lwd.set App.last_answer (Some last_answer)
+  Lwd.set App_state.last_answer (Some last_answer)
 
 let init_optimization_chart =
   let chart = ref None in
@@ -409,7 +391,7 @@ let init_optimization_chart =
     let () = Chart.set_data chart data in
     (chart, d_objective, d_satisfaction)
 
-let optimize ~(chart_canvas : El.t) (current_state : App.state) =
+let optimize ~(chart_canvas : El.t) (current_state : App_state.t) =
   let planning = current_state.data_rich in
   let+ handle =
     let open Brr_io.Fetch in
@@ -423,7 +405,7 @@ let optimize ~(chart_canvas : El.t) (current_state : App.state) =
       Headers.of_assoc [ (Jstr.v "Content-Type", Jstr.v "application/json") ]
     in
     let init = Request.init ~body ~method' ~headers () in
-    let () = Lwd.set App.optimize_state Running in
+    let () = Lwd.set App_state.optimize_state Running in
     let* response = url ~init uri in
     Response.as_body response |> Body.text
   in
@@ -444,7 +426,7 @@ let optimize ~(chart_canvas : El.t) (current_state : App.state) =
       (fun _ev ->
         if !first then begin
           first := false;
-          match Lwd.peek App.last_answer with
+          match Lwd.peek App_state.last_answer with
           | None -> ()
           | Some ({ answer; _ } as state) ->
               ignore
@@ -457,7 +439,8 @@ let optimize ~(chart_canvas : El.t) (current_state : App.state) =
               let analysis =
                 Shared.Analysis.of_planning planning answer normalized_planning
               in
-              Lwd.set App.last_answer (Some { state with answer; analysis });
+              Lwd.set App_state.last_answer
+                (Some { state with answer; analysis });
               Assignations.insert_assignations assignations
         end)
       (Event_source.as_target event_source)
@@ -468,7 +451,7 @@ let optimize ~(chart_canvas : El.t) (current_state : App.state) =
     let analysis =
       Shared.Analysis.of_planning planning answer normalized_planning
     in
-    Lwd.set App.last_answer (Some { current_state with answer; analysis });
+    Lwd.set App_state.last_answer (Some { current_state with answer; analysis });
     Chartjs.Dataset.push_data d_objective
       (mk_point time (answer.objective_value -. answer.best_objective_bound));
     Chartjs.Dataset.push_data d_satisfaction (mk_point time satisfaction);
@@ -489,12 +472,12 @@ let optimize ~(chart_canvas : El.t) (current_state : App.state) =
 
 let app =
   let open Lwd_infix in
-  let last_answer = Lwd.get App.last_answer in
+  let last_answer = Lwd.get App_state.last_answer in
   let controls =
     let chart_canvas, optimize_chart =
       let chart_canvas = El.canvas [] in
       let display =
-        let$ state = Lwd.get App.optimize_state in
+        let$ state = Lwd.get App_state.optimize_state in
         match state with
         | Running -> At.void
         | _ -> At.style (Jstr.v "display: none")
@@ -509,18 +492,18 @@ let app =
     in
     let check_btn =
       let disabled =
-        let$ state = Lwd.get App.check_btn in
+        let$ state = Lwd.get App_state.check_btn in
         match state with `In_progress -> At.disabled | `Ready -> At.void
       in
       let ev =
-        let$ state = Lwd.get App.check_btn in
+        let$ state = Lwd.get App_state.check_btn in
         match state with
         | `In_progress -> Elwd.handler Ev.click (fun _ -> ())
         | `Ready ->
             Elwd.handler Ev.click (fun _ ->
-                Lwd.set App.check_btn `In_progress;
+                Lwd.set App_state.check_btn `In_progress;
                 sat ()
-                |> Fut.map (fun _ -> Lwd.set App.check_btn `Ready)
+                |> Fut.map (fun _ -> Lwd.set App_state.check_btn `Ready)
                 |> ignore)
       in
       Elwd.button
@@ -530,13 +513,13 @@ let app =
     in
     let optimize_btn =
       let disabled =
-        let$ state = Lwd.get App.optimize_state in
+        let$ state = Lwd.get App_state.optimize_state in
         match state with
         | Not_ready | Running -> At.disabled
         | Ready _ -> At.void
       in
       let ev =
-        let$ state = Lwd.get App.optimize_state in
+        let$ state = Lwd.get App_state.optimize_state in
         match state with
         | Not_ready | Running -> Elwd.handler Ev.click (fun _ -> ())
         | Ready state ->
@@ -548,73 +531,10 @@ let app =
         ~ev:[ `R ev ]
         [ `P (El.txt' "2. Optimiser") ]
     in
-    let print_options_modal, show_modal =
-      let show_modal = Lwd.var false in
-      let options, peek_options =
-        let bp =
-          Forms.Field_checkboxes.make_single
-            {
-              value = `By_place;
-              id = "chk-by-place";
-              name = "By place";
-              label = (fun _ -> [ `P (El.txt' "Plannings par lieu") ]);
-              state = true;
-            }
-        in
-        let bp_var =
-          let (Check { state; _ }) = bp.desc in
-          state
-        in
-        let bt =
-          Forms.Field_checkboxes.make_single
-            {
-              value = `By_quest_kind;
-              id = "chk-by-task";
-              name = "By task";
-              label = (fun _ -> [ `P (El.txt' "Plannings par type de quête") ]);
-              state = false;
-            }
-        in
-        let bt_var =
-          let (Check { state; _ }) = bt.desc in
-          state
-        in
-        let peek () =
-          List.filter_map ~f:Fun.id [ Lwd.peek bp_var; Lwd.peek bt_var ]
-        in
-        ([ `R bp.element; `R bt.element ], peek)
-      in
-      let footer =
-        let cancel =
-          Elwd.button
-            ~ev:
-              [ `P (Elwd.handler Ev.click (fun _ -> Lwd.set show_modal false)) ]
-            [ `P (El.txt' "Annuler") ]
-        in
-        let print =
-          let on_click _ =
-            Lwd.peek App.last_answer
-            |> Option.iter @@ fun { App.data; answer; _ } ->
-               let _id_map, planning = Grist_import.to_planning data in
-               let planning =
-                 Render.make_plannings planning answer (peek_options ())
-               in
-               Lwd.set show_modal false;
-               Print.print planning
-          in
-          Elwd.button
-            ~ev:[ `P (Elwd.handler Ev.click on_click) ]
-            [ `P (El.txt' "Imprimer") ]
-        in
-        [ `R cancel; `R print ]
-      in
-      Pico_ui.Elwd.modal ~opened:show_modal
-        ~title:(`P (El.txt' "Options d'impression"))
-        ~footer options
-    in
+    let print_options_modal, show_modal = Print.modal () in
     let print_btn =
       let disabled =
-        let$ answer = Lwd.get App.last_answer in
+        let$ answer = Lwd.get App_state.last_answer in
         match answer with
         | None | Some { answer = { solution = []; _ }; _ } -> At.disabled
         | Some _ -> At.void
@@ -643,8 +563,8 @@ let app =
   in
   let results =
     let title =
-      let$ status = Lwd.get App.server_status in
-      let slug = App.to_fr_slug status in
+      let$ status = Lwd.get App_state.server_status in
+      let slug = App_state.to_fr_slug status in
       El.txt' ("Résultats " ^ slug)
     in
     let results =
@@ -676,7 +596,7 @@ let app =
                 :: sufass))
       in
       let diffs =
-        let$ state = Lwd.get App.last_answer in
+        let$ state = Lwd.get App_state.last_answer in
         match state with
         | None -> El.nbsp ()
         | Some { analysis; _ } -> Diffs_table.make analysis
@@ -687,7 +607,7 @@ let app =
   in
   let diagnostics =
     let diags =
-      let$ answer = Lwd.get App.last_answer in
+      let$ answer = Lwd.get App_state.last_answer in
       let diags =
         match answer with
         | None -> []
@@ -707,13 +627,13 @@ let app =
     section
   in
   let analyses =
-    let$ results = Lwd.get App.last_answer in
+    let$ results = Lwd.get App_state.last_answer in
     match results with
     | None -> El.nbsp ()
     | Some { analysis; _ } -> Infos.capacity_table analysis
   in
   let available_volunteers =
-    let$* results = Lwd.get App.last_answer in
+    let$* results = Lwd.get App_state.last_answer in
     match results with
     | None -> Lwd.return (El.nbsp ())
     | Some { data_rich; _ } -> Infos.available_volunteers_widget data_rich
