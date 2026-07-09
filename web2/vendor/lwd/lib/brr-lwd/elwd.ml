@@ -330,6 +330,7 @@ let del = cons Name.del
 let details = cons Name.details
 let dfn = cons Name.dfn
 let div = cons Name.div
+let dialog = cons (Jstr.v "dialog")
 let dl = cons Name.dl
 let dt = cons Name.dt
 let em = cons Name.em

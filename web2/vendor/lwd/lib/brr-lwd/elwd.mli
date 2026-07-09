@@ -143,6 +143,10 @@ val div : cons
 (** {{:https://developer.mozilla.org/en-US/docs/Web/HTML/Element/div}
     div} *)
 
+val dialog : cons
+(** {{:https://developer.mozilla.org/en-US/docs/Web/HTML/Element/dialog}
+    dialog} *)
+
 val dl : cons
 (** {{:https://developer.mozilla.org/en-US/docs/Web/HTML/Element/dl}dl} *)
 
