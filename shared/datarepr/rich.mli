@@ -91,6 +91,7 @@ module Place : sig
   val dummy : t
   val equal : t -> t -> bool
 
+  module Set : Set.S_jsont with type elt = t
   module Map : Map.S_jsont with type key = t
   include S with type t := t
 
@@ -123,6 +124,7 @@ module Task_type : sig
   val equal : t -> t -> bool
 
   module Set : Set.S_jsont with type elt = t
+  module Map : Map.S_jsont with type key = t
   include S with type t := t
 
   val make :

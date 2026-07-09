@@ -127,6 +127,7 @@ module Place = struct
   end
 
   include T
+  module Set = Set.Make_jsont (T)
   module Map = Map.Make_jsont (T)
 
   let dummy = { id = ""; slug = ""; name = ""; description = None }
@@ -173,6 +174,7 @@ module Task_type = struct
 
   include T
   module Set = Set.Make_jsont (T)
+  module Map = Map.Make_jsont (T)
 
   let dummy =
     {
