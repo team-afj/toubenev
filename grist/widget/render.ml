@@ -98,13 +98,15 @@ let make_day_table ~with_types ~with_places acc (d, a) =
 let make_legend v =
   let lis =
     List.fold_left v ~init:[] ~f:(fun acc (slug, name, description) ->
-        let txt = match slug with "" -> name | slug -> slug ^ " " ^ name in
-        let txt =
-          Option.map_or ~default:txt (fun d -> txt ^ "(" ^ d ^ ")") description
+        let name = match slug with "" -> name | slug -> slug ^ " " ^ name in
+        let content =
+          match description with
+          | None -> [ El.h4 [ El.txt' name ] ]
+          | Some d -> [ El.h4 [ El.txt' name ]; El.p [ El.txt' d ] ]
         in
-        El.span [ El.txt' txt ] :: acc)
+        El.article content :: acc)
   in
-  Pico_ui.El.section [ El.div ~at:[ cls "planning-legend" ] lis ]
+  El.section [ El.div ~at:[ cls "planning-legend" ] lis ]
 
 let make_layout ~title ~legend content =
   let title = El.h1 [ El.txt' ("Planning " ^ title) ] in

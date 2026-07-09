@@ -67,10 +67,9 @@ let modal () =
     let print =
       let on_click _ =
         Lwd.peek App_state.last_answer
-        |> Option.iter @@ fun { App_state.data; answer; _ } ->
-           let _id_map, planning = Grist_import.to_planning data in
+        |> Option.iter @@ fun { App_state.data_rich; answer; _ } ->
            let planning =
-             Render.make_plannings planning answer (peek_options ())
+             Render.make_plannings data_rich answer (peek_options ())
            in
            Lwd.set show_modal false;
            print planning
