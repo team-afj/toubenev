@@ -548,6 +548,70 @@ let app =
         ~ev:[ `R ev ]
         [ `P (El.txt' "2. Optimiser") ]
     in
+    let print_options_modal, show_modal =
+      let show_modal = Lwd.var false in
+      let options, peek_options =
+        let bp =
+          Forms.Field_checkboxes.make_single
+            {
+              value = `By_place;
+              id = "chk-by-place";
+              name = "By place";
+              label = (fun _ -> [ `P (El.txt' "Plannings par lieu") ]);
+              state = true;
+            }
+        in
+        let bp_var =
+          let (Check { state; _ }) = bp.desc in
+          state
+        in
+        let bt =
+          Forms.Field_checkboxes.make_single
+            {
+              value = `By_quest_kind;
+              id = "chk-by-task";
+              name = "By task";
+              label = (fun _ -> [ `P (El.txt' "Plannings par type de quête") ]);
+              state = false;
+            }
+        in
+        let bt_var =
+          let (Check { state; _ }) = bt.desc in
+          state
+        in
+        let peek () =
+          List.filter_map ~f:Fun.id [ Lwd.peek bp_var; Lwd.peek bt_var ]
+        in
+        ([ `R bp.element; `R bt.element ], peek)
+      in
+      let footer =
+        let cancel =
+          Elwd.button
+            ~ev:
+              [ `P (Elwd.handler Ev.click (fun _ -> Lwd.set show_modal false)) ]
+            [ `P (El.txt' "Annuler") ]
+        in
+        let print =
+          let on_click _ =
+            Lwd.peek App.last_answer
+            |> Option.iter @@ fun { App.data; answer; _ } ->
+               let _id_map, planning = Grist_import.to_planning data in
+               let planning =
+                 Render.make_plannings planning answer (peek_options ())
+               in
+               Lwd.set show_modal false;
+               Print.print planning
+          in
+          Elwd.button
+            ~ev:[ `P (Elwd.handler Ev.click on_click) ]
+            [ `P (El.txt' "Imprimer") ]
+        in
+        [ `R cancel; `R print ]
+      in
+      Pico_ui.Elwd.modal ~opened:show_modal
+        ~title:(`P (El.txt' "Options d'impression"))
+        ~footer options
+    in
     let print_btn =
       let disabled =
         let$ answer = Lwd.get App.last_answer in
@@ -556,22 +620,13 @@ let app =
         | Some _ -> At.void
       in
       let ev =
-        let$ answer = Lwd.get App.last_answer in
-        let f =
-          match answer with
-          | None -> ignore
-          | Some { data; answer; _ } ->
-              fun _ ->
-                let _id_map, planning = Grist_import.to_planning data in
-                let planning = Render.make_plannings planning answer in
-                Print.print planning
-        in
+        let f = fun _ -> Lwd.set show_modal true in
         Elwd.handler Ev.click f
       in
       Elwd.button
         ~at:[ `R disabled ]
-        ~ev:[ `R ev ]
-        [ `P (El.txt' "3. Imprimer") ]
+        ~ev:[ `P ev ]
+        [ `P (El.txt' "3. Imprimer") ]
     in
     let btns =
       Elwd.fieldset
@@ -583,7 +638,8 @@ let app =
         ~at:[ `P (At.v (Jstr.v "role") (Jstr.v "group")) ]
         [ `R optimize_btn; `R print_btn ]
     in
-    Pico_ui.Elwd.section [ `R btns; `R btns2; `R optimize_chart ]
+    Pico_ui.Elwd.section
+      [ `R print_options_modal; `R btns; `R btns2; `R optimize_chart ]
   in
   let results =
     let title =
