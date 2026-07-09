@@ -1,7 +1,7 @@
 @media print {
-  @page {
-    size: landscape;
-  }
+  /* @page {
+    size: portrait;
+  } */
 
   .planning-place:not(:first-child) {
     break-before: page;
@@ -21,8 +21,14 @@
 
   & .day-grid {
     display: flex;
+    flex-wrap: wrap;
     flex-direction: row;
     justify-content: space-evenly;
+    gap: 0.5rem;
+
+    &>div {
+      break-after: always;
+    }
   }
 }
 
@@ -37,12 +43,11 @@
 
   & article {
     flex: 0 0 auto;
-
     display: flex;
     flex-direction: column;
     justify-content: center;
 
-    & h4 {
+    & h6 {
       margin-bottom: 0;
     }
 

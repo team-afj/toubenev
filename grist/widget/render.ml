@@ -101,8 +101,8 @@ let make_legend v =
         let name = match slug with "" -> name | slug -> slug ^ " " ^ name in
         let content =
           match description with
-          | None -> [ El.h4 [ El.txt' name ] ]
-          | Some d -> [ El.h4 [ El.txt' name ]; El.p [ El.txt' d ] ]
+          | None -> [ El.h6 [ El.txt' name ] ]
+          | Some d -> [ El.h6 [ El.txt' name ]; El.p [ El.txt' d ] ]
         in
         El.article content :: acc)
   in
