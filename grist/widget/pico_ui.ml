@@ -1,6 +1,7 @@
 open Brr
 open Brr_lwd
 module Api = Data_repr.Api
+open Lwd_infix
 
 let j = Jstr.v
 let container = At.class' (Jstr.v "container")
@@ -22,6 +23,21 @@ module Elwd = struct
   include Elwd
 
   let section ?(at = []) = Elwd.section ~at:(`P container :: at)
+
+  let modal ?(opened = Lwd.var false) ~title ?footer content =
+    let at_opened =
+      let$ shown = Lwd.get opened in
+      if shown then At.v (j "open") (j "true") else At.void
+    in
+    let header = Elwd.header [ `R (Elwd.p [ `R (Elwd.strong [ title ]) ]) ] in
+    let content =
+      match footer with
+      | None -> `R header :: content
+      | Some footer ->
+          let style = El.style [ El.txt' "input: {width: auto}" ] in
+          (`R header :: content) @ [ `R (Elwd.footer (`P style :: footer)) ]
+    in
+    (dialog ~at:[ `R at_opened ] [ `R (Elwd.article content) ], opened)
 end
 
 let accordion ~name ?(closed = false) ~title content =
