@@ -97,8 +97,11 @@ let make_day_table ~with_types ~with_places acc (d, a) =
 
 let make_legend v =
   let lis =
-    List.fold_left v ~init:[] ~f:(fun acc (slug, name) ->
+    List.fold_left v ~init:[] ~f:(fun acc (slug, name, description) ->
         let txt = match slug with "" -> name | slug -> slug ^ " " ^ name in
+        let txt =
+          Option.map_or ~default:txt (fun d -> txt ^ "(" ^ d ^ ")") description
+        in
         El.span [ El.txt' txt ] :: acc)
   in
   Pico_ui.El.section [ El.div ~at:[ cls "planning-legend" ] lis ]
@@ -150,8 +153,9 @@ let make_place_planning (place : Place.t) assignations =
   in
   let legend =
     types
-    |> Task_type.Set.to_list_map ~f:(fun { Task_type.slug; name; _ } ->
-        (slug, name))
+    |> Task_type.Set.to_list_map
+         ~f:(fun { Task_type.slug; name; description; _ } ->
+           (slug, name, description))
     |> make_legend
   in
   let content = El.div ~at:[ cls "day-grid" ] days in
@@ -181,7 +185,8 @@ let make_tdq_planning (task_type : Task_type.t) assignations =
   in
   let legend =
     places
-    |> Place.Set.to_list_map ~f:(fun { Place.slug; name; _ } -> (slug, name))
+    |> Place.Set.to_list_map ~f:(fun { Place.slug; name; description; _ } ->
+        (slug, name, description))
     |> make_legend
   in
   let content = El.div ~at:[ cls "day-grid" ] days in

@@ -234,6 +234,8 @@ let mandatory_of_string = function
   | "Tout le monde autant" -> In_equal_proportion
   | s -> failwith ("Unexpected value:" ^ s)
 
+let option_of_string s = match String.trim s with "" -> None | s -> Some s
+
 let to_planning ?(id_map = new_id_map ())
     ({
        infos;
@@ -315,7 +317,8 @@ let to_planning ?(id_map = new_id_map ())
   let id_map, places =
     let convert_place id_map { Lieu.id; slug; nom; description } =
       let ids = Rich.id_of_int id in
-      let place = Rich.Place.make ~id:ids ~slug ~name:nom ~description () in
+      let description = option_of_string description in
+      let place = Rich.Place.make ~id:ids ~slug ~name:nom ?description () in
       ({ id_map with places = Int.Map.add id place id_map.places }, place)
     in
     let id_map, places =
@@ -329,7 +332,7 @@ let to_planning ?(id_map = new_id_map ())
           Task_type.id;
           slug;
           nom = name;
-          fiche_de_poste = description;
+          fiche_de_poste;
           impose;
           specialiste_requis = specialist_only;
           decoupable = divisible;
@@ -337,8 +340,9 @@ let to_planning ?(id_map = new_id_map ())
         } =
       let ids = Rich.id_of_int id in
       let everyone_should_do_it = mandatory_of_string impose in
+      let description = option_of_string fiche_de_poste in
       let v =
-        Rich.Task_type.make ~id:ids ~slug ~name ~description
+        Rich.Task_type.make ~id:ids ~slug ~name ?description
           ~everyone_should_do_it ~specialist_only ~divisible ~free ()
       in
       ({ id_map with task_types = Int.Map.add id v id_map.task_types }, v)
