@@ -13,10 +13,15 @@ let place_of_assignation (assignation : Api.assignation) =
   assignation.quest.initial.Rich.Quest.place
 
 let make_assignation_cell ?tags el =
+  let at = [ cls "planning-cell-content" ] in
   match tags with
-  | None -> El.td [ el ]
+  | None -> El.td [ El.div ~at [ el ] ]
   | Some tags ->
-      El.td [ El.span ~at:[ cls "planning-cell-tags" ] [ El.txt' tags ]; el ]
+      El.td
+        [
+          El.div ~at
+            [ El.span ~at:[ cls "planning-cell-tags" ] [ El.txt' tags ]; el ];
+        ]
 
 let make_empty_cell ?tags () = make_assignation_cell ?tags (El.nbsp ())
 let make_assigned_cell ?tags name = make_assignation_cell ?tags (El.txt' name)

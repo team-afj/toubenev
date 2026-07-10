@@ -72,9 +72,24 @@ table.planning {
       border: solid 1px white;
     }
 
-    & .planning-cell-tags {
-      float: left;
-      margin-right: 0.5rem;
+    & .planning-cell-content {
+      display: flex;
+      flex-direction: row;
+
+      & .planning-cell-tags {
+        font-size: 1rem;
+        align-self: flex-start;
+        margin-right: 0.5rem;
+      }
+
+      &.full-details {
+        flex-direction: column-reverse;
+
+        & .planning-cell-tags {
+          font-size: 0.6rem;
+          align-self: flex-end;
+        }
+      }
     }
   }
 }
