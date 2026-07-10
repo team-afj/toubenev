@@ -87,7 +87,6 @@ table.planning {
 
         & .planning-cell-tags {
           font-size: 0.6rem;
-          align-self: flex-end;
         }
       }
     }

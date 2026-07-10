@@ -12,8 +12,13 @@ let scope s = At.v (Jstr.v "scope") (Jstr.v s)
 let place_of_assignation (assignation : Api.assignation) =
   assignation.quest.initial.Rich.Quest.place
 
-let make_assignation_cell ?tags el =
-  let at = [ cls "planning-cell-content" ] in
+let make_assignation_cell ~details ?tags el =
+  let at =
+    let cell_content = cls "planning-cell-content" in
+    match details with
+    | false -> [ cell_content ]
+    | true -> [ cell_content; cls "full-details" ]
+  in
   match tags with
   | None -> El.td [ El.div ~at [ el ] ]
   | Some tags ->
@@ -23,10 +28,14 @@ let make_assignation_cell ?tags el =
             [ El.span ~at:[ cls "planning-cell-tags" ] [ El.txt' tags ]; el ];
         ]
 
-let make_empty_cell ?tags () = make_assignation_cell ?tags (El.nbsp ())
-let make_assigned_cell ?tags name = make_assignation_cell ?tags (El.txt' name)
+let make_empty_cell ~details ?tags () =
+  make_assignation_cell ~details ?tags (El.nbsp ())
 
-let make_day_table ~with_types ~with_places (date : Date.t) assignations =
+let make_assigned_cell ~details ?tags name =
+  make_assignation_cell ~details ?tags (El.txt' name)
+
+let make_day_table ~details ~with_types ~with_places (date : Date.t)
+    assignations =
   let head =
     let title =
       El.tr
@@ -61,7 +70,7 @@ let make_day_table ~with_types ~with_places (date : Date.t) assignations =
                let n_missing =
                  max 0 (n - Normal.Volunteers.cardinal volunteers - 1)
                in
-               let tags =
+               let tags, descr =
                  match
                    ( with_types,
                      quest.initial.task_type,
@@ -69,35 +78,42 @@ let make_day_table ~with_types ~with_places (date : Date.t) assignations =
                      quest.initial.place )
                  with
                  | true, Some tdq, false, Some _ | true, Some tdq, true, None ->
-                     Some tdq.slug
+                     (Some tdq.slug, tdq.name)
                  | false, Some _, true, Some place
                  | true, None, true, Some place ->
-                     Some place.slug
+                     (Some place.slug, place.name)
                  | true, Some tdq, true, Some place ->
-                     Some (place.slug ^ ": " ^ tdq.slug)
-                 | _ -> None
+                     ( Some (place.slug ^ ": " ^ tdq.slug),
+                       tdq.name ^ " à " ^ place.name )
+                 | _ -> (None, "")
+               in
+               let tags, details =
+                 match (tags, details, descr) with
+                 | Some tag, true, descr -> (Some (tag ^ " " ^ descr), true)
+                 | None, true, descr -> (Some descr, true)
+                 | _, _, _ -> (tags, false)
                in
                let first, rest =
                  match Normal.Volunteers.to_list volunteers with
-                 | [] -> (make_empty_cell ?tags (), [])
-                 | hd :: tl -> (make_assigned_cell ?tags hd.name, tl)
+                 | [] -> (make_empty_cell ~details ?tags (), [])
+                 | hd :: tl -> (make_assigned_cell ~details ?tags hd.name, tl)
                in
                let missing =
                  List.init ~len:n_missing ~f:(fun _ ->
-                     El.tr [ make_empty_cell ?tags () ])
+                     El.tr [ make_empty_cell ~details ?tags () ])
                in
                let rest =
                  List.fold_left rest ~init:(List.rev_append missing acc)
                    ~f:(fun acc (v : Normal.Volunteer.t) ->
-                     El.tr [ make_assigned_cell ?tags v.name ] :: acc)
+                     El.tr [ make_assigned_cell ~details ?tags v.name ] :: acc)
                in
                El.tr [ El.th ~at:[ rowspan n ] [ El.txt' slot ]; first ] :: rest))
          []
   in
   El.div [ El.table ~at:[ cls "planning" ] (head :: rows) ]
 
-let make_day_table ~with_types ~with_places acc (d, a) =
-  let el = make_day_table ~with_types ~with_places d a in
+let make_day_table ~details ~with_types ~with_places acc (d, a) =
+  let el = make_day_table ~details ~with_types ~with_places d a in
   el :: acc
 
 let make_legend v =
@@ -135,7 +151,7 @@ let find_all (type a) (module Set : Set.S with type elt = a)
         v acc)
     assignations Set.empty *)
 
-let make_place_planning (place : Place.t) assignations =
+let make_place_planning ~details (place : Place.t) assignations =
   let title = "lieu " ^ place.name in
   let types =
     Date.Map.fold
@@ -154,7 +170,7 @@ let make_place_planning (place : Place.t) assignations =
   let days =
     Date.Map.to_rev_seq assignations
     |> Seq.fold
-         (make_day_table
+         (make_day_table ~details
             ~with_types:(Task_type.Set.cardinal types > 1)
             ~with_places:false)
          []
@@ -169,7 +185,7 @@ let make_place_planning (place : Place.t) assignations =
   let content = El.div ~at:[ cls "day-grid" ] days in
   make_layout ~title ~legend content
 
-let make_tdq_planning (task_type : Task_type.t) assignations =
+let make_tdq_planning ~details (task_type : Task_type.t) assignations =
   let title = "quête " ^ task_type.name in
   let places =
     Date.Map.fold
@@ -188,7 +204,7 @@ let make_tdq_planning (task_type : Task_type.t) assignations =
   let days =
     Date.Map.to_rev_seq assignations
     |> Seq.fold
-         (make_day_table ~with_types:false
+         (make_day_table ~details ~with_types:false
             ~with_places:(Place.Set.cardinal places > 1))
          []
   in
@@ -247,18 +263,21 @@ let group_by_kind (infos : Event_infos.t) (assignations : Api.assignation list)
   in
   group infos assignations ~empty:Task_type.Map.empty ~update
 
-let make_plannings (data : Rich.Planning.t) (answer : Api.answer) variants =
+let make_plannings (data : Rich.Planning.t) (answer : Api.answer) ~details
+    variants =
   List.map variants ~f:(function
     | `By_place ->
         let assignations = group_by_place data.infos answer.solution in
-        let make_place_planning p v acc = make_place_planning p v :: acc in
+        let make_place_planning p v acc =
+          make_place_planning ~details p v :: acc
+        in
         let place_sections =
           Place.Map.fold make_place_planning assignations []
         in
         El.div ~at:[ cls "planning-sections" ] place_sections
     | `By_quest_kind ->
         let assignations = group_by_kind data.infos answer.solution in
-        let make_tdq_planning p v acc = make_tdq_planning p v :: acc in
+        let make_tdq_planning p v acc = make_tdq_planning ~details p v :: acc in
         let tdq_sections =
           Task_type.Map.fold make_tdq_planning assignations []
         in

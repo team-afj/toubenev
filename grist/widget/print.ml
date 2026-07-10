@@ -53,10 +53,39 @@ let modal () =
       let (Check { state; _ }) = bt.desc in
       state
     in
-    let peek () =
-      List.filter_map ~f:Fun.id [ Lwd.peek bp_var; Lwd.peek bt_var ]
+    let details =
+      Forms.Field_checkboxes.make_single
+        {
+          value = ();
+          id = "chk-details";
+          name = "details";
+          label =
+            (fun _ ->
+              [
+                `P
+                  (El.txt'
+                     "Afficher les nom de quêtes en cas d'ambiguité. (sinon \
+                      seul le slug 🐌 est utilisé)");
+              ]);
+          state = false;
+        }
     in
-    ([ `R bp.element; `R bt.element ], peek)
+    let details_var =
+      let (Check { state; _ }) = bt.desc in
+      state
+    in
+    let peek () =
+      ( List.filter_map ~f:Fun.id [ Lwd.peek bp_var; Lwd.peek bt_var ],
+        Lwd.peek details_var |> Option.is_some )
+    in
+    ( [
+        `P (El.legend [ El.txt' "Type(s) de planning à imprimer :" ]);
+        `R bp.element;
+        `R bt.element;
+        `P (El.legend [ El.txt' "Autres options :" ]);
+        `R details.element;
+      ],
+      peek )
   in
   let footer =
     let cancel =
@@ -69,7 +98,8 @@ let modal () =
         Lwd.peek App_state.last_answer
         |> Option.iter @@ fun { App_state.data_rich; answer; _ } ->
            let planning =
-             Render.make_plannings data_rich answer (peek_options ())
+             let sections, details = peek_options () in
+             Render.make_plannings ~details data_rich answer sections
            in
            Lwd.set show_modal false;
            print planning
