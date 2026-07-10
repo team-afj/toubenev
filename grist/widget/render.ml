@@ -129,8 +129,15 @@ let make_legend v =
   in
   El.section [ El.div ~at:[ cls "planning-legend" ] lis ]
 
-let make_layout ~title ~legend content =
-  let title = El.h1 [ El.txt' ("Planning " ^ title) ] in
+let make_layout ~title ?subtitle ~legend content =
+  let title =
+    let title = El.h1 [ El.txt' ("Planning " ^ title) ] in
+    match subtitle with
+    | None -> title
+    | Some subtitle ->
+        let subtitle = El.p [ El.txt' subtitle ] in
+        El.hgroup [ title; subtitle ]
+  in
   El.section
     ~at:[ At.class' (Jstr.v "planning-place") ]
     [ title; legend; content ]
@@ -153,6 +160,7 @@ let find_all (type a) (module Set : Set.S with type elt = a)
 
 let make_place_planning ~details (place : Place.t) assignations =
   let title = "lieu " ^ place.name in
+  let subtitle = place.description in
   let types =
     Date.Map.fold
       (fun _date v acc ->
@@ -183,10 +191,11 @@ let make_place_planning ~details (place : Place.t) assignations =
     |> make_legend
   in
   let content = El.div ~at:[ cls "day-grid" ] days in
-  make_layout ~title ~legend content
+  make_layout ~title ?subtitle ~legend content
 
 let make_tdq_planning ~details (task_type : Task_type.t) assignations =
   let title = "quête " ^ task_type.name in
+  let subtitle = task_type.description in
   let places =
     Date.Map.fold
       (fun _date v acc ->
@@ -215,7 +224,7 @@ let make_tdq_planning ~details (task_type : Task_type.t) assignations =
     |> make_legend
   in
   let content = El.div ~at:[ cls "day-grid" ] days in
-  make_layout ~title ~legend content
+  make_layout ~title ?subtitle ~legend content
 
 type grouping = By_place | By_quest_kind
 
