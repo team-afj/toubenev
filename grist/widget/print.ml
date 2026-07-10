@@ -71,7 +71,7 @@ let modal () =
         }
     in
     let details_var =
-      let (Check { state; _ }) = bt.desc in
+      let (Check { state; _ }) = details.desc in
       state
     in
     let peek () =
