@@ -46,7 +46,6 @@ let make_single ?persist ?(ev = []) ?(on_change = fun _ -> ()) ?var
         | Some true -> Persistent.var ~key:id (result state)
         | Some false | None -> Lwd.var (result state))
   in
-  let lbl = Elwd.label ~at:[ `P (At.for' (Jstr.v id)) ] (label ()) in
   let at =
     let open Attrs in
     add At.Name.id (`P id) []
@@ -70,12 +69,11 @@ let make_single ?persist ?(ev = []) ?(on_change = fun _ -> ()) ?var
   in
   let ev = `P on_change :: ev in
   let element = ref None in
+  let form_input =
+    Elwd.input ~at ~ev ~on_create:(fun e -> element := Some e) ()
+  in
   let field =
-    Elwd.(
-      div
-        [
-          `R (input ~at ~ev ~on_create:(fun e -> element := Some e) ()); `R lbl;
-        ])
+    Elwd.label ~at:[ `P (At.for' (Jstr.v id)) ] (`R form_input :: label ())
   in
   let () =
     Utils.tap ~f:(fun v ->
