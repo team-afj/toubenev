@@ -48,20 +48,25 @@ let non_ubiquity_of_normal_humans (ctx : Context.t) =
   Quests.iter overlapping ~f:(fun q' ->
       if not (Quest.equal q q') then
         ctx.for_all_volunteers @@ fun v ->
-        let assig_v = ctx.assignations v in
-        let name =
-          Format.sprintf "%s_cannot_do_both_%s_and_%s" v.initial.name q.name
-            q'.name
-        in
-        let only_enforce_if =
-          (* TODO: these probably add more noise than useful information *)
-          (* assume ctx
+        if
+          not
+            (Quest.is_manually_assigned_to v q
+            && Quest.is_manually_assigned_to v q')
+        then
+          let assig_v = ctx.assignations v in
+          let name =
+            Format.sprintf "%s_cannot_do_both_%s_and_%s" v.initial.name q.name
+              q'.name
+          in
+          let only_enforce_if =
+            (* TODO: these probably add more noise than useful information *)
+            (* assume ctx
           @@ Format.sprintf "%s cannot do both %s and %s" v.initial.name q.name
                q'.name *)
-          None
-        in
-        Sat.Constraint.at_most_one [ assig_v q; assig_v q' ]
-        |> Sat.add ctx.model ?only_enforce_if ~name)
+            None
+          in
+          Sat.Constraint.at_most_one [ assig_v q; assig_v q' ]
+          |> Sat.add ctx.model ?only_enforce_if ~name)
 
 (** Not everyone is available all the time *)
 let check_unavailabilities (ctx : Context.t) =
