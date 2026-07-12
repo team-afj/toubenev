@@ -165,6 +165,8 @@ module Task_type = struct
       specialist_only : bool;
       divisible : bool;
       free : bool;
+      required_time_before : Duration.t option;
+      required_time_after : Duration.t option;
     }
     [@@deriving jsont]
 
@@ -186,6 +188,8 @@ module Task_type = struct
       specialist_only = false;
       divisible = false;
       free = false;
+      required_time_before = None;
+      required_time_after = None;
     }
 
   type edit =
@@ -206,7 +210,7 @@ module Task_type = struct
 
   let make ?id ~slug ~name ?description
       ?(everyone_should_do_it = Not_necessarily) ~specialist_only ~divisible
-      ~free () =
+      ~free ?required_time_before ?required_time_after () =
     let id = Option.get_lazy make_id id in
     {
       id;
@@ -217,6 +221,8 @@ module Task_type = struct
       specialist_only;
       divisible;
       free;
+      required_time_before;
+      required_time_after;
     }
 end
 

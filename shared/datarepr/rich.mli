@@ -118,6 +118,8 @@ module Task_type : sig
     free : bool;
         (** Free means that doing that task does not count in a volunteer
             workload *)
+    required_time_before : Duration.t option;
+    required_time_after : Duration.t option;
   }
 
   val dummy : t
@@ -136,6 +138,8 @@ module Task_type : sig
     specialist_only:bool ->
     divisible:bool ->
     free:bool ->
+    ?required_time_before:Duration.t ->
+    ?required_time_after:Duration.t ->
     unit ->
     t
 end
