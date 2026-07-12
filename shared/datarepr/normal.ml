@@ -129,17 +129,18 @@ module Quest = struct
   (** Returns the complete slot taking into account preparation time and rest
       time. *)
   let real_slot t =
-    let start =
+    let start, duration =
       match t.initial.task_type with
       | Some { required_time_before = Some offset; _ } ->
-          Zoned_datetime.(t.slot.start - offset)
-      | _ -> t.slot.start
+          ( Zoned_datetime.(t.slot.start - offset),
+            Duration.(t.slot.duration + offset) )
+      | _ -> (t.slot.start, t.slot.duration)
     in
     let duration =
       match t.initial.task_type with
       | Some { required_time_after = Some offset; _ } ->
-          Duration.(t.slot.duration + offset)
-      | _ -> t.slot.duration
+          Duration.(duration + offset)
+      | _ -> duration
     in
     { Time_slot.start; duration }
 
