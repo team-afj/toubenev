@@ -43,8 +43,9 @@ let assignations m vs qs =
                   |> Datetime.to_duration |> Duration.to_minutes
                   |> Sat.LinearExpr.of_int
                 in
-                let start = datetime_to_minutes q.slot.start in
-                let end_ = datetime_to_minutes (Time_slot.end_ q.slot) in
+                let q_slot = Quest.real_slot q in
+                let start = datetime_to_minutes q_slot.start in
+                let end_ = datetime_to_minutes (Time_slot.end_ q_slot) in
                 let size = Sat.(end_ - start) in
                 let name =
                   Format.sprintf "%i_interval_%s_does_%s" !c v.initial.name

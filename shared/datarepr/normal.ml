@@ -126,6 +126,23 @@ module Quest = struct
     let find_by_id id t = find { dummy with id } t
   end
 
+  (** Returns the complete slot taking into account preparation time and rest
+      time. *)
+  let real_slot t =
+    let start =
+      match t.initial.task_type with
+      | Some { required_time_before = Some offset; _ } ->
+          Zoned_datetime.(t.slot.start - offset)
+      | _ -> t.slot.start
+    in
+    let duration =
+      match t.initial.task_type with
+      | Some { required_time_after = Some offset; _ } ->
+          Duration.(t.slot.duration + offset)
+      | _ -> t.slot.duration
+    in
+    { Time_slot.start; duration }
+
   let minutes_conv ~unit t =
     match unit with
     | `Minutes -> t
@@ -149,15 +166,18 @@ module Quest = struct
     duration * q.initial.required_volunteers
 
   (** Check if two quests are overlapping. If they are in separate places they
-      must be separated by at least [Options.minimum_transfer_time]. *)
+      must be separated by at least [Options.minimum_transfer_time]. If the
+      quest type(s) require preparation or rest time these are also taken into
+      account. *)
   let overlaps { Event_infos.minimum_transfer_time; _ } (q1 : t) (q2 : t) =
     let same_place =
       match (q1.initial.place, q2.initial.place) with
       | Some p1, Some p2 -> Rich.Place.equal p1 p2
       | _, _ -> false
     in
-    let q1_start, q1_end = (q1.slot.start, Time_slot.end_ q1.slot) in
-    let q2_start, q2_end = (q2.slot.start, Time_slot.end_ q2.slot) in
+    let q1_slot, q2_slot = (real_slot q1, real_slot q2) in
+    let q1_start, q1_end = (q1_slot.start, Time_slot.end_ q1_slot) in
+    let q2_start, q2_end = (q2_slot.start, Time_slot.end_ q2_slot) in
     let q2_start, q2_end =
       if same_place then (q2_start, q2_end)
       else

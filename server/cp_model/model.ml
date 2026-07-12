@@ -68,10 +68,13 @@ let check_unavailabilities (ctx : Context.t) =
   let one_hour = Duration.from_hours 1 in
   ctx.for_all_volunteers @@ fun v ->
   ctx.for_all_quests @@ fun q ->
-  (* We consider a one hour delay for people arrival / departure *)
+  (* We count prep and rest time here, but maybe it would also be reasonnable
+     to ignore rest time... *)
+  let q_slot = Quest.real_slot q in
+  (* We add a one hour delay for people arrival / departure *)
   Option.iter
     (fun arrival ->
-      if Zoned_datetime.(q.slot.start <= arrival + one_hour) then
+      if Zoned_datetime.(q_slot.start <= arrival + one_hour) then
         let name = Format.sprintf "%s_not_here_for_%s" v.name q.name in
         let only_enforce_if =
           let name = Format.sprintf "%s not here for %s" v.name q.name in
@@ -82,7 +85,7 @@ let check_unavailabilities (ctx : Context.t) =
     v.initial.arrival;
   Option.iter
     (fun departure ->
-      if Zoned_datetime.(Time_slot.end_ q.slot >= departure - one_hour) then
+      if Zoned_datetime.(Time_slot.end_ q_slot >= departure - one_hour) then
         let name = Format.sprintf "%s_not_here_for_%s" v.name q.name in
         let only_enforce_if =
           let name = Format.sprintf "%s not here for %s" v.name q.name in
@@ -93,7 +96,7 @@ let check_unavailabilities (ctx : Context.t) =
     v.initial.departure;
   List.iter v.unavailabilities ~f:(fun (slot : Time_slot.t) ->
       if
-        Time_slot.overlaps slot q.slot
+        Time_slot.overlaps slot q_slot
         && not (Quest.is_manually_assigned_to v q)
       then
         let name = Format.sprintf "%s_unavailable_for_%s" v.name q.name in
