@@ -248,8 +248,12 @@ end
 module Quests_group : sig
   type quests_constraint =
     | At_least_one_common_volunteer
+        (** 1 volunteer will do all the quests in this group *)
     | Maximum_common_volunteers
+        (** N volunteers will do all the group's quests, with N the smallest
+            number of volunteers a quest of that group requires. *)
     | Distinct_volunteers
+        (** No volunteer can do several quests of this group *)
 
   (** Note: only quests with the exact same recurrence specification can be in
       the same group. *)
