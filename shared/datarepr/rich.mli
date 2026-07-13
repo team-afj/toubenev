@@ -251,6 +251,8 @@ module Quests_group : sig
     | Maximum_common_volunteers
     | Distinct_volunteers
 
+  (** Note: only quests with the exact same recurrence specification can be in
+      the same group. *)
   type recurring_quests_behavior =
     | Same_group_for_all_occurrences
     | One_group_per_occurrence
