@@ -5,6 +5,8 @@ open Fut.Result_syntax
 open Lunar_jsont
 open! Data_repr
 
+let debug = true
+
 (* TODO: There might be more efficient way to do some tthings by using the REST
 API with short-live tokens. *)
 
@@ -23,6 +25,7 @@ module Data = struct
   let task_types_tbl_id = Jstr.v "Types_de_quetes"
   let time_slots_tbl_id = Jstr.v "Plages_horaires_ponctuelles"
   let volunteers_tbl_id = Jstr.v "Benevoles"
+  let quests_groups_tbl_id = Jstr.v "Quests_groups"
   let quests_tbl_id = Jstr.v "Quetes"
   let solutions_tbl_id = Jstr.v "Solutions"
   let assignations_tbl_id = Jstr.v "Assignations"
@@ -39,6 +42,7 @@ module Data = struct
     let* task_types = fetch task_types_tbl_id in
     let* time_specs = fetch time_slots_tbl_id in
     let* volunteers = fetch volunteers_tbl_id in
+    let* quests_groups = fetch quests_groups_tbl_id in
     let* quests = fetch quests_tbl_id in
     let data_json =
       Jv.obj
@@ -49,10 +53,12 @@ module Data = struct
           ("task_types", task_types);
           ("time_specs", time_specs);
           ("volunteers", volunteers);
+          ("quests_groups", quests_groups);
           ("quests", quests);
         |]
       |> Json.encode
     in
+    if debug then Console.debug [ "DBG"; "Fetched data: "; data_json ];
     Fut.return @@ Jsont_brr.decode Grist_import.data_jsont data_json
 end
 

@@ -409,9 +409,41 @@ end
 
 module Volunteers = Random_access_list (Volunteer)
 
+module Quests_group = struct
+  type quests_constraint =
+    | At_least_one_common_volunteer
+    | Maximum_common_volunteers
+    | Distinct_volunteers
+  [@@deriving jsont]
+
+  type recurring_quests_behavior =
+    | Same_group_for_all_occurrences
+    | One_group_per_occurrence
+  [@@deriving jsont]
+
+  type t = {
+    id : t id;
+    name : string;
+    quests_constraint : quests_constraint;
+    recurring_quests_behavior : recurring_quests_behavior;
+  }
+  [@@deriving jsont]
+
+  type edit = TODO [@@deriving jsont]
+
+  let apply_edit _edit t = t
+
+  let make ?id ~name quests_constraint recurring_quests_behavior =
+    let id = Option.get_lazy make_id id in
+    { id; name; quests_constraint; recurring_quests_behavior }
+end
+
+module Quests_groups = Random_access_list (Quests_group)
+
 module Quest = struct
   type t = {
     id : t id;
+    group : Quests_group.t option;
     name : string;
     description : string option;
     task_type : Task_type.t option;
@@ -426,6 +458,7 @@ module Quest = struct
   let dummy =
     {
       id = "";
+      group = None;
       name = "";
       description = None;
       task_type = None;
@@ -456,11 +489,12 @@ module Quest = struct
     | New_required_volunteers required_volunteers ->
         { t with required_volunteers }
 
-  let make ?id ~name ?description ?task_type ?place ~slot ~required_volunteers
-      ?(assigned_volunteers = CCRAL.empty) () =
+  let make ?id ?group ~name ?description ?task_type ?place ~slot
+      ~required_volunteers ?(assigned_volunteers = CCRAL.empty) () =
     let id = Option.get_lazy make_id id in
     {
       id;
+      group;
       name;
       description;
       task_type;
@@ -483,6 +517,7 @@ module Planning = struct
     places : Places.t;
     task_types : Task_types.t;
     volunteers : Volunteers.t;
+    quests_groups : Quests_groups.t;
     quests : Quests.t;
   }
   [@@deriving jsont]

@@ -151,6 +151,16 @@ module Time_spec = struct
   [@@deriving jsont]
 end
 
+module Quests_group = struct
+  type t = {
+    id : int;
+    name : string;
+    quests_constraint : string; [@key "Contrainte_sur_les_quetes_du_groupe"]
+    recurring_quests_behavior : string; [@key "Quetes_recurrentes"]
+  }
+  [@@deriving jsont]
+end
+
 module Quete = struct
   type t = {
     id : int;
@@ -210,6 +220,7 @@ type data = {
   task_types : Task_type.t list;
   time_specs : Time_spec.t list;
   volunteers : Benevole.t list;
+  quests_groups : Quests_group.t list;
   quests : Quete.t list;
 }
 [@@deriving jsont]
@@ -218,6 +229,7 @@ type id_map = {
   places : Rich.Place.t Int.Map.t;
   task_types : Rich.Task_type.t Int.Map.t;
   volunteers : Rich.Volunteer.t Int.Map.t;
+  quests_groups : Rich.Quests_group.t Int.Map.t;
   quests : Rich.Quest.t Int.Map.t;
 }
 (* TODO It would be much easier to reuse grist ids directly *)
@@ -227,6 +239,7 @@ let new_id_map () =
     places = Int.Map.empty;
     task_types = Int.Map.empty;
     volunteers = Int.Map.empty;
+    quests_groups = Int.Map.empty;
     quests = Int.Map.empty;
   }
 
@@ -246,6 +259,7 @@ let to_planning ?(id_map = new_id_map ())
        task_types;
        time_specs;
        volunteers = vols;
+       quests_groups;
        quests;
      } :
       data) =
@@ -543,6 +557,36 @@ let to_planning ?(id_map = new_id_map ())
         Rich.Volunteer.set_friends v friends;
         Rich.Volunteer.set_ennemis v ennemis)
   in
+  let id_map, quests_groups =
+    let convert_quests_group id_map
+        { Quests_group.id; name; quests_constraint; recurring_quests_behavior }
+        =
+      let ids = Rich.id_of_int id in
+      let quests_constraint =
+        match quests_constraint with
+        | "Un maximum de bénévoles en commun" ->
+            Rich.Quests_group.Maximum_common_volunteers
+        | "Un bénévole ne peut faire qu'une seule quête de ce groupe" ->
+            Distinct_volunteers
+        | _ -> At_least_one_common_volunteer
+      in
+      let recurring_quests_behavior =
+        match recurring_quests_behavior with
+        | "Même groupe pour toutes les occurrences" ->
+            Rich.Quests_group.Same_group_for_all_occurrences
+        | _ -> One_group_per_occurrence
+      in
+      let v =
+        Rich.Quests_group.make ~id:ids ~name quests_constraint
+          recurring_quests_behavior
+      in
+      ({ id_map with quests_groups = Int.Map.add id v id_map.quests_groups }, v)
+    in
+    let id_map, quests_groups =
+      List.fold_left_map ~f:convert_quests_group ~init:id_map quests_groups
+    in
+    (id_map, CCRAL.of_list quests_groups)
+  in
   let id_map, quests =
     let convert_quests id_map
         {
@@ -587,4 +631,12 @@ let to_planning ?(id_map = new_id_map ())
     (id_map, CCRAL.of_list quests)
   in
   ( id_map,
-    { Rich.Planning.options; infos; places; task_types; volunteers; quests } )
+    {
+      Rich.Planning.options;
+      infos;
+      places;
+      task_types;
+      volunteers;
+      quests_groups;
+      quests;
+    } )

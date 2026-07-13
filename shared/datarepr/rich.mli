@@ -245,9 +245,41 @@ module Volunteers : sig
   include module type of Random_access_list (Volunteer)
 end
 
+module Quests_group : sig
+  type quests_constraint =
+    | At_least_one_common_volunteer
+    | Maximum_common_volunteers
+    | Distinct_volunteers
+
+  type recurring_quests_behavior =
+    | Same_group_for_all_occurrences
+    | One_group_per_occurrence
+
+  type t = private {
+    id : t id;
+    name : string;
+    quests_constraint : quests_constraint;
+    recurring_quests_behavior : recurring_quests_behavior;
+  }
+
+  include S with type t := t
+
+  val make :
+    ?id:t id ->
+    name:string ->
+    quests_constraint ->
+    recurring_quests_behavior ->
+    t
+end
+
+module Quests_groups : sig
+  include module type of Random_access_list (Quests_group)
+end
+
 module Quest : sig
   type t = private {
     id : t id;
+    group : Quests_group.t option;
     name : string;
     description : string option;
     task_type : Task_type.t option;
@@ -263,6 +295,7 @@ module Quest : sig
 
   val make :
     ?id:t id ->
+    ?group:Quests_group.t ->
     name:string ->
     ?description:string ->
     ?task_type:Task_type.t ->
@@ -287,6 +320,7 @@ module Planning : sig
     places : Places.t;
     task_types : Task_types.t;
     volunteers : Volunteers.t;
+    quests_groups : Quests_groups.t;
     quests : Quests.t;
   }
 
