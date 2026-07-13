@@ -38,6 +38,7 @@ let example_planning : Planning.t =
   in
   let v2 = Volunteer.make ~daily_workload ~name:"V2" () in
   let volunteers = CCRAL.of_list [ v1; v2 ] in
+  let quests_groups = CCRAL.of_list [] in
   let quests =
     let slot =
       let start = Time.make ~hour:8 ~min:0 ~sec:0 () |> Result.get_ok in
@@ -53,7 +54,7 @@ let example_planning : Planning.t =
     in
     CCRAL.of_list [ q1; q2 ]
   in
-  { options; infos; places; task_types; volunteers; quests }
+  { options; infos; places; task_types; volunteers; quests_groups; quests }
 
 let context = Cp_model.Model.make ~with_assumptions:true example_planning
 
