@@ -14,6 +14,7 @@ type t = {
   vs : Volunteers.t;
   qs : Quests.t;
   by_day : Quests.t Date.Map.t;
+  quests_groups : Quests_group.t String.Map.t;
   task_types : Task_type.Set.t;
   for_all_quests : (Quest.t -> unit) -> unit;
   for_all_volunteers : (Volunteer.t -> unit) -> unit;
@@ -68,8 +69,7 @@ let assignations m vs qs =
   (find_assignation, find_interval, rev_find)
 
 let prepare ~with_assumptions model (data : Planning.t) =
-  (* TODO: split quests, group friends and quests groups, etc *)
-  let { Api.volunteers = vs; quests = qs; diagnostics = _ } =
+  let { Api.volunteers = vs; quests = qs; quests_groups; diagnostics = _ } =
     Data_repr.Conv.normalize data
   in
   let task_types = CCRAL.to_list data.task_types |> Task_type.Set.of_list in
@@ -87,6 +87,7 @@ let prepare ~with_assumptions model (data : Planning.t) =
     vs;
     qs;
     by_day;
+    quests_groups;
     task_types;
     for_all_quests;
     for_all_volunteers;

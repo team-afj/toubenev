@@ -226,6 +226,14 @@ let sat =
         let _id_map, planning = Grist_import.to_planning data in
         let () = Console.debug [ "TBN"; "Normalize" ] in
         let normalized_planning = Conv.normalize planning in
+        let () =
+          let groups =
+            List.map ~f:(fun (id, g) ->
+                Jstr.v @@ "[" ^ id ^ "] " ^ Normal.Quests_group.to_string g)
+            @@ String.Map.to_list normalized_planning.quests_groups
+          in
+          Console.debug [ "TBN"; "Groups"; Jv.of_jstr_list groups ]
+        in
         let initial_answer =
           {
             Api.dummy_answer with

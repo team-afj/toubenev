@@ -123,7 +123,7 @@ let normalize_volunteer event_infos (v : Rich.Volunteer.t) =
 
 (** Generates sub-quests depending of the recurrence and the task type's
     divisibility. *)
-let normalize_quest event_infos options vs diags (q : Rich.Quest.t) =
+let normalize_quest event_infos options vs (diags, groups) (q : Rich.Quest.t) =
   let assigned_volunteers =
     CCRAL.fold q.assigned_volunteers ~x:Volunteer.Set.empty
       ~f:(fun acc (v : Rich.Volunteer.t) ->
@@ -152,18 +152,60 @@ let normalize_quest event_infos options vs diags (q : Rich.Quest.t) =
     if not divisible then List.map ~f:List.pure slots
     else List.map ~f:(split_time_slot options) slots
   in
-  let quests =
-    List.mapi slots ~f:(fun i slots ->
-        List.mapi slots ~f:(fun j (slot : Time_slot.t) ->
+  let groups, quests =
+    List.fold_flat_map_i ~init:groups slots ~f:(fun groups i slots ->
+        (* [i] is the id of the expansion *)
+        let group_infos =
+          q.group
+          |> Option.map (function
+            | {
+                Rich.Quests_group.id;
+                name;
+                recurring_quests_behavior = Same_group_for_all_occurrences;
+                quests_constraint;
+              } ->
+                (Rich.id_to_string id, name, quests_constraint)
+            | {
+                id;
+                name;
+                recurring_quests_behavior = One_group_per_occurrence;
+                quests_constraint;
+              } ->
+                ( Rich.(id_to_string id) ^ "_" ^ string_of_int i,
+                  name,
+                  quests_constraint ))
+        in
+        List.fold_map_i slots ~init:groups
+          ~f:(fun groups j (slot : Time_slot.t) ->
+            (* [j] is the id of the division *)
             let id = Printf.sprintf "%s_%i_%i" (Rich.id_to_string q.id) i j in
             let name =
               Printf.sprintf "%s_%s" q.name
                 (Zoned_datetime.to_string slot.start)
             in
-            { Quest.id; initial = q; name; slot; assigned_volunteers }))
-    |> List.concat
+            let q' =
+              { Quest.id; initial = q; name; slot; assigned_volunteers }
+            in
+            let groups =
+              group_infos
+              |> Option.map_or ~default:groups
+                   (fun (id, name, quests_constraint) ->
+                     Logs.debug (fun m -> m "TBN GROUP \n%!");
+                     groups
+                     |> String.Map.update id @@ function
+                        | None ->
+                            Some
+                              {
+                                Normal.Quests_group.name;
+                                quests = Quests.singleton q';
+                                quests_constraint;
+                              }
+                        | Some ({ Normal.Quests_group.quests; _ } as group) ->
+                            Some { group with quests = Quests.add q' quests })
+            in
+            (groups, q')))
   in
-  (diagnostics, quests)
+  ((diagnostics, groups), quests)
 
 let normalize (data : Rich.Planning.t) =
   let volunteers =
@@ -171,12 +213,12 @@ let normalize (data : Rich.Planning.t) =
     |> List.map ~f:(normalize_volunteer data.infos)
     |> Volunteers.of_list
   in
-  let quests, diagnostics =
-    let diags, quests =
+  let quests, quests_groups, diagnostics =
+    let (diags, quests_groups), quests =
       CCRAL.to_list data.quests
-      |> List.fold_flat_map ~init:[]
+      |> List.fold_flat_map ~init:([], String.Map.empty)
            ~f:(normalize_quest data.infos data.options volunteers)
     in
-    (Quests.of_list quests, diags)
+    (Quests.of_list quests, quests_groups, diags)
   in
-  { Api.volunteers; quests; diagnostics }
+  { Api.volunteers; quests; quests_groups; diagnostics }

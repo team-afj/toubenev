@@ -416,6 +416,11 @@ module Quests_group = struct
     | Distinct_volunteers
   [@@deriving jsont]
 
+  let string_of_quests_constraint = function
+    | At_least_one_common_volunteer -> "At_least_one_common_volunteer"
+    | Maximum_common_volunteers -> "Maximum_common_volunteers"
+    | Distinct_volunteers -> "Distinct_volunteers"
+
   type recurring_quests_behavior =
     | Same_group_for_all_occurrences
     | One_group_per_occurrence

@@ -197,6 +197,20 @@ end
 
 module Quests = Quest.Set
 
+module Quests_group = struct
+  type t = {
+    name : string;
+    quests : Quests.t;
+    quests_constraint : Quests_group.quests_constraint;
+  }
+  [@@deriving jsont]
+
+  let to_string { name; quests; quests_constraint } =
+    let cstr = Quests_group.string_of_quests_constraint quests_constraint in
+    let quests = Quests.to_list_map quests ~f:(fun q -> q.name) in
+    "Group " ^ name ^ " [" ^ cstr ^ "]: " ^ String.concat ~sep:"; " quests
+end
+
 let to_event_local_date (infos : Event_infos.t) datetime =
   Zoned_datetime.(datetime - Time.to_duration infos.day_start_local)
   |> Zoned_datetime.local_date

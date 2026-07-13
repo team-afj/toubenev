@@ -254,12 +254,16 @@ module Quests_group : sig
             number of volunteers a quest of that group requires. *)
     | Distinct_volunteers
         (** No volunteer can do several quests of this group *)
+  [@@deriving jsont]
+
+  val string_of_quests_constraint : quests_constraint -> string
 
   (** Note: only quests with the exact same recurrence specification can be in
       the same group. *)
   type recurring_quests_behavior =
     | Same_group_for_all_occurrences
     | One_group_per_occurrence
+  [@@deriving jsont]
 
   type t = private {
     id : t id;
