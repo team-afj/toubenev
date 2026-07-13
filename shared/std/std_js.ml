@@ -132,7 +132,13 @@ module Int = struct
 end
 
 module String = struct
-  include String
-  module Set = Set.Make (String)
-  module Map = Map.Make (String)
+  module T = struct
+    include String
+
+    let jsont = Jsont.string
+  end
+
+  include T
+  module Set = Set.Make_jsont (T)
+  module Map = Map.Make_jsont (T)
 end
