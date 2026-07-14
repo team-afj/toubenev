@@ -39,7 +39,7 @@ let empty = { daily = Date.Map.empty; volunteers = Volunteer.Map.empty }
 let day_stats (_planning : Planning.t) (normalized : Api.data) day quests =
   let total_quest_time =
     Quests.fold ~init:0
-      ~f:(fun acc q -> acc + Normal.Quest.weighted_duration ~unit:`Minutes q)
+      ~f:(fun acc q -> acc + Quest.weighted_duration ~unit:`Minutes q)
       quests
     |> Duration.from_minutes
   in
@@ -83,7 +83,10 @@ let day_stats (_planning : Planning.t) (normalized : Api.data) day quests =
   in
   let total_volunteer_time =
     Volunteers.fold volunteers ~init:Duration.zero ~f:(fun acc v ->
-        Duration.(acc + v.initial.daily_workload))
+        let theoretical_load =
+          Workload_analysis.theoretical_load ~of_:v ~on:day quests
+        in
+        Duration.(acc + theoretical_load))
   in
   let available_volunteers = Volunteers.cardinal volunteers in
   {

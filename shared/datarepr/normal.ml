@@ -126,6 +126,8 @@ module Quest = struct
     let find_by_id id t = find { dummy with id } t
   end
 
+  let is_free t = Quest.is_free t.initial
+
   (** Returns the complete slot taking into account preparation time and rest
       time. *)
   let real_slot t =
@@ -154,11 +156,13 @@ module Quest = struct
   (** The "real" quest duration. Free quests last 0 minutes. *)
   let real_duration ?(unit = `Minutes) q =
     let duration_m =
-      if Rich.Quest.is_free q.initial then 0
+      if is_free q then 0
       else Duration.to_minutes q.slot.duration (* Resolution 15 ? *)
     in
     Float.to_int (minutes_conv ~unit (Float.of_int duration_m))
 
+  (** Returns the total time spent for a quest (duration * number of
+      volunteers). Free quests last 0. *)
   let weighted_duration ?(unit = `Minutes) q =
     (* TODO We should not count quest time for assigned volunteers that are manually
      assigned. If their time is 0 or the length of the quest, applying the
@@ -207,7 +211,12 @@ module Quests_group = struct
 
   let to_string { name; quests; quests_constraint } =
     let cstr = Quests_group.string_of_quests_constraint quests_constraint in
-    let quests = Quests.to_list_map quests ~f:(fun q -> q.name) in
+    let quests =
+      Quests.to_list_map quests ~f:(fun q ->
+          q.name ^ "(end: "
+          ^ Zoned_datetime.to_string (Time_slot.end_ q.slot)
+          ^ ")")
+    in
     "Group " ^ name ^ " [" ^ cstr ^ "]: " ^ String.concat ~sep:"; " quests
 end
 

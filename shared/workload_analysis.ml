@@ -20,8 +20,10 @@ let theoretical_load ~of_:(volunteer : Volunteer.t) ~on:date day_quests =
       let theory = volunteer.initial.daily_workload in
       let manually_assigned =
         Quests.fold day_quests ~init:Duration.zero ~f:(fun acc q ->
-            if Quest.is_manually_assigned_to volunteer q then
-              Duration.(acc + q.slot.duration)
+            if
+              (not (Quest.is_free q))
+              && Quest.is_manually_assigned_to volunteer q
+            then Duration.(acc + q.slot.duration)
             else acc)
       in
       Duration.max theory manually_assigned
