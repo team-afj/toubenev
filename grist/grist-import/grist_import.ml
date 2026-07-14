@@ -121,7 +121,8 @@ module Benevole = struct
     indisponibilites_quotidiennes : grist_int_list; [@default []]
     horaires_preferes : grist_int_list; [@default []]
     horaires_contraints : grist_int_list; [@default []]
-    indisponibilites_ponctuelles : grist_int_list; [@default []]
+    indisponibilites_ponctuelles : grist_int_list;
+        [@default []] [@key "autres_indisponibilites"]
   }
   [@@deriving jsont]
 end
@@ -499,7 +500,6 @@ let to_planning ?(id_map = new_id_map ())
         in
         let ponctually_unavailable =
           List.map indisponibilites_ponctuelles ~f:(fun i ->
-              Printf.eprintf "\nPRT\n%!";
               let slot = time_specs.(i - 1) in
               { Rich.Availability.status = Unavailable; slot })
         in
