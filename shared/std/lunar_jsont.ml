@@ -114,9 +114,10 @@ end
 module Duration = struct
   include Lunar.Duration
 
+  (** [from_hours_f f] rounds [f] into minutes. *)
   let from_hours_f f =
     let minutes = f *. 60. in
-    from_minutes (Float.to_int minutes)
+    from_minutes Float.(round minutes |> to_int)
 
   let to_minutes t =
     let hours, minutes, seconds = hms t in
