@@ -190,7 +190,6 @@ let normalize_quest event_infos options vs (diags, groups) (q : Rich.Quest.t) =
               group_infos
               |> Option.map_or ~default:groups
                    (fun (id, name, quests_constraint) ->
-                     Logs.debug (fun m -> m "TBN GROUP \n%!");
                      groups
                      |> String.Map.update id @@ function
                         | None ->
