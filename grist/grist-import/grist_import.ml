@@ -297,9 +297,7 @@ let to_planning ?(id_map = new_id_map ())
           Weekly (Weekday.Set.of_list @@ List.map ~f:day_of_jour days)
       | s -> raise (Invalid_argument s)
     in
-    let duration =
-      Duration.from_seconds (Float.to_int (duration_h *. 60. *. 60.))
-    in
+    let duration = Duration.from_hours_f duration_h in
     let first_day =
       match recurrence with On _ -> None | _ -> Some (local_date start)
     in
