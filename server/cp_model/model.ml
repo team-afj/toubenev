@@ -288,7 +288,7 @@ let know_your_ennemy (ctx : Context.t) =
               in
               let only_enforce_if =
                 assume ctx
-                @@ Format.sprintf "%s wannot work with %s on %s" v.name
+                @@ Format.sprintf "%s cannot work with %s on %s" v.name
                      ennemy.name q.name
               in
               Sat.Constraint.at_most_one
@@ -297,7 +297,44 @@ let know_your_ennemy (ctx : Context.t) =
 
 (* TODO Daily break *)
 
-(** TODO Quests groups *)
+(** Quests groups TODO remaining constraints*)
+let handle_grouped_quests (ctx : Context.t) =
+  let enforce_group id
+      { Quests_group.name = group_name; quests; quests_constraint } =
+    match quests_constraint with
+    | Maximum_common_volunteers ->
+        let quests = Quests.to_list quests in
+        let sorted_quests =
+          List.sort
+            ~cmp:(fun (q : Quest.t) (q' : Quest.t) ->
+              Int.compare q.initial.required_volunteers
+                q'.initial.required_volunteers)
+            quests
+        in
+        ctx.for_all_volunteers @@ fun v ->
+        let assignation q = ctx.assignations v q in
+        let name =
+          Format.sprintf "if_%s_do_%s_they_do_all_quests_in_group_%s[%s]" v.name
+            (List.hd sorted_quests).name group_name id
+        in
+        let assume =
+          assume ctx
+          @@ Format.sprintf "if %s do %s they do all quests in group %s[%s]"
+               v.name (List.hd sorted_quests).name group_name id
+        in
+        let assignations = List.map ~f:assignation sorted_quests in
+        let doing_least_volunteer_required, others = List.hd_tl assignations in
+        let all_others = Sat.Constraint.And others in
+        (* doing least_volunteer_required implies doing the others quests *)
+        let only_enforce_if =
+          match assume with
+          | None -> [ doing_least_volunteer_required ]
+          | Some assumption -> doing_least_volunteer_required :: assumption
+        in
+        Sat.add ctx.model ~name ~only_enforce_if all_others
+    | _ -> failwith "not implemented"
+  in
+  String.Map.iter enforce_group ctx.quests_groups
 
 (* TODO:
    - at least one volunteer in all of them
@@ -483,6 +520,7 @@ let make ?(no_optim = false) ~with_assumptions (data : Planning.t) =
   let () = required_specialists context in
   let () = enforce_bans context in
   let () = know_your_ennemy context in
+  let () = handle_grouped_quests context in
 
   let () = if not (with_assumptions || no_optim) then minimize_f context in
 
