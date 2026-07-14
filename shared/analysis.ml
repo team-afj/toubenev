@@ -131,7 +131,7 @@ let volunteer_analyses (planning : Planning.t) (answer : Api.answer)
               |> Option.get_or ~default:[]
             in
             let theoretical_load =
-              Workload_analysis.theoretical_load ~of_:v ~on:date
+              Workload_analysis.theoretical_load ~of_:v ~on:date day_quests
             in
             let actual_load = volunteer_load assignations in
             let adjusted_load =
