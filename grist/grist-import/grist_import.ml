@@ -523,10 +523,17 @@ let to_planning ?(id_map = new_id_map ())
         CCRAL.of_list
           (List.concat [ unavailable; best; worse; ponctually_unavailable ])
       in
+      let manually_assigned =
+        (* By convention, volunteers with a 0h workload are entirely manually
+           assigned in the Grist planning. This means they only do assigned
+           quests and they to it for free. *)
+        Duration.(equal zero daily_workload)
+      in
       let v =
         Rich.Volunteer.make ~id:ids ?public_name ~name ~daily_workload
           ~proficiencies ~forbidden_tasks ~forbidden_places ~wanted_tasks
-          ~unwanted_tasks ~availabilities ?arrival ?departure ()
+          ~unwanted_tasks ~availabilities ?arrival ?departure ~manually_assigned
+          ()
       in
       ({ id_map with volunteers = Int.Map.add id v id_map.volunteers }, v)
     in
