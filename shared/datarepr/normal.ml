@@ -91,7 +91,56 @@ module Volunteer = struct
       unavailabilities. A day starts at the [Event_infos.day_start_local] time
       and ends at that time on the next day. *)
   let available_hours (event_infos : Event_infos.t) ~on:(date : Date.t) t =
-    failwith "not implemented"
+    let tz = event_infos.timezone in
+    let day_offset = Time.to_duration event_infos.day_start_local in
+    let day_start = Zoned_datetime.(from_date ~tz date + day_offset) in
+    let day_end =
+      Zoned_datetime.(from_date ~tz (Date.add_days 1 date) + day_offset)
+    in
+    let available_start =
+      match t.initial.arrival with
+      | None -> day_start
+      | Some arrival -> Zoned_datetime.max day_start arrival
+    in
+    let available_end =
+      match t.initial.departure with
+      | None -> day_end
+      | Some departure -> Zoned_datetime.min day_end departure
+    in
+    if Zoned_datetime.(available_end <= available_start) then Duration.zero
+    else
+      (* First we gather, truncate and SORT all relevant unavailabilities *)
+      let unavailable_ranges =
+        List.filter_map t.unavailabilities ~f:(fun (slot : Time_slot.t) ->
+            let slot_start = Zoned_datetime.max available_start slot.start in
+            let slot_end =
+              Zoned_datetime.min available_end (Time_slot.end_ slot)
+            in
+            if Zoned_datetime.(slot_end <= slot_start) then None
+            else Some (slot_start, slot_end))
+        |> List.sort ~cmp:(fun (s1, e1) (s2, e2) ->
+            let c = Zoned_datetime.compare s1 s2 in
+            if c <> 0 then c else Zoned_datetime.compare e1 e2)
+      in
+      (* We merge overlapping ranges *)
+      let merged_ranges =
+        List.fold_left unavailable_ranges ~init:[] ~f:(fun acc (start, end_) ->
+            match acc with
+            | [] -> [ (start, end_) ]
+            | (prev_start, prev_end) :: rest ->
+                if Zoned_datetime.(start <= prev_end) then
+                  (prev_start, Zoned_datetime.max prev_end end_) :: rest
+                else (start, end_) :: acc)
+      in
+      (* And count their duration *)
+      let unavailable_duration =
+        List.fold_left merged_ranges ~init:Duration.zero
+          ~f:(fun acc (start, end_) ->
+            Duration.(acc + Zoned_datetime.diff end_ start))
+      in
+      (* Available time = 1 day - unavailable duration *)
+      let total_duration = Zoned_datetime.diff available_end available_start in
+      Duration.(max zero (total_duration - unavailable_duration))
 end
 
 module Volunteers = Volunteer.Set

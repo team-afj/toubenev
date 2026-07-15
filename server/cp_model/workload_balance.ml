@@ -36,7 +36,7 @@ let load_diff (ctx : Context.t) volunteer day day_quests =
   in
   let time_spent = time_spent ctx ~unit ~by:volunteer ~on:day_quests in
   let adjusted_load =
-    adjusted_load_minutes ~unit ctx.vs volunteer day day_quests
+    adjusted_load_minutes ctx.data.infos ~unit ctx.vs volunteer day day_quests
   in
   Sat.(time_spent - of_int adjusted_load)
 

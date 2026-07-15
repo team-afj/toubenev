@@ -36,7 +36,7 @@ type t = {
 
 let empty = { daily = Date.Map.empty; volunteers = Volunteer.Map.empty }
 
-let day_stats (_planning : Planning.t) (normalized : Api.data) day quests =
+let day_stats (planning : Planning.t) (normalized : Api.data) day quests =
   let total_quest_time =
     Quests.fold ~init:0
       ~f:(fun acc q -> acc + Quest.weighted_duration ~unit:`Minutes q)
@@ -84,7 +84,10 @@ let day_stats (_planning : Planning.t) (normalized : Api.data) day quests =
   let total_volunteer_time =
     Volunteers.fold volunteers ~init:Duration.zero ~f:(fun acc v ->
         let theoretical_load =
-          Workload_analysis.theoretical_load ~of_:v ~on:day quests
+          Workload_analysis.theoretical_load planning.infos ~of_:v ~on:day
+            quests
+          |> function
+          | `Fixed load | `Flexible load -> load
         in
         Duration.(acc + theoretical_load))
   in
@@ -134,12 +137,15 @@ let volunteer_analyses (planning : Planning.t) (answer : Api.answer)
               |> Option.get_or ~default:[]
             in
             let theoretical_load =
-              Workload_analysis.theoretical_load ~of_:v ~on:date day_quests
+              Workload_analysis.theoretical_load planning.infos ~of_:v ~on:date
+                day_quests
+              |> function
+              | `Fixed load | `Flexible load -> load
             in
             let actual_load = volunteer_load assignations in
             let adjusted_load =
-              Workload_analysis.adjusted_load_minutes normalized.volunteers v
-                date day_quests
+              Workload_analysis.adjusted_load_minutes planning.infos
+                normalized.volunteers v date day_quests
               |> Duration.from_minutes
             in
             Volunteer.Map.add v
