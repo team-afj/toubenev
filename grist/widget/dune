@@ -4,6 +4,15 @@
  (js_of_ocaml
   (javascript_files stubs.js))
  (flags :standard -open Std_js)
- (libraries std_js brr jsont.brr grist_import lwd brr-lwd brr-lwd-ui shared)
+ (libraries
+  std_js
+  logs.browser
+  brr
+  jsont.brr
+  grist_import
+  lwd
+  brr-lwd
+  brr-lwd-ui
+  shared)
  (preprocess
   (pps ppx_deriving_jsont)))
