@@ -84,6 +84,14 @@ module Volunteer = struct
     && not
          (List.exists t.unavailabilities ~f:(fun (slot : Time_slot.t) ->
               Zoned_datetime.(slot.start <= time && time < Time_slot.end_ slot)))
+
+  (** [available_hours event_infos ~on:(date : Date.t) t] returns a Duration.t
+      representing the availability of the volunter [t] on day [date]. This
+      depends on the volunteer arrival and departure times and her
+      unavailabilities. A day starts at the [Event_infos.day_start_local] time
+      and ends at that time on the next day. *)
+  let available_hours (event_infos : Event_infos.t) ~on:(date : Date.t) t =
+    failwith "not implemented"
 end
 
 module Volunteers = Volunteer.Set
