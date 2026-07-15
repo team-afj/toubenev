@@ -33,7 +33,13 @@ let make (analysis : t) =
         Duration.(
           facts.event.actual_load - facts.event.adjusted_load |> to_minutes)
       in
-      (diff, El.td ~at:[ make_red diff ] [ El.txt' (print_signed_int diff) ])
+      ( diff,
+        El.td
+          ~at:[ make_red diff ]
+          [
+            El.txt' (print_signed_int diff);
+            El.txt' (" (" ^ Duration.to_string facts.event.adjusted_load ^ ")");
+          ] )
     in
     ( total_diff,
       Date.Map.fold
@@ -41,7 +47,13 @@ let make (analysis : t) =
           let diff =
             Duration.(facts.actual_load - facts.adjusted_load |> to_minutes)
           in
-          El.td ~at:[ make_red diff ] [ El.txt' (print_signed_int diff) ] :: acc)
+          El.td
+            ~at:[ make_red diff ]
+            [
+              El.txt' (print_signed_int diff);
+              El.txt' (" (" ^ Duration.to_string facts.adjusted_load ^ ")");
+            ]
+          :: acc)
         facts.daily [ total; name ]
       |> List.rev |> El.tr )
   in

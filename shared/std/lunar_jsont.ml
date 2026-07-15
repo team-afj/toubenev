@@ -123,6 +123,10 @@ module Duration = struct
     let hours, minutes, seconds = hms t in
     Stdlib.((hours * 60) + minutes + (seconds / 60))
 
+  let to_string t =
+    let h, m, _s = hms t in
+    Utils.lpad ~size:2 h ^ ":" ^ Utils.lpad ~size:2 m
+
   let jsont : t Jsont.t = Jsont.map ~dec:from_int64 ~enc:to_int64 Jsont.int64
 end
 

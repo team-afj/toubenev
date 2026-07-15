@@ -6,6 +6,8 @@ open Lunar_jsont
 open! Data_repr
 
 let debug = true
+let () = Logs.set_reporter (Logs_browser.console_reporter ())
+let () = Logs.set_level ~all:true (Some Debug)
 
 (* TODO: There might be more efficient way to do some tthings by using the REST
 API with short-live tokens. *)
@@ -476,10 +478,11 @@ let optimize ~(chart_canvas : El.t) (current_state : App_state.t) =
     Ev.listen Brr_io.Message.Ev.message
       (fun ev ->
         let json : Jstr.t = Brr_io.Message.Ev.data (Ev.as_type ev) in
-        let answer =
-          Jsont_brr.decode Data_repr.Api.answer_jsont json |> Result.get_ok
-        in
-        handle (fun () -> handle_new_solution answer))
+        handle (fun () ->
+            let answer =
+              Jsont_brr.decode Data_repr.Api.answer_jsont json |> Result.get_ok
+            in
+            handle_new_solution answer))
       (Event_source.as_target event_source)
   in
   Console.error [ "DBG"; "HANDLE"; handle; event_source ]
