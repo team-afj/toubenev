@@ -499,8 +499,8 @@ let minimize_f (ctx : Context.t) =
   let friendship_coef = options.friendship_bonus in
   let open Sat.LinearExpr in
   [
-    scale (10 * event_bounds_coef) @@ Workload_balance.event_bounds ctx;
-    scale (10 * daily_bounds_coef) @@ Workload_balance.daily_bounds ctx;
+    scale (10 * 10 * event_bounds_coef) @@ Workload_balance.event_bounds ctx;
+    scale (10 * 10 * daily_bounds_coef) @@ Workload_balance.daily_bounds ctx;
     scale amplitude_coef @@ amplitudes ctx;
     scale (-1 * friendship_coef) @@ friendship_bonus ctx;
     scale (-1) @@ appreciation_of_planning options ctx;

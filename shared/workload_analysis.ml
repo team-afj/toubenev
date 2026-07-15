@@ -5,8 +5,11 @@ open Normal
 
 (** Theoretical targets *)
 let total_quests_time quests =
+  (* We don't count manually assigned quests as to not biased the proportions
+     since manually assigned volunteers will not take part in other quests. *)
   Quests.fold quests ~init:0 ~f:(fun acc q ->
-      acc + Quest.weighted_duration ~unit:`Minutes q)
+      acc
+      + Quest.weighted_duration ~skip_manually_assigned:true ~unit:`Minutes q)
   |> Duration.from_minutes
 
 let theoretical_load ~of_:(volunteer : Volunteer.t) ~on:date day_quests =
@@ -30,20 +33,31 @@ let theoretical_load ~of_:(volunteer : Volunteer.t) ~on:date day_quests =
 
 let total_theoretical_load volunteers ~on day_quests =
   Volunteers.fold volunteers ~init:0 ~f:(fun acc v ->
-      acc + (Duration.to_minutes @@ theoretical_load ~of_:v ~on day_quests))
-
-let theoretical_coef ~total ~of_ ~on day_quests =
-  Float.(
-    of_int (Duration.to_minutes @@ theoretical_load ~of_ ~on day_quests)
-    / of_int total)
+      (* Don't count the load of manually assigned volunteers *)
+      if v.initial.manually_assigned then acc
+      else acc + (Duration.to_minutes @@ theoretical_load ~of_:v ~on day_quests))
 
 let adjusted_load_minutes ?(unit = `Minutes) volunteers volunteer day day_quests
     =
-  let quests_time = total_quests_time day_quests |> Duration.to_minutes in
-  let total = total_theoretical_load volunteers ~on:day day_quests in
-  let adjustement_coef =
-    theoretical_coef ~total ~of_:volunteer ~on:day day_quests
+  let volunteer_theoretical_load =
+    (* Manually assigned volunteers are not adjusted *)
+    theoretical_load ~of_:volunteer ~on:day day_quests |> Duration.to_minutes
   in
-  let adjusted_m = Float.(adjustement_coef * of_int quests_time) in
-  let adjusted = Quest.minutes_conv ~unit adjusted_m in
-  Float.to_int adjusted
+  if volunteer.initial.manually_assigned then volunteer_theoretical_load
+  else
+    (* Available time on that day. Not counting manually assinge volunteers *)
+    let total_theoretical_load =
+      total_theoretical_load volunteers ~on:day day_quests
+    in
+    (* Quest time, not counting quests assigned to manually assigned volunteers *)
+    let quests_time = total_quests_time day_quests |> Duration.to_minutes in
+    let adjustement_coef =
+      Float.(of_int volunteer_theoretical_load / of_int total_theoretical_load)
+    in
+    let adjusted_m = Float.(adjustement_coef * of_int quests_time) in
+    let adjusted = Quest.minutes_conv ~unit adjusted_m in
+    Logs.debug (fun m ->
+        m "%s on %s load: %i / %i = %f   ... * %i = %f" volunteer.name
+          (Date.to_string day) volunteer_theoretical_load total_theoretical_load
+          adjustement_coef quests_time adjusted);
+    Float.to_int adjusted

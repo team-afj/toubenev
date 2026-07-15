@@ -163,12 +163,23 @@ module Quest = struct
 
   (** Returns the total time spent for a quest (duration * number of
       volunteers). Free quests last 0. *)
-  let weighted_duration ?(unit = `Minutes) q =
+  let weighted_duration ?(unit = `Minutes) ?(skip_manually_assigned = false) q =
     (* TODO We should not count quest time for assigned volunteers that are manually
      assigned. If their time is 0 or the length of the quest, applying the
      proportional coefficient will biased them. *)
     let duration = real_duration ~unit q in
-    duration * q.initial.required_volunteers
+    let n =
+      let n = q.initial.required_volunteers in
+      if not skip_manually_assigned then n
+      else
+        let m =
+          Volunteers.fold q.assigned_volunteers ~init:0 ~f:(fun acc v ->
+              if v.initial.manually_assigned then acc + 1 else acc)
+        in
+        n - m
+    in
+    assert (n >= 0);
+    duration * n
 
   (** Check if two quests are overlapping. If they are in separate places they
       must be separated by at least [Options.minimum_transfer_time]. If the
