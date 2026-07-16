@@ -1,5 +1,5 @@
 open Ortools
-open Lunar
+open Lunar_jsont
 open Data_repr
 open Rich
 open Normal
@@ -15,6 +15,7 @@ type t = {
   qs : Quests.t;
   by_day : Quests.t Date.Map.t;
   quests_groups : Quests_group.t String.Map.t;
+  breaks : Break.t list;
   task_types : Task_type.Set.t;
   for_all_quests : (Quest.t -> unit) -> unit;
   for_all_volunteers : (Volunteer.t -> unit) -> unit;
@@ -38,13 +39,11 @@ let assignations m vs qs =
               Hashtbl.add rev_tbl !c (var, v, q);
               incr c;
               let interval =
-                let open Lunar in
                 let datetime_to_minutes d =
-                  Zoned_datetime.to_local_datetime d
-                  |> Datetime.to_duration |> Duration.to_minutes
-                  |> Sat.LinearExpr.of_int
+                  Zoned_datetime.to_local_minutes d |> Sat.LinearExpr.of_int
                 in
-                let q_slot = Quest.real_slot q in
+                (* let q_slot = Quest.real_slot q in *)
+                let q_slot = q.slot in
                 let start = datetime_to_minutes q_slot.start in
                 let end_ = datetime_to_minutes (Time_slot.end_ q_slot) in
                 let size = Sat.(end_ - start) in
@@ -69,7 +68,13 @@ let assignations m vs qs =
   (find_assignation, find_interval, rev_find)
 
 let prepare ~with_assumptions model (data : Planning.t) =
-  let { Api.volunteers = vs; quests = qs; quests_groups; diagnostics = _ } =
+  let {
+    Api.volunteers = vs;
+    quests = qs;
+    quests_groups;
+    breaks;
+    diagnostics = _;
+  } =
     Data_repr.Conv.normalize data
   in
   let task_types = CCRAL.to_list data.task_types |> Task_type.Set.of_list in
@@ -88,6 +93,7 @@ let prepare ~with_assumptions model (data : Planning.t) =
     qs;
     by_day;
     quests_groups;
+    breaks;
     task_types;
     for_all_quests;
     for_all_volunteers;

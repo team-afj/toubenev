@@ -295,7 +295,66 @@ let know_your_ennemy (ctx : Context.t) =
                 [ ctx.assignations v q; ctx.assignations ennemy q ]
               |> Sat.add ctx.model ~name ?only_enforce_if)
 
-(* TODO Daily break *)
+(** Dstribute breaks *)
+
+let distribute_break (ctx : Context.t) { Break.initial; slot } =
+  (* TODO volunteer filters *)
+  (* TODO we could magnetize break slots to start every fifteen minutes.
+     It would scale the domain down and make more pleasants results. *)
+  let duration = initial.duration in
+  let duration_m = Duration.to_minutes duration in
+  let start_m = Zoned_datetime.to_local_minutes slot.start in
+  let start_s = Zoned_datetime.to_string slot.start in
+  let end_m = Zoned_datetime.to_local_minutes (Time_slot.end_ slot) in
+  let overlapping_quests =
+    Quests.filter (fun q -> Time_slot.overlaps slot q.slot) ctx.qs
+    |> Quests.to_list
+  in
+  ctx.for_all_volunteers @@ fun v ->
+  let start =
+    let name =
+      String.concat ~sep:"_"
+        [ "break_start"; initial.name; "for"; v.name; "on"; start_s ]
+    in
+    let lb = start_m in
+    let ub =
+      end_m - duration_m
+      (* The break must start [duration_of_the_break] before the break slot ends *)
+    in
+    Sat.Var.new_int ctx.model ~lb ~ub name
+  in
+  let break =
+    let name =
+      String.concat ~sep:"_"
+        [ "break_interval"; initial.name; "for"; v.name; "on"; start_s ]
+    in
+    let start = Sat.var start in
+    let size = Sat.of_int duration_m in
+    let end_ = Sat.(start + size) in
+    Sat.new_interval_var ctx.model ~start ~size ~end_ name
+  in
+  let name =
+    String.concat ~sep:"_"
+      [ "break_no_overlap"; initial.name; "for"; v.name; "on"; start_s ]
+  in
+  let only_enforce_if =
+    assume ctx
+    @@ String.concat ~sep:" "
+         [
+           "Break ";
+           initial.name;
+           "for";
+           v.name;
+           "on";
+           start_s;
+           "does not overlap with other quests";
+         ]
+  in
+  let intervals = break :: List.map overlapping_quests ~f:(ctx.intervals v) in
+  Sat.add_no_overlap ctx.model ?only_enforce_if ~name intervals
+
+let distribute_breaks (ctx : Context.t) =
+  List.iter ~f:(distribute_break ctx) ctx.breaks
 
 (** Quests groups TODO remaining constraints*)
 let handle_grouped_quests (ctx : Context.t) =
@@ -521,6 +580,7 @@ let make ?(no_optim = false) ~with_assumptions (data : Planning.t) =
   let () = enforce_bans context in
   let () = know_your_ennemy context in
   let () = handle_grouped_quests context in
+  let () = distribute_breaks context in
 
   let () = if not (with_assumptions || no_optim) then minimize_f context in
 
