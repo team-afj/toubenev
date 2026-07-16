@@ -259,6 +259,7 @@ let new_id_map () =
 let mandatory_of_string = function
   | "Non" -> Rich.Task_type.Not_necessarily
   | "Au moins une fois" -> At_least_once
+  | "Au plus une fois" -> At_most_once
   | "Tout le monde autant" -> In_equal_proportion
   | s -> failwith ("Unexpected value:" ^ s)
 

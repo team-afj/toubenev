@@ -105,7 +105,13 @@ end
 
 module Task_type : sig
   (* Only [At_least_once] is handled right now *)
-  type task_sharing = Not_necessarily | At_least_once | In_equal_proportion
+  type task_sharing =
+    | Not_necessarily
+    | At_least_once
+    | At_most_once
+    | In_equal_proportion
+
+  val string_of_task_sharing : task_sharing -> string
 
   type t = private {
     id : t id;

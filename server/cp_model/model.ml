@@ -214,6 +214,11 @@ let everyone_does (ctx : Context.t) ~name requirement (quests : Quests.t) =
           let vars = Quests.to_list_map ~f:(ctx.assignations v) quests in
           Sat.add ctx.model ~name ?only_enforce_if
           @@ Sat.Constraint.at_least_one vars
+      | `Only_once ->
+          let name = Format.sprintf "%s_do_%s_only_once" v.initial.name name in
+          let vars = Quests.to_list_map ~f:(ctx.assignations v) quests in
+          Sat.add ctx.model ~name ?only_enforce_if
+          @@ Sat.Constraint.at_most_one vars
       | `Equal_proportion ->
           let n_volunteers = Volunteers.cardinal available_volunteers in
           let longuest_quest, total_time =
@@ -252,6 +257,7 @@ let enforce_mandatory_tasks (ctx : Context.t) =
       let requirement =
         match tt.everyone_should_do_it with
         | At_least_once -> `Once
+        | At_most_once -> `Only_once
         | In_equal_proportion -> `Equal_proportion
         | Not_necessarily -> assert false
       in

@@ -152,8 +152,18 @@ end
 module Places = Random_access_list (Place)
 
 module Task_type = struct
-  type task_sharing = Not_necessarily | At_least_once | In_equal_proportion
+  type task_sharing =
+    | Not_necessarily
+    | At_least_once
+    | At_most_once
+    | In_equal_proportion
   [@@deriving jsont]
+
+  let string_of_task_sharing = function
+    | Not_necessarily -> "Not_necessarily"
+    | At_least_once -> "At_least_once"
+    | At_most_once -> "At_most_once"
+    | In_equal_proportion -> "In_equal_proportion"
 
   module T = struct
     type t = {
