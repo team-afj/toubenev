@@ -220,4 +220,14 @@ let normalize (data : Rich.Planning.t) =
     in
     (Quests.of_list quests, quests_groups, diags)
   in
-  { Api.volunteers; quests; quests_groups; diagnostics }
+  let breaks =
+    CCRAL.to_list data.breaks
+    |> List.concat_map ~f:(fun ({ Rich.Break.specs; _ } as initial) ->
+        let specs = CCRAL.to_list specs in
+        List.concat_map
+          ~f:(fun spec ->
+            List.map (expand_time_spec data.infos spec) ~f:(fun slot ->
+                { Break.initial; slot }))
+          specs)
+  in
+  { Api.volunteers; breaks; quests; quests_groups; diagnostics }

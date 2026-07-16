@@ -18,6 +18,7 @@ let diagnostic_level_to_string = function
 
 type data = {
   volunteers : Volunteers.t;
+  breaks : Break.t list;
   quests : Quests.t;
   quests_groups : Quests_group.t String.Map.t;
   diagnostics : diagnostic list;

@@ -145,6 +145,10 @@ end
 
 module Volunteers = Volunteer.Set
 
+module Break = struct
+  type t = { initial : Break.t; slot : Time_slot.t } [@@deriving jsont]
+end
+
 module Quest = struct
   module T = struct
     type t = {
