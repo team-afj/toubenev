@@ -409,6 +409,25 @@ end
 
 module Volunteers = Random_access_list (Volunteer)
 
+module Break = struct
+  type t = {
+    name : string;
+    duration : Duration.t;  (** Duration of the beak *)
+    specs : Time_specs.t;  (** Time spans during which the break can happen *)
+    filter : [ `All | `Only of Volunteers.t | `Except of Volunteers.t ];
+  }
+  [@@deriving jsont]
+
+  type edit = unit [@@deriving jsont]
+
+  let apply_edit _ t = t
+
+  let make ~name duration specs ?(filter = `All) () =
+    { name; duration; specs; filter }
+end
+
+module Breaks = Random_access_list (Break)
+
 module Quests_group = struct
   type quests_constraint =
     | At_least_one_common_volunteer
@@ -519,6 +538,7 @@ module Planning = struct
   type t = {
     options : Options.t;
     infos : Event_infos.t;
+    breaks : Breaks.t;
     places : Places.t;
     task_types : Task_types.t;
     volunteers : Volunteers.t;

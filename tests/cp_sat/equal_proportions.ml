@@ -52,7 +52,17 @@ let example_planning : Planning.t =
     in
     CCRAL.of_list [ q1; q2 ]
   in
-  { options; infos; places; task_types; volunteers; quests_groups; quests }
+  let breaks = CCRAL.empty in
+  {
+    options;
+    infos;
+    places;
+    task_types;
+    volunteers;
+    breaks;
+    quests_groups;
+    quests;
+  }
 
 let context = Cp_model.Model.make ~with_assumptions:true example_planning
 

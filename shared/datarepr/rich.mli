@@ -245,6 +245,29 @@ module Volunteers : sig
   include module type of Random_access_list (Volunteer)
 end
 
+module Break : sig
+  type t = private {
+    name : string;
+    duration : Duration.t;  (** Duration of the beak *)
+    specs : Time_specs.t;  (** Time span during which the break can happen *)
+    filter : [ `All | `Only of Volunteers.t | `Except of Volunteers.t ];
+  }
+
+  include S with type t := t
+
+  val make :
+    name:string ->
+    Duration.t ->
+    Time_specs.t ->
+    ?filter:[ `All | `Only of Volunteers.t | `Except of Volunteers.t ] ->
+    unit ->
+    t
+end
+
+module Breaks : sig
+  include module type of Random_access_list (Break)
+end
+
 module Quests_group : sig
   type quests_constraint =
     | At_least_one_common_volunteer
@@ -327,6 +350,7 @@ module Planning : sig
   type t = {
     options : Options.t;
     infos : Event_infos.t;
+    breaks : Breaks.t;
     places : Places.t;
     task_types : Task_types.t;
     volunteers : Volunteers.t;

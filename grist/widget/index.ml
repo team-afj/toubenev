@@ -27,6 +27,7 @@ module Data = struct
   let task_types_tbl_id = Jstr.v "Types_de_quetes"
   let time_slots_tbl_id = Jstr.v "Plages_horaires_ponctuelles"
   let volunteers_tbl_id = Jstr.v "Benevoles"
+  let breaks_tbl_id = Jstr.v "Breaks"
   let quests_groups_tbl_id = Jstr.v "Quests_groups"
   let quests_tbl_id = Jstr.v "Quetes"
   let solutions_tbl_id = Jstr.v "Solutions"
@@ -44,6 +45,7 @@ module Data = struct
     let* task_types = fetch task_types_tbl_id in
     let* time_specs = fetch time_slots_tbl_id in
     let* volunteers = fetch volunteers_tbl_id in
+    let* breaks = fetch breaks_tbl_id in
     let* quests_groups = fetch quests_groups_tbl_id in
     let* quests = fetch quests_tbl_id in
     let data_json =
@@ -55,6 +57,7 @@ module Data = struct
           ("task_types", task_types);
           ("time_specs", time_specs);
           ("volunteers", volunteers);
+          ("breaks", breaks);
           ("quests_groups", quests_groups);
           ("quests", quests);
         |]

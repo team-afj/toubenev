@@ -127,6 +127,16 @@ module Benevole = struct
   [@@deriving jsont]
 end
 
+module Pause = struct
+  type t = {
+    id : int;
+    name : string;
+    duration_m : int;
+    time_specs : grist_int_list; [@default []]
+  }
+  [@@deriving jsont]
+end
+
 type jour = Lun | Mar | Mer | Jeu | Ven | Sam | Dim [@@deriving jsont]
 type jour_list = jour list
 
@@ -222,6 +232,7 @@ type data = {
   task_types : Task_type.t list;
   time_specs : Time_spec.t list;
   volunteers : Benevole.t list;
+  breaks : Pause.t list;
   quests_groups : Quests_group.t list;
   quests : Quete.t list;
 }
@@ -261,6 +272,7 @@ let to_planning ?(id_map = new_id_map ())
        task_types;
        time_specs;
        volunteers = vols;
+       breaks;
        quests_groups;
        quests;
      } :
@@ -563,6 +575,16 @@ let to_planning ?(id_map = new_id_map ())
         Rich.Volunteer.set_friends v friends;
         Rich.Volunteer.set_ennemis v ennemis)
   in
+  let breaks =
+    let convert_break { Pause.name; duration_m; time_specs = specs; _ } =
+      let name = String.trim name in
+      let duration = Duration.from_minutes duration_m in
+      let specs = List.map specs ~f:(fun i -> time_specs.(i - 1)) in
+      Rich.Break.make ~name duration (CCRAL.of_list specs) ()
+    in
+    let breaks = List.map ~f:convert_break breaks in
+    CCRAL.of_list breaks
+  in
   let id_map, quests_groups =
     let convert_quests_group id_map
         { Quests_group.id; name; quests_constraint; recurring_quests_behavior }
@@ -647,6 +669,7 @@ let to_planning ?(id_map = new_id_map ())
     {
       Rich.Planning.options;
       infos;
+      breaks;
       places;
       task_types;
       volunteers;
