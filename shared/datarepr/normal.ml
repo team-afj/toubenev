@@ -222,6 +222,16 @@ module Quest = struct
     in
     Float.to_int (minutes_conv ~unit (Float.of_int duration_m))
 
+  let required_volunteers ?(include_manually_assigned = false) t =
+    let n = t.initial.required_volunteers in
+    if include_manually_assigned then n
+    else
+      let m =
+        Volunteers.fold t.assigned_volunteers ~init:0 ~f:(fun acc v ->
+            if v.initial.manually_assigned then acc + 1 else acc)
+      in
+      n - m
+
   (** Returns the total time spent for a quest (duration * number of
       volunteers). Free quests last 0. *)
   let weighted_duration ?(unit = `Minutes) ?(skip_manually_assigned = false) q =
@@ -230,14 +240,8 @@ module Quest = struct
      proportional coefficient will biased them. *)
     let duration = real_duration ~unit q in
     let n =
-      let n = q.initial.required_volunteers in
-      if not skip_manually_assigned then n
-      else
-        let m =
-          Volunteers.fold q.assigned_volunteers ~init:0 ~f:(fun acc v ->
-              if v.initial.manually_assigned then acc + 1 else acc)
-        in
-        n - m
+      let include_manually_assigned = not skip_manually_assigned in
+      required_volunteers ~include_manually_assigned q
     in
     assert (n >= 0);
     duration * n
@@ -269,6 +273,11 @@ module Quest = struct
 
   let is_manually_assigned_to (v : Volunteer.t) t =
     Volunteers.mem v t.assigned_volunteers
+
+  let is_forbidden_to (v : Volunteer.t) t =
+    match t.initial.task_type with
+    | None -> false
+    | Some tt -> Task_type.Set.mem tt v.forbidden_tasks
 end
 
 module Quests = Quest.Set
