@@ -222,15 +222,19 @@ module Quest = struct
     in
     Float.to_int (minutes_conv ~unit (Float.of_int duration_m))
 
-  let required_volunteers ?(include_manually_assigned = false) t =
+  let required_volunteers ?(filter = `None) t =
     let n = t.initial.required_volunteers in
-    if include_manually_assigned then n
-    else
-      let m =
-        Volunteers.fold t.assigned_volunteers ~init:0 ~f:(fun acc v ->
-            if v.initial.manually_assigned then acc + 1 else acc)
-      in
-      n - m
+    match filter with
+    | `None -> n
+    | `Manually_assigned ->
+        let m =
+          Volunteers.fold t.assigned_volunteers ~init:0 ~f:(fun acc v ->
+              if v.initial.manually_assigned then acc + 1 else acc)
+        in
+        n - m
+    | `Assigned ->
+        let m = Volunteers.cardinal t.assigned_volunteers in
+        n - m
 
   (** Returns the total time spent for a quest (duration * number of
       volunteers). Free quests last 0. *)
@@ -240,8 +244,10 @@ module Quest = struct
      proportional coefficient will biased them. *)
     let duration = real_duration ~unit q in
     let n =
-      let include_manually_assigned = not skip_manually_assigned in
-      required_volunteers ~include_manually_assigned q
+      let filter =
+        if skip_manually_assigned then `Manually_assigned else `None
+      in
+      required_volunteers ~filter q
     in
     assert (n >= 0);
     duration * n

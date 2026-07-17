@@ -222,7 +222,7 @@ let everyone_does (ctx : Context.t) ~name requirement (quests : Quests.t) =
       let n_volunteers = Volunteers.cardinal available_volunteers in
       let n_slots =
         Quests.fold ~init:0 quests ~f:(fun acc q ->
-            acc + Quest.required_volunteers ~include_manually_assigned:false q)
+            acc + Quest.required_volunteers ~filter:`Manually_assigned q)
       in
       Volunteers.iter available_volunteers ~f:(fun v ->
           let quests =
