@@ -201,12 +201,7 @@ let everyone_does (ctx : Context.t) ~name requirement (quests : Quests.t) =
   in
   Volunteers.iter available_volunteers ~f:(fun v ->
       let quests =
-        Quests.filter
-          (fun q ->
-            match q.initial.task_type with
-            | None -> true
-            | Some tt -> not (Task_type.Set.mem tt v.forbidden_tasks))
-          quests
+        Quests.filter (fun q -> not (Quest.is_forbidden_to v q)) quests
       in
       match requirement with
       | `Once ->
@@ -221,26 +216,21 @@ let everyone_does (ctx : Context.t) ~name requirement (quests : Quests.t) =
           @@ Sat.Constraint.at_most_one vars
       | `Equal_proportion ->
           let n_volunteers = Volunteers.cardinal available_volunteers in
-          let longuest_quest, total_time =
-            Quests.fold ~init:(Duration.zero, Duration.zero) quests
-              ~f:(fun (max, acc) q ->
-                let max = Duration.max max q.slot.duration in
-                (max, Duration.(q.slot.duration + acc)))
+          let n_slots, n_slots_assigned_to_v =
+            Quests.fold ~init:(0, 0) quests ~f:(fun (acc, acc_ass) q ->
+                ( acc
+                  + Quest.required_volunteers ~include_manually_assigned:false q,
+                  if Quest.is_manually_assigned_to v q then acc_ass + 1
+                  else acc_ass ))
           in
-          let longuest_quest = Duration.to_minutes longuest_quest in
-          let total_time = Duration.to_minutes total_time in
-          let time_per_v = (total_time / n_volunteers) - longuest_quest in
-          let vars =
-            Quests.to_list_map
-              ~f:(fun q ->
-                (Duration.to_minutes q.slot.duration, ctx.assignations v q))
-              quests
-          in
-          let sum = Sat.LinearExpr.weighted_sum vars in
+          let max_slots_per_v = 1 + (n_slots / n_volunteers) in
+          let v_max_slots = max max_slots_per_v n_slots_assigned_to_v in
+          let vars = Quests.to_list_map ~f:(ctx.assignations v) quests in
+          let sum = Sat.LinearExpr.sum_vars vars in
           let name =
             Format.sprintf "%s_do_as_much_%s_as_everyone" v.initial.name name
           in
-          Sat.(add ctx.model ~name ?only_enforce_if (sum >= of_int time_per_v)))
+          Sat.(add ctx.model ~name ?only_enforce_if (sum <= of_int v_max_slots)))
 
 (** Force every volunteer to participate at least once to a mandatory task.
     Warning, this constraint can easily make the problem UNFEASIBLE, especially
