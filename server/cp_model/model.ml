@@ -199,29 +199,39 @@ let everyone_does (ctx : Context.t) ~name requirement (quests : Quests.t) =
   let only_enforce_if =
     assume ctx @@ Format.sprintf "Tout le monde fait %s au moins une fois." name
   in
-  Volunteers.iter available_volunteers ~f:(fun v ->
-      let quests =
-        Quests.filter (fun q -> not (Quest.is_forbidden_to v q)) quests
-      in
-      match requirement with
-      | `Once ->
+  match requirement with
+  | `Once ->
+      Volunteers.iter available_volunteers ~f:(fun v ->
+          let quests =
+            Quests.filter (fun q -> not (Quest.is_forbidden_to v q)) quests
+          in
           let name = Format.sprintf "%s_do_one_%s" v.initial.name name in
           let vars = Quests.to_list_map ~f:(ctx.assignations v) quests in
           Sat.add ctx.model ~name ?only_enforce_if
-          @@ Sat.Constraint.at_least_one vars
-      | `Only_once ->
+          @@ Sat.Constraint.at_least_one vars)
+  | `Only_once ->
+      Volunteers.iter available_volunteers ~f:(fun v ->
+          let quests =
+            Quests.filter (fun q -> not (Quest.is_forbidden_to v q)) quests
+          in
           let name = Format.sprintf "%s_do_%s_only_once" v.initial.name name in
           let vars = Quests.to_list_map ~f:(ctx.assignations v) quests in
           Sat.add ctx.model ~name ?only_enforce_if
-          @@ Sat.Constraint.at_most_one vars
-      | `Equal_proportion ->
-          let n_volunteers = Volunteers.cardinal available_volunteers in
-          let n_slots, n_slots_assigned_to_v =
-            Quests.fold ~init:(0, 0) quests ~f:(fun (acc, acc_ass) q ->
-                ( acc
-                  + Quest.required_volunteers ~include_manually_assigned:false q,
-                  if Quest.is_manually_assigned_to v q then acc_ass + 1
-                  else acc_ass ))
+          @@ Sat.Constraint.at_most_one vars)
+  | `Equal_proportion ->
+      let n_volunteers = Volunteers.cardinal available_volunteers in
+      let n_slots =
+        Quests.fold ~init:0 quests ~f:(fun acc q ->
+            acc + Quest.required_volunteers ~include_manually_assigned:false q)
+      in
+      Volunteers.iter available_volunteers ~f:(fun v ->
+          let quests =
+            Quests.filter (fun q -> not (Quest.is_forbidden_to v q)) quests
+          in
+          let n_slots_assigned_to_v =
+            Quests.fold ~init:0 quests ~f:(fun acc_ass q ->
+                if Quest.is_manually_assigned_to v q then acc_ass + 1
+                else acc_ass)
           in
           let max_slots_per_v = 1 + (n_slots / n_volunteers) in
           let v_max_slots = max max_slots_per_v n_slots_assigned_to_v in
