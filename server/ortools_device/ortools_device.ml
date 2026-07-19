@@ -26,6 +26,15 @@ let new_optim t (p : Data_repr.Rich.Planning.t) =
    fun () ->
     let context = Cp_model.Model.make ~with_assumptions:false p in
     let parameters =
+      (* claude suggestions:
+         - linearization_level:2l enables a stronger LP relaxation (more cuts),
+           usually worth it for scheduling problems. Fact Check: it's indeed a
+           bit better.
+         - symmetry_level:2l more aggressive symmetry breaking (useful when many
+           volunteers have similar constraints.) Fact check: seems a little bit
+           worse.
+         - interleave_search:true better coordination between parallel workers.
+           Fact check: this is much slower in practice. *)
       Ortools.Sat_parameters.make_sat_parameters ~log_search_progress:false
         ~num_workers:8l ~max_time_in_seconds:(60. *. 5.) ()
     in
