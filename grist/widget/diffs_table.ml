@@ -1,4 +1,6 @@
 open Brr
+open Brr_lwd_ui
+open Brr_lwd
 open Shared
 open Lunar_jsont
 open Data_repr
@@ -17,7 +19,7 @@ let make_red i =
   let i = i * 100 / max_red in
   color_grad (100 - i)
 
-let make (analysis : t) =
+let make_table (analysis : t) real_time =
   let head =
     Date.Map.fold
       (fun date _ acc ->
@@ -29,29 +31,35 @@ let make (analysis : t) =
   let volunteer (v : Volunteer.t) (facts : volunteer_analyses) =
     let name = El.th [ El.txt' v.name ] in
     let total_diff, total =
+      let expected_load =
+        if real_time then facts.event.theoretical_load
+        else facts.event.adjusted_load
+      in
       let diff =
-        Duration.(
-          facts.event.actual_load - facts.event.adjusted_load |> to_minutes)
+        Duration.(facts.event.actual_load - expected_load |> to_minutes)
       in
       ( diff,
         El.td
           ~at:[ make_red diff ]
           [
             El.txt' (print_signed_int diff);
-            El.txt' (" (" ^ Duration.to_string facts.event.adjusted_load ^ ")");
+            El.txt' (" (" ^ Duration.to_string expected_load ^ ")");
           ] )
     in
     ( total_diff,
       Date.Map.fold
         (fun _ facts acc ->
+          let expected_load =
+            if real_time then facts.theoretical_load else facts.adjusted_load
+          in
           let diff =
-            Duration.(facts.actual_load - facts.adjusted_load |> to_minutes)
+            Duration.(facts.actual_load - expected_load |> to_minutes)
           in
           El.td
             ~at:[ make_red diff ]
             [
               El.txt' (print_signed_int diff);
-              El.txt' (" (" ^ Duration.to_string facts.adjusted_load ^ ")");
+              El.txt' (" (" ^ Duration.to_string expected_load ^ ")");
             ]
           :: acc)
         facts.daily [ total; name ]
@@ -65,3 +73,26 @@ let make (analysis : t) =
     |> List.map ~f:snd
   in
   El.table ~at:[ Pico_ui.At.overflow_auto ] (head :: volunteers)
+
+let make (analysis : t) =
+  let { element; desc = Check { state; _ } } =
+    Forms.Field_checkboxes.make_single
+      {
+        value = ();
+        id = "theoretical_or_adjusted_diff_switch";
+        name = "theoretical_or_adjusted_diff_switch";
+        label =
+          (fun () ->
+            [
+              `P
+                (El.txt'
+                   "Montrer les temps prévus en théorie plutôt que les temps \
+                    \"ajustés\"");
+            ]);
+        state = false;
+      }
+  in
+  let table =
+    Lwd.map (Lwd.get state) ~f:(fun s -> make_table analysis (Option.is_some s))
+  in
+  Elwd.div [ `R element; `R table ]

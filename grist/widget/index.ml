@@ -616,9 +616,9 @@ let app =
                 :: sufass))
       in
       let diffs =
-        let$ state = Lwd.get App_state.last_answer in
+        let$* state = Lwd.get App_state.last_answer in
         match state with
-        | None -> El.nbsp ()
+        | None -> Lwd.return (El.nbsp ())
         | Some { analysis; _ } -> Diffs_table.make analysis
       in
       Pico_ui.Elwd.section [ `R txt; `R diffs ]
