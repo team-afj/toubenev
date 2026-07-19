@@ -498,8 +498,10 @@ let appreciation_of_planning opts (ctx : Context.t) =
       Quests.fold ctx.qs ~init:acc ~f:(fun acc q ->
           let appreciation = appreciation_of_quest opts v q in
           Logs.debug (fun msg -> msg "%s + %s = %i" v.name q.name appreciation);
-          Sat.scale appreciation (Sat.LinearExpr.var (ctx.assignations v q))
-          :: acc))
+          if appreciation = 0 then acc
+          else
+            Sat.scale appreciation (Sat.LinearExpr.var (ctx.assignations v q))
+            :: acc))
   |> Sat.LinearExpr.sum (* maybe weighted sum *)
 
 (* Amplitudes: daily work time span *)
@@ -576,16 +578,21 @@ let minimize_f (ctx : Context.t) =
   let friendship_coef = options.friendship_bonus in
   let resolution = `Minutes in
   let open Sat.LinearExpr in
-  [
-    scale (15 * 2 * 10 * 10 * event_bounds_coef)
-    @@ Workload_balance.event_bounds ctx resolution;
-    scale (15 * 10 * 10 * daily_bounds_coef)
-    @@ Workload_balance.daily_bounds ctx resolution;
-    scale amplitude_coef @@ amplitudes ctx;
-    scale (-1 * friendship_coef) @@ friendship_bonus ctx;
-    scale (-1) @@ appreciation_of_planning options ctx;
-  ]
-  |> sum |> Sat.minimize ctx.model
+  let objective_terms =
+    [
+      scale (15 * 2 * 10 * 10 * event_bounds_coef)
+      @@ Workload_balance.event_bounds ctx resolution;
+      scale (15 * 10 * 10 * daily_bounds_coef)
+      @@ Workload_balance.daily_bounds ctx resolution;
+      scale (-1 * friendship_coef) @@ friendship_bonus ctx;
+      scale (-1) @@ appreciation_of_planning options ctx;
+    ]
+  in
+  let objective_terms =
+    if amplitude_coef = 0 then objective_terms
+    else (scale amplitude_coef @@ amplitudes ctx) :: objective_terms
+  in
+  sum objective_terms |> Sat.minimize ctx.model
 
 let make ?(no_optim = false) ~with_assumptions (data : Planning.t) =
   let start_time = Unix.gettimeofday () in
