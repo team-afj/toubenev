@@ -1,15 +1,21 @@
 (executable
  (name cp_sat_wasm_worker)
- (promote (until-clean))
  (modes js)
  (js_of_ocaml
   (javascript_files stubs.js))
+ (libraries brr ortools)
  (preprocess
   (pps js_of_ocaml-ppx)))
 
 (rule
- (deps cp_sat_wasm_worker.bc.js package.json)
- (targets cp_sat_wasm_worker.bundle.js cp_sat_wasm_worker.bundle.js.map)
+ (deps
+  index.html
+  testcp.ts
+  cp_sat_wasm_worker.bc.js
+  package.json
+  vite.config.ts)
+ (targets
+  (dir dist))
  (action
   (progn
    (run yarn install) ; this is a bit wasteful

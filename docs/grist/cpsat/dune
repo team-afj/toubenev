@@ -1,0 +1,4 @@
+(copy_files
+ (alias app)
+ (mode promote)
+ (files ../../../grist/cp-sat-wasm-worker/dist/index.html))

@@ -2,3 +2,9 @@
  (alias app)
  (mode promote)
  (files ../../grist/widget/index.bc.js))
+
+; (copy_files
+;  (alias app)
+;  (mode promote)
+;  (files
+;   ../../grist/cp-sat-wasm-worker/cp_sat_wasm_worker.bundle{.js,.js.map}))
