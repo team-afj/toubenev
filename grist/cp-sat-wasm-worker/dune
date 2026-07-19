@@ -6,3 +6,11 @@
   (javascript_files stubs.js))
  (preprocess
   (pps js_of_ocaml-ppx)))
+
+(rule
+ (deps cp_sat_wasm_worker.bc.js package.json)
+ (targets cp_sat_wasm_worker.bundle.js cp_sat_wasm_worker.bundle.js.map)
+ (action
+  (progn
+   (run yarn install) ; this is a bit wasteful
+   (run yarn build))))

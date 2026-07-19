@@ -3,5 +3,11 @@
   "packageManager": "yarn@4.9.2",
   "dependencies": {
     "or-tools-wasm": "^0.9.1"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.1"
+  },
+  "scripts": {
+    "build": "esbuild cp_sat_wasm_worker.bc.js --external:node:fs  --external:node:util  --external:node:constants --external:node:child_process --external:node:tty --bundle  --minify-syntax --minify-whitespace --sourcemap  --outfile=cp_sat_wasm_worker.bundle.js "
   }
 }
