@@ -477,7 +477,7 @@ module Quests_groups = Random_access_list (Quests_group)
 module Quest = struct
   type t = {
     id : t id;
-    group : Quests_group.t option;
+    groups : Quests_group.t list;
     name : string;
     description : string option;
     task_type : Task_type.t option;
@@ -492,7 +492,7 @@ module Quest = struct
   let dummy =
     {
       id = "";
-      group = None;
+      groups = [];
       name = "";
       description = None;
       task_type = None;
@@ -523,12 +523,12 @@ module Quest = struct
     | New_required_volunteers required_volunteers ->
         { t with required_volunteers }
 
-  let make ?id ?group ~name ?description ?task_type ?place ~slot
+  let make ?id ?(groups = []) ~name ?description ?task_type ?place ~slot
       ~required_volunteers ?(assigned_volunteers = CCRAL.empty) () =
     let id = Option.get_lazy make_id id in
     {
       id;
-      group;
+      groups;
       name;
       description;
       task_type;

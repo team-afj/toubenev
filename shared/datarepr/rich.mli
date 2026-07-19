@@ -318,7 +318,7 @@ end
 module Quest : sig
   type t = private {
     id : t id;
-    group : Quests_group.t option;
+    groups : Quests_group.t list;
     name : string;
     description : string option;
     task_type : Task_type.t option;
@@ -334,7 +334,7 @@ module Quest : sig
 
   val make :
     ?id:t id ->
-    ?group:Quests_group.t ->
+    ?groups:Quests_group.t list ->
     name:string ->
     ?description:string ->
     ?task_type:Task_type.t ->

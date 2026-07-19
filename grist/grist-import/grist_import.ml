@@ -634,11 +634,11 @@ let to_planning ?(id_map = new_id_map ())
           _;
         } =
       let ids = Rich.id_of_int id in
-      let group =
-        let open Option in
+      let groups =
         (* TODO We only handle one group per case but we could do more *)
-        let* id = List.head_opt group in
-        Int.Map.find_opt id id_map.quests_groups
+        List.filter_map
+          ~f:(fun id -> Int.Map.find_opt id id_map.quests_groups)
+          group
       in
       let required_volunteers =
         Option.value ~default:1 required_volunteers_opt
@@ -656,7 +656,7 @@ let to_planning ?(id_map = new_id_map ())
           ~duration_h:duree_heures ~end_date:fin_de_recurrence
       in
       let v =
-        Rich.Quest.make ~id:ids ?group ~name ?task_type ?place ~slot
+        Rich.Quest.make ~id:ids ~groups ~name ?task_type ?place ~slot
           ~required_volunteers ~assigned_volunteers ()
       in
       ({ id_map with quests = Int.Map.add id v id_map.quests }, v)

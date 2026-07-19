@@ -155,9 +155,8 @@ let normalize_quest event_infos options vs (diags, groups) (q : Rich.Quest.t) =
   let groups, quests =
     List.fold_flat_map_i ~init:groups slots ~f:(fun groups i slots ->
         (* [i] is the id of the expansion *)
-        let group_infos =
-          q.group
-          |> Option.map (function
+        let groups_infos =
+          List.map q.groups ~f:(function
             | {
                 Rich.Quests_group.id;
                 name;
@@ -187,20 +186,19 @@ let normalize_quest event_infos options vs (diags, groups) (q : Rich.Quest.t) =
               { Quest.id; initial = q; name; slot; assigned_volunteers }
             in
             let groups =
-              group_infos
-              |> Option.map_or ~default:groups
-                   (fun (id, name, quests_constraint) ->
-                     groups
-                     |> String.Map.update id @@ function
-                        | None ->
-                            Some
-                              {
-                                Normal.Quests_group.name;
-                                quests = Quests.singleton q';
-                                quests_constraint;
-                              }
-                        | Some ({ Normal.Quests_group.quests; _ } as group) ->
-                            Some { group with quests = Quests.add q' quests })
+              List.fold_left groups_infos ~init:groups
+                ~f:(fun groups (id, name, quests_constraint) ->
+                  groups
+                  |> String.Map.update id @@ function
+                     | None ->
+                         Some
+                           {
+                             Normal.Quests_group.name;
+                             quests = Quests.singleton q';
+                             quests_constraint;
+                           }
+                     | Some ({ Normal.Quests_group.quests; _ } as group) ->
+                         Some { group with quests = Quests.add q' quests })
             in
             (groups, q')))
   in

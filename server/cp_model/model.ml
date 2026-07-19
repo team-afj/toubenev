@@ -397,6 +397,21 @@ let handle_grouped_quests (ctx : Context.t) =
           | Some assumption -> doing_least_volunteer_required :: assumption
         in
         Sat.add ctx.model ~name ~only_enforce_if all_others
+    | Distinct_volunteers ->
+        (* [v] can do only one of [quests] *)
+        ctx.for_all_volunteers @@ fun v ->
+        let vars = Quests.to_list_map ~f:(ctx.assignations v) quests in
+        let name =
+          Format.sprintf "%s_can_only_do_one_of_the_quests_in_group_%s[%s]"
+            v.name group_name id
+        in
+        let only_enforce_if =
+          assume ctx
+          @@ Format.sprintf "%s can only do one of the quests in group %s[%s]"
+               v.name group_name id
+        in
+        let sum = Sat.LinearExpr.sum_vars vars in
+        Sat.add ctx.model ~name ?only_enforce_if Sat.(sum <= of_int 1)
     | _ -> failwith "not implemented"
   in
   String.Map.iter enforce_group ctx.quests_groups
