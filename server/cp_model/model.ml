@@ -22,10 +22,6 @@ let all_staffed (ctx : Context.t) =
   let quest_is_staffed (q : Quest.t) =
     let open Sat in
     let name = Format.sprintf "q_%s_is_staffed" q.name in
-    let sum =
-      LinearExpr.sum_vars
-      @@ Volunteers.to_list_map ctx.vs ~f:(fun v -> ctx.assignations v q)
-    in
     let only_enforce_if =
       (* TODO: these probably add more noise than useful information *)
       (* let name =
@@ -35,9 +31,15 @@ let all_staffed (ctx : Context.t) =
       assume ctx name *)
       None
     in
-    sum
-    == of_int q.initial.required_volunteers
-    |> add ctx.model ~name ?only_enforce_if
+    let vars =
+      Volunteers.to_list_map ctx.vs ~f:(fun v -> ctx.assignations v q)
+    in
+    let constraint_ =
+      (* ExactlyOne might be a bit faster *)
+      if q.initial.required_volunteers = 1 then Constraint.exactly_one vars
+      else LinearExpr.sum_vars vars == of_int q.initial.required_volunteers
+    in
+    add ctx.model ~name ?only_enforce_if constraint_
   in
   ctx.for_all_quests quest_is_staffed
 
