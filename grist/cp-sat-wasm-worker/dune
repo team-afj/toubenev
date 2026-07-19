@@ -1,0 +1,8 @@
+(executable
+ (name cp_sat_wasm_worker)
+ (promote (until-clean))
+ (modes js)
+ (js_of_ocaml
+  (javascript_files stubs.js))
+ (preprocess
+  (pps js_of_ocaml-ppx)))

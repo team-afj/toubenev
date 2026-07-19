@@ -1,0 +1,7 @@
+{
+  "name": "cp-sat-wasm-worker",
+  "packageManager": "yarn@4.9.2",
+  "dependencies": {
+    "or-tools-wasm": "^0.9.1"
+  }
+}
