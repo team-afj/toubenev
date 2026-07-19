@@ -11,6 +11,14 @@ module Data : sig
   end
 end
 
+module Access_token_result : sig
+  include Jv.CONV
+
+  val token : t -> Jstr.t
+  val base_url : t -> Jstr.t
+  val ttl_msec : t -> int option
+end
+
 module New_record : sig
   include Jv.CONV
 
@@ -86,12 +94,89 @@ module Table_operations : sig
     unit Fut.or_error
 end
 
+module View_API : sig
+  include Jv.CONV
+
+  val allow_select_by : t -> unit Fut.or_error
+
+  val fetch_selected_record :
+    t -> row_id:int -> ?options:Jv.t -> unit -> Jv.t Fut.or_error
+
+  val fetch_selected_table : t -> ?options:Jv.t -> unit -> Jv.t Fut.or_error
+  val set_cursor_pos : t -> pos:Jv.t -> unit Fut.or_error
+  val set_selected_rows : t -> row_ids:Jv.t -> unit Fut.or_error
+end
 
 module Doc_API : sig
   include Jv.CONV
 
   val fetch_table : table_id:Jstr.t -> Data.Row_records.t Fut.or_error
+
+  val fetch_selected_record :
+    t -> row_id:int -> ?options:Jv.t -> unit -> Jv.t Fut.or_error
+
+  val fetch_selected_table : t -> ?options:Jv.t -> unit -> Jv.t Fut.or_error
+  val allow_select_by : t -> unit Fut.or_error
+  val set_cursor_pos : t -> pos:Jv.t -> unit Fut.or_error
+  val set_selected_rows : t -> row_ids:Jv.t -> unit Fut.or_error
+
+  val apply_user_actions :
+    t -> actions:Jv.t -> ?options:Jv.t -> unit -> Jv.t Fut.or_error
+
+  val get_access_token :
+    t -> ?options:Jv.t -> unit -> Access_token_result.t Fut.or_error
+
+  val get_doc_name : t -> Jstr.t Fut.or_error
+  val list_tables : t -> Jstr.t list Fut.or_error
+end
+
+module Section_API : sig
+  include Jv.CONV
+
+  val configure : t -> custom_options:Jv.t -> unit Fut.or_error
+  val mappings : t -> Jv.t option Fut.or_error
+end
+
+module Widget_API : sig
+  include Jv.CONV
+
+  val clear_options : t -> unit Fut.or_error
+  val get_option : t -> key:Jstr.t -> Jv.t Fut.or_error
+  val get_options : t -> Jv.t option Fut.or_error
+  val set_option : t -> key:Jstr.t -> value:Jv.t -> unit Fut.or_error
+  val set_options : t -> options:Jv.t -> unit Fut.or_error
 end
 
 val doc_Api : Doc_API.t
+val view_Api : View_API.t
+val section_Api : Section_API.t
+val widget_Api : Widget_API.t
+val selected_table : Table_operations.t
+val checkers : Jv.t
 val get_table : ?table_id:Jstr.t -> unit -> Table_operations.t
+
+val fetch_selected_record :
+  row_id:int -> ?options:Jv.t -> unit -> Jv.t Fut.or_error
+
+val fetch_selected_table : ?options:Jv.t -> unit -> Jv.t Fut.or_error
+val allow_select_by : unit -> unit Fut.or_error
+
+val get_access_token :
+  ?options:Jv.t -> unit -> Access_token_result.t Fut.or_error
+
+val clear_options : unit -> unit Fut.or_error
+val get_option : key:Jstr.t -> Jv.t Fut.or_error
+val get_options : unit -> Jv.t option Fut.or_error
+val set_option : key:Jstr.t -> value:Jv.t -> unit Fut.or_error
+val set_options : options:Jv.t -> unit Fut.or_error
+val map_column_names : data:Jv.t -> ?options:Jv.t -> unit -> Jv.t
+val map_column_names_back : data:Jv.t -> ?options:Jv.t -> unit -> Jv.t
+val on_any : event_name:Jv.t -> listener:Jv.t -> Jv.t
+val on : event_name:Jstr.t -> listener:Jv.t -> Jv.t
+val on_new_record : callback:Jv.t -> unit
+val on_options : callback:Jv.t -> unit
+val on_record : callback:Jv.t -> ?options:Jv.t -> unit -> unit
+val on_records : callback:Jv.t -> ?options:Jv.t -> unit -> unit
+val ready : ?settings:Jv.t -> unit -> unit
+val set_cursor_pos : pos:Jv.t -> unit Fut.or_error
+val set_selected_rows : row_ids:Jv.t -> unit Fut.or_error
