@@ -43,30 +43,25 @@ let all_staffed (ctx : Context.t) =
 
 (** Volunteers cannot do several things at the same time *)
 let non_ubiquity_of_normal_humans (ctx : Context.t) =
-  ctx.for_all_quests @@ fun q ->
-  let overlapping = Quest.overlaps_with ctx.data.infos q ctx.qs in
-  Quests.iter overlapping ~f:(fun q' ->
-      if not (Quest.equal q q') then
-        ctx.for_all_volunteers @@ fun v ->
-        if
-          not
-            (Quest.is_manually_assigned_to v q
-            && Quest.is_manually_assigned_to v q')
-        then
-          let assig_v = ctx.assignations v in
+  ctx.for_all_volunteers @@ fun v ->
+  let manual_quests = Quests.filter (Quest.is_manually_assigned_to v) ctx.qs in
+  let flexible_quests =
+    Quests.filter (fun q -> not (Quest.is_manually_assigned_to v q)) ctx.qs
+  in
+  let intervals =
+    Quests.to_list_map flexible_quests ~f:(ctx.intervals_reals v)
+  in
+  Sat.add_no_overlap ctx.model intervals;
+  Quests.iter manual_quests ~f:(fun manual_q ->
+      let overlapping =
+        Quest.overlaps_with ctx.data.infos manual_q flexible_quests
+      in
+      Quests.iter overlapping ~f:(fun q ->
           let name =
-            Format.sprintf "%s_cannot_do_both_%s_and_%s" v.initial.name q.name
-              q'.name
+            Format.sprintf "%s_cannot_do_%s_because_of_manual_%s" v.initial.name
+              q.name manual_q.name
           in
-          let only_enforce_if =
-            (* TODO: these probably add more noise than useful information *)
-            (* assume ctx
-          @@ Format.sprintf "%s cannot do both %s and %s" v.initial.name q.name
-               q'.name *)
-            None
-          in
-          Sat.Constraint.at_most_one [ assig_v q; assig_v q' ]
-          |> Sat.add ctx.model ?only_enforce_if ~name)
+          Sat.add ctx.model ~name (is_false (ctx.assignations v q))))
 
 (** Not everyone is available all the time *)
 let check_unavailabilities (ctx : Context.t) =

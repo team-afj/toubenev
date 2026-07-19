@@ -10,6 +10,7 @@ type t = {
   with_assumptions : bool;
   assignations : Volunteer.t -> Quest.t -> Sat.Var.t_bool;
   intervals : Volunteer.t -> Quest.t -> Sat.interval_var;
+  intervals_reals : Volunteer.t -> Quest.t -> Sat.interval_var;
   assignations_rev : int -> Sat.Var.t_bool * Volunteer.t * Quest.t;
   vs : Volunteers.t;
   qs : Quests.t;
@@ -27,7 +28,9 @@ let assignations m vs qs =
   let rev_tbl : (int, Sat.Var.t_bool * Volunteer.t * Quest.t) Hashtbl.t =
     Hashtbl.create size
   in
-  let by_uuid : (Sat.Var.t_bool * Sat.interval_var) String.Map.t String.Map.t =
+  let by_uuid :
+      (Sat.Var.t_bool * Sat.interval_var * Sat.interval_var) String.Map.t
+      String.Map.t =
     Volunteers.fold vs ~init:String.Map.empty ~f:(fun acc (v : Volunteer.t) ->
         let quests =
           Quests.fold qs ~init:String.Map.empty ~f:(fun acc (q : Quest.t) ->
@@ -38,10 +41,10 @@ let assignations m vs qs =
               let var = Sat.Var.new_bool m name in
               Hashtbl.add rev_tbl !c (var, v, q);
               incr c;
+              let datetime_to_minutes d =
+                Zoned_datetime.to_local_minutes d |> Sat.LinearExpr.of_int
+              in
               let interval =
-                let datetime_to_minutes d =
-                  Zoned_datetime.to_local_minutes d |> Sat.LinearExpr.of_int
-                in
                 (* let q_slot = Quest.real_slot q in *)
                 let q_slot = q.slot in
                 let start = datetime_to_minutes q_slot.start in
@@ -54,7 +57,19 @@ let assignations m vs qs =
                 Sat.new_optional_interval_var m ~start ~size ~end_
                   ~is_present:var name
               in
-              String.Map.add q.id (var, interval) acc)
+              let interval_real =
+                let q_slot = Quest.real_slot q in
+                let start = datetime_to_minutes q_slot.start in
+                let end_ = datetime_to_minutes (Time_slot.end_ q_slot) in
+                let size = Sat.(end_ - start) in
+                let name =
+                  Format.sprintf "%i_interval_real_%s_does_%s" !c v.initial.name
+                    q.name
+                in
+                Sat.new_optional_interval_var m ~start ~size ~end_
+                  ~is_present:var name
+              in
+              String.Map.add q.id (var, interval, interval_real) acc)
         in
         String.Map.add v.id quests acc)
   in
@@ -62,10 +77,20 @@ let assignations m vs qs =
    fun v q ->
     String.Map.find v.Volunteer.id by_uuid |> String.Map.find q.Quest.id
   in
-  let find_assignation v q = fst (find v q) in
-  let find_interval v q = snd (find v q) in
+  let find_assignation v q =
+    let a, _, _ = find v q in
+    a
+  in
+  let find_interval v q =
+    let _, i, _ = find v q in
+    i
+  in
+  let find_interval_real v q =
+    let _, _, i = find v q in
+    i
+  in
   let rev_find = fun i -> Hashtbl.find rev_tbl i in
-  (find_assignation, find_interval, rev_find)
+  (find_assignation, find_interval, find_interval_real, rev_find)
 
 let prepare ~with_assumptions model (data : Planning.t) =
   let {
@@ -78,7 +103,9 @@ let prepare ~with_assumptions model (data : Planning.t) =
     Data_repr.Conv.normalize data
   in
   let task_types = CCRAL.to_list data.task_types |> Task_type.Set.of_list in
-  let assignations, intervals, assignations_rev = assignations model vs qs in
+  let assignations, intervals, intervals_reals, assignations_rev =
+    assignations model vs qs
+  in
   let for_all_quests f = Quests.iter qs ~f in
   let for_all_volunteers f = Volunteers.iter ~f vs in
   let by_day = quests_by_day data.infos qs in
@@ -88,6 +115,7 @@ let prepare ~with_assumptions model (data : Planning.t) =
     data;
     assignations;
     intervals;
+    intervals_reals;
     assignations_rev;
     vs;
     qs;
