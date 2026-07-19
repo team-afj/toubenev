@@ -57,7 +57,8 @@ let adjusted_load_minutes infos ?(unit = `Minutes) volunteers volunteer day
   in
   match (volunteer.initial.manually_assigned, volunteer_theoretical_load) with
   | true, (`Fixed load | `Flexible load) | false, `Fixed load ->
-      Duration.to_minutes load
+      Duration.to_minutes load |> Float.of_int |> Quest.minutes_conv ~unit
+      |> Float.round |> Float.to_int
   | false, `Flexible load ->
       let volunteer_theoretical_load = Duration.to_minutes load in
       (* Available time on that day. Not counting manually assigned volunteers *)

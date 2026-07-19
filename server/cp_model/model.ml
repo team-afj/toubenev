@@ -577,10 +577,13 @@ let minimize_f (ctx : Context.t) =
     (*options.large_amplitude_malus*)
   in
   let friendship_coef = options.friendship_bonus in
+  let resolution = `Fifteen_minutes in
   let open Sat.LinearExpr in
   [
-    scale (2 * 10 * 10 * event_bounds_coef) @@ Workload_balance.event_bounds ctx;
-    scale (10 * 10 * daily_bounds_coef) @@ Workload_balance.daily_bounds ctx;
+    scale (15 * 2 * 10 * 10 * event_bounds_coef)
+    @@ Workload_balance.event_bounds ctx resolution;
+    scale (15 * 10 * 10 * daily_bounds_coef)
+    @@ Workload_balance.daily_bounds ctx resolution;
     scale amplitude_coef @@ amplitudes ctx;
     scale (-1 * friendship_coef) @@ friendship_bonus ctx;
     scale (-1) @@ appreciation_of_planning options ctx;

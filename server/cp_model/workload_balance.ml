@@ -31,7 +31,7 @@ let time_spent (ctx : Context.t) ~unit ~by:volunteer ~on:quests =
     actual load in the current solution. *)
 let load_diff (ctx : Context.t) volunteer day day_quests =
   let unit =
-    `Minutes
+    `Fifteen_minutes
     (* `Five_minutes should be faster but does not give good results right now... *)
   in
   let time_spent = time_spent ctx ~unit ~by:volunteer ~on:day_quests in
@@ -42,14 +42,14 @@ let load_diff (ctx : Context.t) volunteer day day_quests =
 
 (** Lower and upper bounds *)
 
-let max_daily_load (ctx : Context.t) =
-  60
-  * Volunteers.fold ctx.vs ~init:0 ~f:(fun max_so_far v ->
-      max max_so_far (Duration.to_seconds v.initial.daily_workload))
+let max_daily_load (ctx : Context.t) unit =
+  Volunteers.fold ctx.vs ~init:0 ~f:(fun max_so_far v ->
+      max max_so_far (Duration.to_minutes v.initial.daily_workload))
+  |> Float.of_int |> Quest.minutes_conv ~unit |> Float.to_int
 
-let bounds (ctx : Context.t) day day_quests =
+let bounds (ctx : Context.t) resolution day day_quests =
   let s_date = Date.to_string day in
-  let max_daily_load = max_daily_load ctx in
+  let max_daily_load = max_daily_load ctx resolution in
   let lb = -2 * max_daily_load in
   let ub = 2 * max_daily_load in
   let lower_bound =
@@ -67,14 +67,14 @@ let bounds (ctx : Context.t) day day_quests =
   Sat.(add ctx.model (Constraint.min_equality lower_bound diffs));
   Sat.(var upper_bound - var lower_bound)
 
-let daily_bounds (ctx : Context.t) =
+let daily_bounds (ctx : Context.t) resolution =
   Date.Map.fold
-    (fun day day_quests acc -> bounds ctx day day_quests :: acc)
+    (fun day day_quests acc -> bounds ctx resolution day day_quests :: acc)
     ctx.by_day []
   |> Sat.LinearExpr.sum
 
-let event_bounds (ctx : Context.t) =
-  let max_daily_load = max_daily_load ctx in
+let event_bounds (ctx : Context.t) resolution =
+  let max_daily_load = max_daily_load ctx resolution in
   let lb = -2 * max_daily_load in
   let ub = 2 * max_daily_load in
   let lower_bound =
