@@ -277,9 +277,6 @@ module Quest = struct
       set might contain [q] itself if [q] ∈ [qs]. *)
   let overlaps_with infos q qs = Set.filter (overlaps infos q) qs
 
-  let is_manually_assigned_to (v : Volunteer.t) t =
-    Volunteers.mem v t.assigned_volunteers
-
   let is_forbidden_to (v : Volunteer.t) t =
     match t.initial.task_type with
     | None -> false
