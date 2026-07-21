@@ -67,12 +67,18 @@ let bounds (ctx : Context.t) resolution day day_quests =
   Sat.(add ctx.model (Constraint.min_equality lower_bound diffs));
   Sat.(var upper_bound - var lower_bound)
 
+(** [daily_bounds], depending on [resolution] vary:
+    - in minutes between 0 and 1440 24 * 60
+    - in fifteen_minutes between 0 and 96 *)
 let daily_bounds (ctx : Context.t) resolution =
   Date.Map.fold
     (fun day day_quests acc -> bounds ctx resolution day day_quests :: acc)
     ctx.by_day []
   |> Sat.LinearExpr.sum
 
+(** [event_bound], depending on [resolution] vary:
+    - in minutes between 0 and 1440 24 * 60
+    - in fifteen_minutes between 0 and 96 *)
 let event_bounds (ctx : Context.t) resolution =
   let max_daily_load = max_daily_load ctx resolution in
   let lb = -2 * max_daily_load in
