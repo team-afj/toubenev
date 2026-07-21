@@ -3,6 +3,7 @@ open! Lunar_jsont
 open Data_repr
 open Rich
 open Normal
+open Shared.Static_checks
 
 (* Utilities *)
 let is_false v = Sat.(var v == of_int 0)
@@ -46,9 +47,9 @@ let all_staffed (ctx : Context.t) =
 (** Volunteers cannot do several things at the same time *)
 let non_ubiquity_of_normal_humans (ctx : Context.t) =
   ctx.for_all_volunteers @@ fun v ->
-  let manual_quests = Quests.filter (Quest.is_manually_assigned_to v) ctx.qs in
+  let manual_quests = Quests.filter (v_is_manually_assigned_to_q v) ctx.qs in
   let flexible_quests =
-    Quests.filter (fun q -> not (Quest.is_manually_assigned_to v q)) ctx.qs
+    Quests.filter (fun q -> not (v_is_manually_assigned_to_q v q)) ctx.qs
   in
   let intervals =
     Quests.to_list_map flexible_quests ~f:(ctx.intervals_reals v)
@@ -97,9 +98,7 @@ let check_unavailabilities (ctx : Context.t) =
           add ctx.model ~name ?only_enforce_if (is_false (ctx.assignations v q))))
     v.initial.departure;
   List.iter v.unavailabilities ~f:(fun (slot : Time_slot.t) ->
-      if
-        Time_slot.overlaps slot q_slot
-        && not (Quest.is_manually_assigned_to v q)
+      if Time_slot.overlaps slot q_slot && not (v_is_manually_assigned_to_q v q)
       then
         let name = Format.sprintf "%s_unavailable_for_%s" v.name q.name in
         let only_enforce_if =
@@ -119,7 +118,7 @@ let required_specialists (ctx : Context.t) =
        let skills = CCRAL.to_list v.initial.proficiencies in
        if
          (not (List.mem ~eq:Task_type.equal task_type skills))
-         && not (Quest.is_manually_assigned_to v q)
+         && not (v_is_manually_assigned_to_q v q)
        then
          let name =
            Format.sprintf "%s_does_not_have_the_skill_for_%s" v.name q.name
@@ -227,8 +226,7 @@ let everyone_does (ctx : Context.t) ~name requirement (quests : Quests.t) =
           in
           let n_slots_assigned_to_v =
             Quests.fold ~init:0 quests ~f:(fun acc_ass q ->
-                if Quest.is_manually_assigned_to v q then acc_ass + 1
-                else acc_ass)
+                if v_is_manually_assigned_to_q v q then acc_ass + 1 else acc_ass)
           in
           let max_slots_per_v = 1 + (n_slots / n_volunteers) in
           let v_max_slots = max max_slots_per_v n_slots_assigned_to_v in
