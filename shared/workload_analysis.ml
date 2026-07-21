@@ -30,7 +30,7 @@ let theoretical_load infos ~of_:(volunteer : Volunteer.t) ~on:date day_quests =
         Quests.fold day_quests ~init:Duration.zero ~f:(fun acc q ->
             if
               (not (Quest.is_free q))
-              && Quest.is_manually_assigned_to volunteer q
+              && Static_checks.v_is_manually_assigned_to_q volunteer q
             then Duration.(acc + q.slot.duration)
             else acc)
       in
