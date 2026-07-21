@@ -429,22 +429,28 @@ let friendship_bonus (ctx : Context.t) =
                   if String.compare v.id friend_id <= 0 then (v.id, friend_id)
                   else (friend_id, v.id)
                 in
-                if Hashtbl.mem processed_pairs oredered_pair then acc
+                if
+                  Hashtbl.mem processed_pairs oredered_pair
+                  || not (v_can_do_q ctx.data.infos ctx.qs v q)
+                then acc
                 else begin
-                  Hashtbl.add processed_pairs oredered_pair ();
                   let friend = Volunteers.find_by_id friend_id ctx.vs in
-                  let together_name =
-                    Format.sprintf "%s_and_%s_together_on_%s" v.name friend.name
-                      q.name
-                  in
-                  let together = Sat.Var.new_bool ctx.model together_name in
-                  Sat.add ctx.model
-                    (Sat.Constraint.min_equality together
-                       [
-                         Sat.LinearExpr.var (ctx.assignations v q);
-                         Sat.LinearExpr.var (ctx.assignations friend q);
-                       ]);
-                  together :: acc
+                  if not (v_can_do_q ctx.data.infos ctx.qs friend q) then acc
+                  else begin
+                    Hashtbl.add processed_pairs oredered_pair ();
+                    let together_name =
+                      Format.sprintf "%s_and_%s_together_on_%s" v.name
+                        friend.name q.name
+                    in
+                    let together = Sat.Var.new_bool ctx.model together_name in
+                    Sat.add ctx.model
+                      (Sat.Constraint.min_equality together
+                         [
+                           Sat.LinearExpr.var (ctx.assignations v q);
+                           Sat.LinearExpr.var (ctx.assignations friend q);
+                         ]);
+                    together :: acc
+                  end
                 end)))
   |> Sat.LinearExpr.sum_vars
 
