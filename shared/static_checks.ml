@@ -9,6 +9,7 @@ let result_of_bool err b =
 let v_is_manually_assigned_to_q v (q : Quest.t) =
   Volunteers.mem v q.Quest.assigned_volunteers
 
+(** Check specialist skills and banned quests types *)
 let v_can_do_task (v : Volunteer.t) ?q (t : Task_type.t) =
   let name = Option.map_or ~default:t.name (fun q -> q.Quest.name) q in
   let* _has_correct_speciality =
@@ -24,6 +25,7 @@ let v_can_do_task (v : Volunteer.t) ?q (t : Task_type.t) =
 let v_can_do_quest_task v (q : Quest.t) =
   Option.map_or ~default:(Ok ()) (v_can_do_task v ~q) q.initial.task_type
 
+(** Checks arrival and departure times and other unavailability slots *)
 let v_is_available_during (v : Volunteer.t) ?q (t : Time_slot.t) =
   let name =
     Option.map_lazy (fun () -> Time_slot.to_string t) (fun q -> q.Quest.name) q
@@ -71,7 +73,7 @@ let v_is_not_assigned_to_an_overlapping_q infos all_quests v q =
   | Some q' ->
       result_of_bool [ v.name; "cannot do both"; q.name; "and"; q'.name ] false
 
-let v_can_do_q' infos all_quests v q =
+let v_can_do_q_res infos all_quests v q =
   if v_is_manually_assigned_to_q v q then Ok ()
   else begin
     let* () =
@@ -85,4 +87,4 @@ let v_can_do_q' infos all_quests v q =
   end
 
 let v_can_do_q i aq v q =
-  match v_can_do_q' i aq v q with Ok () -> true | Error _ -> false
+  match v_can_do_q_res i aq v q with Ok () -> true | Error _ -> false

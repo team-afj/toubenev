@@ -3,7 +3,8 @@ open! Lunar_jsont
 open Data_repr
 open Rich
 open Normal
-open Shared.Static_checks
+open Shared
+open Static_checks
 
 (* Utilities *)
 let is_false v = Sat.(var v == of_int 0)
@@ -66,120 +67,29 @@ let non_ubiquity_of_normal_humans (ctx : Context.t) =
           in
           Sat.add ctx.model ~name (is_false (ctx.assignations v q))))
 
-(** Not everyone is available all the time *)
-let check_unavailabilities (ctx : Context.t) =
+(** There are many reasons why someone cannot do something *)
+let enforce_volunteers_restrictions (ctx : Context.t) =
   ctx.for_all_volunteers @@ fun v ->
   ctx.for_all_quests @@ fun q ->
-  (* We count prep and rest time here, but maybe it would also be reasonnable
-     to ignore rest time... *)
-  let q_slot = Quest.real_slot q in
-  Option.iter
-    (fun arrival ->
-      if Zoned_datetime.(q_slot.start <= arrival) then
-        let name = Format.sprintf "%s_not_here_for_%s" v.name q.name in
-        let only_enforce_if =
-          let name = Format.sprintf "%s not here for %s" v.name q.name in
-          assume ctx name
-        in
-        Sat.(
-          add ctx.model ~name ?only_enforce_if (is_false (ctx.assignations v q))))
-    v.initial.arrival;
-  Option.iter
-    (fun departure ->
-      if Zoned_datetime.(Time_slot.end_ q_slot >= departure) then
-        let name = Format.sprintf "%s_not_here_for_%s" v.name q.name in
-        let only_enforce_if =
-          let name = Format.sprintf "%s not here for %s" v.name q.name in
-          assume ctx name
-        in
-        Sat.(
-          add ctx.model ~name ?only_enforce_if (is_false (ctx.assignations v q))))
-    v.initial.departure;
-  List.iter v.unavailabilities ~f:(fun (slot : Time_slot.t) ->
-      if Time_slot.overlaps slot q_slot && not (v_is_manually_assigned_to_q v q)
-      then
-        let name = Format.sprintf "%s_unavailable_for_%s" v.name q.name in
-        let only_enforce_if =
-          let name = Format.sprintf "%s not available for %s" v.name q.name in
-          assume ctx name
-        in
-        Sat.(
-          add ctx.model ~name ?only_enforce_if (is_false (ctx.assignations v q))))
-
-(** Some quests require specialists *)
-let required_specialists (ctx : Context.t) =
-  ctx.for_all_quests @@ fun q ->
-  q.initial.task_type
-  |> Option.iter @@ fun task_type ->
-     if task_type.Task_type.specialist_only then
-       ctx.for_all_volunteers @@ fun v ->
-       let skills = CCRAL.to_list v.initial.proficiencies in
-       if
-         (not (List.mem ~eq:Task_type.equal task_type skills))
-         && not (v_is_manually_assigned_to_q v q)
-       then
-         let name =
-           Format.sprintf "%s_does_not_have_the_skill_for_%s" v.name q.name
-         in
-         let only_enforce_if =
-           let name =
-             Format.sprintf "%s does not have the skill to do %s" v.name q.name
-           in
-           assume ctx name
-         in
-         Sat.(
-           add ctx.model ~name ?only_enforce_if
-             (is_false (ctx.assignations v q)))
-
-(** Some volunteers are banned from some quests types *)
-let enforce_bans (ctx : Context.t) =
-  ctx.for_all_volunteers @@ fun v ->
-  ctx.for_all_quests @@ fun q ->
-  q.initial.task_type
-  |> Option.iter @@ fun task_type ->
-     if Task_type.Set.mem task_type v.forbidden_tasks then
-       let name =
-         Format.sprintf "%s_does_not_have_the_right_to_do_%s" v.name q.name
-       in
-       let only_enforce_if =
-         let name =
-           Format.sprintf "%s does not have the right to do %s" v.name q.name
-         in
-         assume ctx name
-       in
-       Sat.(
-         add ctx.model ~name ?only_enforce_if (is_false (ctx.assignations v q)))
+  Static_checks.v_can_do_q_res ctx.data.infos ctx.qs v q
+  |> Result.iter_error (fun reason ->
+      let name = String.replace ~sub:" " ~by:"_" reason in
+      let only_enforce_if = assume ctx reason in
+      let assignation = ctx.assignations v q in
+      Sat.(add ctx.model ~name ?only_enforce_if (is_false assignation)))
 
 (** Enforces manual assignations of volunteers, and prevents manually assigned
     volunteers from doing anything else. *)
 let enforce_assignations (ctx : Context.t) =
-  let assigned = Hashtbl.create 16 in
-  let () =
-    ctx.for_all_quests @@ fun q ->
-    Volunteers.iter q.assigned_volunteers ~f:(fun (v : Volunteer.t) ->
-        let name = Format.sprintf "%s_assigned_to_%s" v.name q.name in
-        let only_enforce_if =
-          assume ctx
-          @@ Format.sprintf "%s is manually assigned to %s" v.initial.name
-               q.name
-        in
-        Hashtbl.add assigned (q.id, v.id) ();
-        Sat.(
-          add ctx.model ~name ?only_enforce_if (is_true (ctx.assignations v q))))
-  in
-  ctx.for_all_volunteers @@ fun v ->
-  if v.initial.manually_assigned then
-    ctx.for_all_quests @@ fun q ->
-    if not (Hashtbl.mem assigned (q.id, v.id)) then
-      let name =
-        Format.sprintf "manually_assigned_%s_cannot_do_%s" v.initial.name q.name
-      in
+  ctx.for_all_quests @@ fun q ->
+  Volunteers.iter q.assigned_volunteers ~f:(fun (v : Volunteer.t) ->
+      let name = Format.sprintf "%s_assigned_to_%s" v.name q.name in
       let only_enforce_if =
         assume ctx
         @@ Format.sprintf "%s is manually assigned to %s" v.initial.name q.name
       in
       Sat.(
-        add ctx.model ~name ?only_enforce_if (is_false (ctx.assignations v q)))
+        add ctx.model ~name ?only_enforce_if (is_true (ctx.assignations v q))))
 
 (** Force every volunteer to do at least one of a quest list. Warning, this
     constraint can easily make the problem UNFEASIBLE, especially in "equal
@@ -605,9 +515,7 @@ let make ?(no_optim = false) ~with_assumptions (data : Planning.t) =
   let () = non_ubiquity_of_normal_humans context in
   let () = enforce_assignations context in
   let () = enforce_mandatory_tasks context in
-  let () = check_unavailabilities context in
-  let () = required_specialists context in
-  let () = enforce_bans context in
+  let () = enforce_volunteers_restrictions context in
   let () = know_your_ennemy context in
   let () = handle_grouped_quests context in
   let () = distribute_breaks context in
