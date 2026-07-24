@@ -71,7 +71,7 @@ let non_ubiquity_of_normal_humans (ctx : Context.t) =
 let enforce_volunteers_restrictions (ctx : Context.t) =
   ctx.for_all_volunteers @@ fun v ->
   ctx.for_all_quests @@ fun q ->
-  Static_checks.v_can_do_q_res ctx.data.infos ctx.qs v q
+  ctx.static_checks.can_do_res v q
   |> Result.iter_error (fun reason ->
       let name = String.replace ~sub:" " ~by:"_" reason in
       let only_enforce_if = assume ctx reason in
@@ -341,11 +341,11 @@ let friendship_bonus (ctx : Context.t) =
                 in
                 if
                   Hashtbl.mem processed_pairs oredered_pair
-                  || not (v_can_do_q ctx.data.infos ctx.qs v q)
+                  || not (ctx.static_checks.can_do v q)
                 then acc
                 else begin
                   let friend = Volunteers.find_by_id friend_id ctx.vs in
-                  if not (v_can_do_q ctx.data.infos ctx.qs friend q) then acc
+                  if not (ctx.static_checks.can_do friend q) then acc
                   else begin
                     Hashtbl.add processed_pairs oredered_pair ();
                     let together_name =

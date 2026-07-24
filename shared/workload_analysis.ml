@@ -12,7 +12,7 @@ let total_quests_time quests =
       + Quest.weighted_duration ~skip_manually_assigned:true ~unit:`Minutes q)
   |> Duration.from_minutes
 
-let max_doable_non_overlapping_duration infos (volunteer : Volunteer.t) quests =
+(* let max_doable_non_overlapping_duration infos (volunteer : Volunteer.t) quests =
   let doable_quests =
     Quests.filter (Static_checks.v_can_do_q infos quests volunteer) quests
     |> Quests.to_list
@@ -56,7 +56,7 @@ let max_doable_non_overlapping_duration infos (volunteer : Volunteer.t) quests =
       in
       best_until.(i) <- Duration.max best_without_q best_with_q
     done;
-    best_until.(quest_count - 1)
+    best_until.(quest_count - 1) *)
 
 let theoretical_load infos ~of_:(volunteer : Volunteer.t) ~on:date day_quests =
   (* TODO Maybe check other factors ? Pro rata of arrival time ? *)

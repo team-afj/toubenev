@@ -86,5 +86,22 @@ let v_can_do_q_res infos all_quests v q =
     v_is_not_assigned_to_an_overlapping_q infos all_quests v q
   end
 
-let v_can_do_q i aq v q =
-  match v_can_do_q_res i aq v q with Ok () -> true | Error _ -> false
+type with_cache = {
+  can_do_res : Volunteers.elt -> Quests.elt -> (unit, string) result;
+  can_do : Volunteers.elt -> Quests.elt -> bool;
+}
+
+let make infos all_quests _by_day () =
+  let can_do_cache = Hashtbl.create 1024 in
+  let can_do_res (v : Volunteer.t) (q : Quest.t) =
+    match Hashtbl.find_opt can_do_cache (v.id, q.id) with
+    | Some res -> res
+    | None ->
+        let res = v_can_do_q_res infos all_quests v q in
+        Hashtbl.add can_do_cache (v.id, q.id) res;
+        res
+  in
+  let can_do v q =
+    match can_do_res v q with Ok () -> true | Error _ -> false
+  in
+  { can_do_res; can_do }
