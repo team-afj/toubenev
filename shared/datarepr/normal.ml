@@ -281,6 +281,9 @@ module Quest = struct
     match t.initial.task_type with
     | None -> false
     | Some tt -> Task_type.Set.mem tt v.forbidden_tasks
+
+  let is_assigned_to (v : Volunteer.t) t =
+    Volunteers.mem v t.assigned_volunteers
 end
 
 module Quests = Quest.Set
