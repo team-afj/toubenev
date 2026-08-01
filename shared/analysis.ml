@@ -36,7 +36,7 @@ type t = {
 
 let empty = { daily = Date.Map.empty; volunteers = Volunteer.Map.empty }
 
-let day_stats (planning : Planning.t) (normalized : Api.data) day quests =
+let day_stats static_checks (normalized : Api.data) day quests =
   let total_quest_time =
     Quests.fold ~init:0
       ~f:(fun acc q -> acc + Quest.weighted_duration ~unit:`Minutes q)
@@ -84,8 +84,7 @@ let day_stats (planning : Planning.t) (normalized : Api.data) day quests =
   let total_volunteer_time =
     Volunteers.fold volunteers ~init:Duration.zero ~f:(fun acc v ->
         let theoretical_load =
-          Workload_analysis.theoretical_load planning.infos ~of_:v ~on:day
-            quests
+          Workload_analysis.theoretical_load static_checks ~of_:v ~on:day quests
           |> function
           | `Fixed load | `Flexible load -> load
         in
@@ -99,9 +98,9 @@ let day_stats (planning : Planning.t) (normalized : Api.data) day quests =
     available_volunteers;
   }
 
-let daily (planning : Planning.t) (normalized : Api.data) =
+let daily static_checks (planning : Planning.t) (normalized : Api.data) =
   let by_day = quests_by_day planning.infos normalized.quests in
-  Date.Map.mapi (day_stats planning normalized) by_day
+  Date.Map.mapi (day_stats static_checks normalized) by_day
 
 let group_assignations_by_date_and_volunteer infos assignations =
   List.fold_left assignations ~init:Volunteer.Map.empty
@@ -119,8 +118,8 @@ let volunteer_load (assignations : Api.assignation list) =
       acc + Quest.real_duration ~unit:`Minutes quest)
   |> Duration.from_minutes
 
-let volunteer_analyses (planning : Planning.t) (answer : Api.answer)
-    (normalized : Api.data) =
+let volunteer_analyses static_checks (planning : Planning.t)
+    (answer : Api.answer) (normalized : Api.data) =
   let quests_by_day = quests_by_day planning.infos normalized.quests in
   let assignations =
     group_assignations_by_date_and_volunteer planning.infos answer.solution
@@ -137,14 +136,14 @@ let volunteer_analyses (planning : Planning.t) (answer : Api.answer)
               |> Option.get_or ~default:[]
             in
             let theoretical_load =
-              Workload_analysis.theoretical_load planning.infos ~of_:v ~on:date
+              Workload_analysis.theoretical_load static_checks ~of_:v ~on:date
                 day_quests
               |> function
               | `Fixed load | `Flexible load -> load
             in
             let actual_load = volunteer_load assignations in
             let adjusted_load =
-              Workload_analysis.adjusted_load_minutes planning.infos
+              Workload_analysis.adjusted_load_minutes static_checks
                 normalized.volunteers v date day_quests
               |> Duration.from_minutes
             in
@@ -170,8 +169,12 @@ let volunteer_analyses (planning : Planning.t) (answer : Api.answer)
       in
       Volunteer.Map.add v { daily; event } acc)
 
-let of_planning infos (answer : Api.answer) n =
-  { daily = daily infos n; volunteers = volunteer_analyses infos answer n }
+let of_planning (planning : Planning.t) (answer : Api.answer) (n : Api.data) =
+  let static_checks = Static_checks.make planning.infos n.quests () in
+  {
+    daily = daily static_checks planning n;
+    volunteers = volunteer_analyses static_checks planning answer n;
+  }
 
 let diags { daily; _ } =
   Date.Map.fold

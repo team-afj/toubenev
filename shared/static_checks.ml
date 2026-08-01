@@ -86,13 +86,61 @@ let v_can_do_q_res infos all_quests v q =
     v_is_not_assigned_to_an_overlapping_q infos all_quests v q
   end
 
+let max_doable can_do (volunteer : Volunteer.t) quests =
+  let doable_quests =
+    Quests.filter (can_do volunteer) quests
+    |> Quests.to_list
+    |> List.sort ~cmp:(fun q1 q2 ->
+        Zoned_datetime.compare
+          (Time_slot.end_ (Quest.real_slot q1))
+          (Time_slot.end_ (Quest.real_slot q2)))
+  in
+  let quests = Array.of_list doable_quests in
+  let quest_count = Array.length quests in
+  if quest_count = 0 then Duration.zero
+  else
+    let ends =
+      Array.init quest_count ~f:(fun i ->
+          Time_slot.end_ (Quest.real_slot quests.(i)))
+    in
+    let best_until = Array.make quest_count Duration.zero in
+    (* Rightmost index <= [hi] whose quest end is <= [start_time]. *)
+    let predecessor_index start_time hi =
+      let rec aux lo hi best_idx =
+        if lo > hi then best_idx
+        else
+          let mid = (lo + hi) / 2 in
+          if Zoned_datetime.(ends.(mid) <= start_time) then
+            aux (mid + 1) hi (Some mid)
+          else aux lo (mid - 1) best_idx
+      in
+      aux 0 hi None
+    in
+    for i = 0 to quest_count - 1 do
+      let q = quests.(i) in
+      let q_slot = Quest.real_slot q in
+      let best_before_q =
+        match predecessor_index q_slot.start (i - 1) with
+        | Some j -> best_until.(j)
+        | None -> Duration.zero
+      in
+      let best_with_q = Duration.(best_before_q + q.slot.duration) in
+      let best_without_q =
+        if i = 0 then Duration.zero else best_until.(i - 1)
+      in
+      best_until.(i) <- Duration.max best_without_q best_with_q
+    done;
+    best_until.(quest_count - 1)
+
 type with_cache = {
   can_do_res : Volunteers.elt -> Quests.elt -> (unit, string) result;
   can_do : Volunteers.elt -> Quests.elt -> bool;
+  max_doable : ?key:string -> Volunteers.elt -> Quests.t -> Duration.t;
 }
 
-let make infos all_quests _by_day () =
+let make infos all_quests () =
   let can_do_cache = Hashtbl.create 1024 in
+  let max_doable_cache = Hashtbl.create 1024 in
   let can_do_res (v : Volunteer.t) (q : Quest.t) =
     match Hashtbl.find_opt can_do_cache (v.id, q.id) with
     | Some res -> res
@@ -104,4 +152,21 @@ let make infos all_quests _by_day () =
   let can_do v q =
     match can_do_res v q with Ok () -> true | Error _ -> false
   in
-  { can_do_res; can_do }
+  let max_doable ?key (v : Volunteer.t) (qs : Quests.t) =
+    let key =
+      Option.get_lazy
+        (fun () ->
+          let buf = Buffer.create (Quests.cardinal qs) in
+          Quests.iter qs ~f:(fun q -> Buffer.add_string buf q.id);
+          Buffer.contents buf)
+        key
+    in
+    let key = (v.id, key) in
+    match Hashtbl.find_opt max_doable_cache key with
+    | Some res -> res
+    | None ->
+        let res = max_doable can_do v qs in
+        Hashtbl.add max_doable_cache key res;
+        res
+  in
+  { can_do_res; can_do; max_doable }

@@ -110,7 +110,7 @@ let prepare ~with_assumptions model (data : Planning.t) =
   let for_all_quests f = Quests.iter qs ~f in
   let for_all_volunteers f = Volunteers.iter ~f vs in
   let by_day = quests_by_day data.infos qs in
-  let static_checks = Shared.Static_checks.make data.infos qs by_day () in
+  let static_checks = Shared.Static_checks.make data.infos qs () in
   {
     model;
     with_assumptions;
