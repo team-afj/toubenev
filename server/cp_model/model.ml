@@ -328,8 +328,11 @@ let handle_grouped_quests (ctx : Context.t) =
    - prevent volunteers to participate in the same recurring group more than
      once *)
 
-(** Objective *)
+(* Ideas:
+- Cap bonus to promote diversity
+- Reward rare couples more *)
 
+(** Objective *)
 let friendship_bonus (ctx : Context.t) =
   Quests.fold ctx.qs ~init:[] ~f:(fun acc q ->
       let processed_pairs : (string * string, unit) Hashtbl.t =
