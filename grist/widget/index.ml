@@ -9,6 +9,8 @@ let debug = true
 let () = Logs.set_reporter (Logs_browser.console_reporter ())
 let () = Logs.set_level ~all:true (Some Debug)
 
+module Logs = (val Logs.src_log (Logs.Src.create "TBN"))
+
 (* TODO: There might be more efficient way to do some tthings by using the REST
 API with short-live tokens. *)
 
@@ -359,7 +361,9 @@ let sat =
       end
 
 let fetch_last () =
+  Logs.debug (fun m -> m "Fetching solution 1");
   let+ last_answer = Solutions.get_solution_1 () in
+  Logs.debug (fun m -> m "Fetched solution 1");
   Lwd.set App_state.last_answer (Some last_answer)
 
 let init_optimization_chart =
@@ -439,15 +443,21 @@ let optimize ~(chart_canvas : El.t) (current_state : App_state.t) =
       [| ("x", Jv.of_string (Float.to_string time)); ("y", Jv.of_float value) |]
   in
   let normalized_planning = Conv.normalize planning in
+  let last_answer = ref None in
   let _ =
     let first = ref true in
     Ev.listen Ev.error
       (fun _ev ->
         if !first then begin
           first := false;
-          match Lwd.peek App_state.last_answer with
+          match !last_answer with
           | None -> ()
-          | Some ({ answer; _ } as state) ->
+          | Some answer ->
+              let analysis =
+                Shared.Analysis.of_planning planning answer normalized_planning
+              in
+              let state = { current_state with answer; analysis } in
+              Lwd.set App_state.last_answer (Some state);
               ignore
               @@
               let* () = Solutions.upsert_solution_1 state in
@@ -467,25 +477,25 @@ let optimize ~(chart_canvas : El.t) (current_state : App_state.t) =
   let handle_new_solution (answer : Api.answer) =
     let time = answer.deterministic_time in
     let satisfaction = Api.satisfaction answer.solution in
-    let analysis =
+    (* let analysis =
       Shared.Analysis.of_planning planning answer normalized_planning
-    in
-    Lwd.set App_state.last_answer (Some { current_state with answer; analysis });
+    in *)
+    (* Lwd.set App_state.last_answer (Some { current_state with answer; analysis }); *)
+    last_answer := Some answer;
     Chartjs.Dataset.push_data d_objective
       (mk_point time (answer.objective_value -. answer.best_objective_bound));
     Chartjs.Dataset.push_data d_satisfaction (mk_point time satisfaction);
     Chartjs.Chart.update chart
   in
-  let handle = Brrer.Limiter.throttle ~delay_ms:10_000 in
+  (* let handle = Brrer.Limiter.throttle ~delay_ms:10_000 in *)
   let _ =
     Ev.listen Brr_io.Message.Ev.message
       (fun ev ->
         let json : Jstr.t = Brr_io.Message.Ev.data (Ev.as_type ev) in
-        handle (fun () ->
-            let answer =
-              Jsont_brr.decode Data_repr.Api.answer_jsont json |> Result.get_ok
-            in
-            handle_new_solution answer))
+        let answer =
+          Jsont_brr.decode Data_repr.Api.answer_jsont json |> Result.get_ok
+        in
+        handle_new_solution answer)
       (Event_source.as_target event_source)
   in
   Console.error [ "DBG"; "HANDLE"; handle; event_source ]
