@@ -498,12 +498,18 @@ let minimize_f (ctx : Context.t) =
   let friendship_coef = options.friendship_bonus in
   let resolution = `Minutes in
   let open Sat.LinearExpr in
+  ignore
+    ( amplitude_coef,
+      friendship_coef,
+      friendship_bonus,
+      appreciation_of_planning,
+      amplitudes,
+      event_bounds_coef,
+      daily_bounds_coef );
   let objective_terms =
     [
-      scale (15 * 2 * 10 * 10 * event_bounds_coef)
-      @@ Workload_balance.event_bounds ctx resolution;
-      scale (15 * 10 * 10 * daily_bounds_coef)
-      @@ Workload_balance.daily_bounds ctx resolution;
+      scale (2 * 1000) @@ Workload_balance.event_bounds ctx resolution;
+      scale (1 * 1000) @@ Workload_balance.daily_bounds ctx resolution;
       scale (-1 * friendship_coef) @@ friendship_bonus ctx;
       scale (-1) @@ appreciation_of_planning options ctx;
     ]
