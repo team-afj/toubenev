@@ -53,18 +53,18 @@ let routes =
     get (rel / "grist" /?? any) --> Grist.index;
     get (rel / "grist" / "index.html" /?? nil) --> Grist.index;
     get (rel / "grist" / "index.bc.js" /?? nil) --> Grist.js;
-    options (rel / "grist" / "data" /?? nil) --> Api.Cors.preflight;
+    options (rel / "grist" / "check-data" /?? nil) --> Api.Cors.preflight;
     put
       (Type.json_encoding Grist_import.data_jsont)
-      (rel / "grist" / "data" /?? nil)
+      (rel / "grist" / "check-data" /?? nil)
     --> Grist.handle_put_data;
     options (rel / "grist" / "optim" /?? nil) --> Api.Cors.preflight;
     put
       (Type.json_encoding Grist_import.data_jsont)
       (rel / "grist" / "optim" /?? nil)
     --> Grist.handle_optimize;
-    options (rel / "optim-stream" /?? nil) --> Api.Cors.preflight;
-    get (rel / "optim-stream" /% string `Path /?? nil)
+    options (rel / "grist" / "optim-stream" /?? nil) --> Api.Cors.preflight;
+    get (rel / "grist" / "optim-stream" /% string `Path /?? nil)
     --> Api.Planning.optim_stream;
   ]
 

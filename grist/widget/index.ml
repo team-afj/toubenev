@@ -288,7 +288,7 @@ let sat =
             let body = Body.of_jstr data in
             Console.debug [ "TBN"; "Querying server" ];
             let method' = Jstr.v "PUT" in
-            let uri = Jstr.v "http://localhost:1357/grist/data" in
+            let uri = Jstr.v "https://localhost:5173/check-data" in
             let headers =
               Headers.of_assoc
                 [ (Jstr.v "Content-Type", Jstr.v "application/json") ]
@@ -419,7 +419,7 @@ let optimize ~(chart_canvas : El.t) (current_state : App_state.t) =
     in
     let body = Body.of_jstr json in
     let method' = Jstr.v "PUT" in
-    let uri = Jstr.v "http://localhost:1357/grist/optim" in
+    let uri = Jstr.v "https://localhost:5173/optim" in
     let headers =
       Headers.of_assoc [ (Jstr.v "Content-Type", Jstr.v "application/json") ]
     in
@@ -429,7 +429,7 @@ let optimize ~(chart_canvas : El.t) (current_state : App_state.t) =
     Response.as_body response |> Body.text
   in
   let module Event_source = Brr_io.Event_source in
-  let url = Jstr.(append (v "http://localhost:1357/optim-stream/") handle) in
+  let url = Jstr.(append (v "https://localhost:5173/optim-stream/") handle) in
   let event_source = Event_source.create ~url () in
   let chart, d_objective, d_satisfaction =
     init_optimization_chart chart_canvas

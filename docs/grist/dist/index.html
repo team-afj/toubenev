@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Toubénev Grist Intégration</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- TODO CDN BAD -->
+  <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+  <script src="http://localhost:7531/grist-plugin-api.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.jade.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.colors.min.css">
+  <style>
+    body:has(> dialog[open]) {
+      overflow: hidden;
+    }
+
+    .container {
+      overflow-x: auto;
+      position: relative;
+    }
+
+    .error {
+      color: var(--pico-color-red-400);
+      font-weight: 700;
+    }
+
+    .error::after {
+      content: "⚠";
+      position: absolute;
+    }
+
+    .warn {
+      color: var(--pico-color-pumpkin-300);
+    }
+
+    .warn::after {
+      content: "🔥";
+      position: absolute;
+    }
+
+    .diag-card {
+      border: 1px solid;
+
+      &::before {
+        float: left;
+        font-size: 1.5rem;
+        line-height: 1.5rem;
+        margin-right: 1rem;
+        margin-bottom: 0.5rem;
+      }
+
+      &.diag-error {
+        border-color: var(--pico-color-red-450);
+
+        &::before {
+          content: '❌';
+        }
+      }
+
+      &.diag-warn {
+        border-color: var(--pico-color-pumpkin-300);
+
+        &::before {
+          content: '⚠️';
+        }
+      }
+
+      &.diag-info {
+        border-color: var(--pico-color-azure-200);
+
+        &::before {
+          content: '✅';
+        }
+      }
+    }
+
+    details summary {
+      font-size: 125%;
+      font-weight: bold;
+
+      &::after {
+        width: 1.5rem;
+        background-size: 1.5rem auto;
+      }
+    }
+  </style>
+  <script type="module" crossorigin src="/assets/index-CFLSG8r5.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index--SlesX9m.css">
+</head>
+
+<body>
+  <main class="container">
+  </main>
+  <script>
+    grist.ready({
+      requiredAccess: 'full',
+      columns: []
+    });
+  </script>
+
+</body>
+
+</html>

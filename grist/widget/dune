@@ -2,7 +2,8 @@
  (name index)
  (modes js)
  (js_of_ocaml
-  (javascript_files stubs.js))
+  (javascript_files stubs.js)
+  (flags :standard --target-env=browser))
  (flags :standard -open Std_js)
  (libraries
   std_js

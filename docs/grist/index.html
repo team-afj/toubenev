@@ -3,6 +3,7 @@
 
 <head>
   <title>Toubénev Grist Intégration</title>
+  <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- TODO CDN BAD -->
   <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
@@ -71,7 +72,7 @@
         border-color: var(--pico-color-azure-200);
 
         &::before {
-          content: 'ⓘ';
+          content: '✅';
         }
       }
     }
@@ -97,7 +98,7 @@
       columns: []
     });
   </script>
-  <script src="index.bc.js"></script>
+  <script src="index.js" type="module"></script>
 
 </body>
 
