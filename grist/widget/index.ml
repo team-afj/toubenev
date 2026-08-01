@@ -435,7 +435,7 @@ let optimize ~(chart_canvas : El.t) (current_state : App_state.t) =
   let module Event_source = Brr_io.Event_source in
   let url = Jstr.(append (v "https://localhost:5173/optim-stream/") handle) in
   let event_source = Event_source.create ~url () in
-  let chart, d_objective, d_satisfaction =
+  let chart, d_objective, _d_satisfaction =
     init_optimization_chart chart_canvas
   in
   let mk_point time value =
@@ -452,7 +452,11 @@ let optimize ~(chart_canvas : El.t) (current_state : App_state.t) =
           first := false;
           match !last_answer with
           | None -> ()
-          | Some answer ->
+          | Some json ->
+              let answer =
+                Jsont_brr.decode Data_repr.Api.answer_jsont json
+                |> Result.get_ok
+              in
               let analysis =
                 Shared.Analysis.of_planning planning answer normalized_planning
               in
@@ -474,17 +478,28 @@ let optimize ~(chart_canvas : El.t) (current_state : App_state.t) =
         end)
       (Event_source.as_target event_source)
   in
-  let handle_new_solution (answer : Api.answer) =
-    let time = answer.deterministic_time in
-    let satisfaction = Api.satisfaction answer.solution in
-    (* let analysis =
-      Shared.Analysis.of_planning planning answer normalized_planning
-    in *)
-    (* Lwd.set App_state.last_answer (Some { current_state with answer; analysis }); *)
-    last_answer := Some answer;
+  let handle_new_solution (answer_json : Jstr.t) =
+    let time =
+      Jsont_brr.decode
+        Jsont.(path Path.(mem "deterministic_time" root) Jsont.number)
+        answer_json
+      |> Result.get_ok
+    in
+    let objective_value =
+      Jsont_brr.decode
+        Jsont.(path Path.(mem "objective_value" root) Jsont.number)
+        answer_json
+      |> Result.get_ok
+    in
+    let best_objective_bound =
+      Jsont_brr.decode
+        Jsont.(path Path.(mem "best_objective_bound" root) Jsont.number)
+        answer_json
+      |> Result.get_ok
+    in
+    last_answer := Some answer_json;
     Chartjs.Dataset.push_data d_objective
-      (mk_point time (answer.objective_value -. answer.best_objective_bound));
-    Chartjs.Dataset.push_data d_satisfaction (mk_point time satisfaction);
+      (mk_point time (objective_value -. best_objective_bound));
     Chartjs.Chart.update chart
   in
   (* let handle = Brrer.Limiter.throttle ~delay_ms:10_000 in *)
@@ -492,10 +507,7 @@ let optimize ~(chart_canvas : El.t) (current_state : App_state.t) =
     Ev.listen Brr_io.Message.Ev.message
       (fun ev ->
         let json : Jstr.t = Brr_io.Message.Ev.data (Ev.as_type ev) in
-        let answer =
-          Jsont_brr.decode Data_repr.Api.answer_jsont json |> Result.get_ok
-        in
-        handle_new_solution answer)
+        handle_new_solution json)
       (Event_source.as_target event_source)
   in
   Console.error [ "DBG"; "HANDLE"; handle; event_source ]
