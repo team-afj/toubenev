@@ -331,8 +331,10 @@ let handle_grouped_quests (ctx : Context.t) =
 (** Objective *)
 
 let friendship_bonus (ctx : Context.t) =
-  let processed_pairs : (string * string, unit) Hashtbl.t = Hashtbl.create 32 in
   Quests.fold ctx.qs ~init:[] ~f:(fun acc q ->
+      let processed_pairs : (string * string, unit) Hashtbl.t =
+        Hashtbl.create 32
+      in
       Volunteers.fold ctx.vs ~init:acc ~f:(fun acc v ->
           List.fold_left v.initial.friends ~init:acc ~f:(fun acc friend_uuid ->
               let friend_id = id_to_string friend_uuid in
