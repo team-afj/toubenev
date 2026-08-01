@@ -118,10 +118,13 @@ let everyone_does (ctx : Context.t) ~name requirement (quests : Quests.t) =
           let quests =
             Quests.filter (fun q -> not (Quest.is_forbidden_to v q)) quests
           in
-          let name = Format.sprintf "%s_do_%s_only_once" v.initial.name name in
-          let vars = Quests.to_list_map ~f:(ctx.assignations v) quests in
-          Sat.add ctx.model ~name ?only_enforce_if
-          @@ Sat.Constraint.at_most_one vars)
+          if not (Quests.exists (Quest.is_assigned_to v) quests) then
+            let name =
+              Format.sprintf "%s_do_%s_only_once" v.initial.name name
+            in
+            let vars = Quests.to_list_map ~f:(ctx.assignations v) quests in
+            Sat.add ctx.model ~name ?only_enforce_if
+            @@ Sat.Constraint.at_most_one vars)
   | `Equal_proportion ->
       let n_volunteers = Volunteers.cardinal available_volunteers in
       let n_slots =
