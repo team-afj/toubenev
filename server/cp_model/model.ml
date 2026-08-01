@@ -489,6 +489,7 @@ let amplitudes (ctx : Context.t) =
 
 let minimize_f (ctx : Context.t) =
   let options = ctx.data.options in
+  let nb_volunteers = Volunteers.cardinal ctx.vs in
   let event_bounds_coef = options.event_equilibrium_malus in
   let daily_bounds_coef = options.daily_equilibrium_malus in
   let amplitude_coef =
@@ -508,8 +509,10 @@ let minimize_f (ctx : Context.t) =
       daily_bounds_coef );
   let objective_terms =
     [
-      scale (2 * 1000) @@ Workload_balance.event_bounds ctx resolution;
-      scale (1 * 1000) @@ Workload_balance.daily_bounds ctx resolution;
+      scale (10 * nb_volunteers * 10_000)
+      @@ Workload_balance.event_bounds ctx resolution;
+      scale (1 * nb_volunteers * 10_000)
+      @@ Workload_balance.daily_bounds ctx resolution;
       scale (-1 * friendship_coef) @@ friendship_bonus ctx;
       scale (-1) @@ appreciation_of_planning options ctx;
     ]
