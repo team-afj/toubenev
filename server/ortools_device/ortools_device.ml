@@ -54,8 +54,10 @@ let new_optim t (p : Data_repr.Rich.Planning.t) =
     let observer response =
       let new_time = Sys.time () in
       Logs.info (fun m ->
-          m "Ortools_device: new solution after %f score [%f]"
-            (new_time -. !time) response.Ortools.Sat.Response.objective_value);
+          m "Ortools_device: new solution after %f score [%f] (%f)"
+            (new_time -. !time) response.Ortools.Sat.Response.objective_value
+            (response.Ortools.Sat.Response.objective_value
+           -. response.Ortools.Sat.Response.best_objective_bound));
       time := new_time;
       let date = now ~tz:p.infos.timezone () in
       let answer = Cp_model.Context.prepare_answer date context response in
