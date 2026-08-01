@@ -8,7 +8,7 @@ const https_options = {
 
 export default {
   root: 'docs/grist',
-  publicDir: 'docs',
+  "base": "./",
   server: {
     https: https_options,
     proxy: {
