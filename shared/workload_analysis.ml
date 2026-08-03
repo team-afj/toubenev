@@ -59,7 +59,7 @@ let theoretical_load static_checks ~of_:(volunteer : Volunteer.t) ~on:date
                 (Duration.to_string manually_assigned))
       in
       let final = Duration.max theory manually_assigned in
-      if Duration.(equal zero available_hours) then `Fixed final
+      if Duration.(final >= available_hours) then `Fixed final
       else `Flexible final
 
 let total_theoretical_load static_checks volunteers ~on day_quests =
