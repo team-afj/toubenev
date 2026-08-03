@@ -11,6 +11,7 @@ export default {
   "base": "./",
   server: {
     https: https_options,
+    cors: true,
     proxy: {
       '/check-data': 'http://localhost:1357/grist',
       '/optim-stream': 'http://localhost:1357/grist',
