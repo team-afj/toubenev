@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "serve": "vite serve"
+  },
   "devDependencies": {
     "@types/node": "^26.1.2",
     "vite": "^8.2.0"

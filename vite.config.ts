@@ -2,8 +2,8 @@ import { UserConfig } from 'vite'
 import fs from 'node:fs';
 
 const https_options = {
-  key: fs.readFileSync('certs/privatekey.pem'),
-  cert: fs.readFileSync('certs/certificate.pem'),
+  key: fs.readFileSync('certs/localhost+2-key.pem'),
+  cert: fs.readFileSync('certs/localhost+2.pem'),
 };
 
 export default {
