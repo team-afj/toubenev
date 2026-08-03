@@ -12,6 +12,7 @@ let total_quests_time quests =
       + Quest.weighted_duration ~skip_manually_assigned:true ~unit:`Minutes q)
   |> Duration.from_minutes
 
+(* TODO this should be memoized *)
 let theoretical_load static_checks ~of_:(volunteer : Volunteer.t) ~on:date
     day_quests =
   (* TODO Maybe check other factors ? Pro rata of arrival time ? *)
@@ -21,6 +22,12 @@ let theoretical_load static_checks ~of_:(volunteer : Volunteer.t) ~on:date
   | _, Some departure when Date.(Zoned_datetime.local_date departure < date) ->
       `Fixed Duration.zero
   | _ ->
+      let debug = String.equal "Hugo" volunteer.name in
+      let () =
+        if debug then
+          Logs.debug (fun m ->
+              m "%s on %s" volunteer.name (Date.to_intl_long_string `Fr date))
+      in
       let available_hours =
         let key =
           Date.to_duration date |> Duration.to_int64 |> Int64.to_string
@@ -30,6 +37,13 @@ let theoretical_load static_checks ~of_:(volunteer : Volunteer.t) ~on:date
       let theory =
         Duration.min volunteer.initial.daily_workload available_hours
       in
+      let () =
+        if debug then
+          Logs.debug (fun m ->
+              m "%s available: %s; theory: %s" volunteer.name
+                (Duration.to_string available_hours)
+                (Duration.to_string volunteer.initial.daily_workload))
+      in
       let manually_assigned =
         Quests.fold day_quests ~init:Duration.zero ~f:(fun acc q ->
             if
@@ -37,6 +51,12 @@ let theoretical_load static_checks ~of_:(volunteer : Volunteer.t) ~on:date
               && Static_checks.v_is_manually_assigned_to_q volunteer q
             then Duration.(acc + q.slot.duration)
             else acc)
+      in
+      let () =
+        if debug then
+          Logs.debug (fun m ->
+              m "%s manual: %s" volunteer.name
+                (Duration.to_string manually_assigned))
       in
       let final = Duration.max theory manually_assigned in
       if Duration.(equal zero available_hours) then `Fixed final
@@ -77,8 +97,8 @@ let adjusted_load_minutes static_checks ?(unit = `Minutes) volunteers volunteer
       in
       let adjusted_m = Float.(adjustement_coef * of_int quests_time) in
       let adjusted = Quest.minutes_conv ~unit adjusted_m in
-      Logs.debug (fun m ->
+      (* Logs.debug (fun m ->
           m "%s on %s load: %i / %i = %f   ... * %i = %f" volunteer.name
             (Date.to_string day) volunteer_theoretical_load
-            total_theoretical_load adjustement_coef quests_time adjusted);
+            total_theoretical_load adjustement_coef quests_time adjusted); *)
       Float.to_int adjusted
