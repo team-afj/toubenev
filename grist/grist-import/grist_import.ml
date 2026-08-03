@@ -597,7 +597,9 @@ let to_planning ?(id_map = new_id_map ())
             Rich.Quests_group.Maximum_common_volunteers
         | "Un bénévole ne peut faire qu'une seule quête de ce groupe" ->
             Distinct_volunteers
-        | _ -> At_least_one_common_volunteer
+        | "Au moins un bénévole en commun" -> At_least_one_common_volunteer
+        | "Assurer la diversité" -> Maximum_diversity
+        | _ -> failwith "Unknown group constraint"
       in
       let recurring_quests_behavior =
         match recurring_quests_behavior with
