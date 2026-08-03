@@ -283,6 +283,8 @@ module Quests_group : sig
             number of volunteers a quest of that group requires. *)
     | Distinct_volunteers
         (** No volunteer can do several quests of this group *)
+    | Maximum_diversity
+        (** Try to spread the quests on the available volunteers *)
   [@@deriving jsont]
 
   val string_of_quests_constraint : quests_constraint -> string
