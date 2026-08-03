@@ -65,6 +65,7 @@ let theoretical_load static_checks ~of_:(volunteer : Volunteer.t) ~on:date
 let total_theoretical_load static_checks volunteers ~on day_quests =
   Volunteers.fold volunteers ~init:0 ~f:(fun acc v ->
       (* Don't count the load of manually assigned volunteers *)
+      (* TODO All "Fixed" volunteers should be ignored *)
       if v.initial.manually_assigned then acc
       else
         let v_load =
@@ -79,6 +80,8 @@ let adjusted_load_minutes static_checks ?(unit = `Minutes) volunteers volunteer
     (* Manually assigned volunteers are not adjusted *)
     theoretical_load static_checks ~of_:volunteer ~on:day day_quests
   in
+  (* TODO it's not the same to adjust up than down ! Some volunteers might not
+     be completely fixed, but not adjustable UP. *)
   match (volunteer.initial.manually_assigned, volunteer_theoretical_load) with
   | true, (`Fixed load | `Flexible load) | false, `Fixed load ->
       Duration.to_minutes load |> Float.of_int |> Quest.minutes_conv ~unit
