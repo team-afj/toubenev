@@ -145,11 +145,12 @@ let make infos all_quests () =
   let can_do_cache = Hashtbl.create 1024 in
   let max_doable_cache = Hashtbl.create 1024 in
   let can_do_res (v : Volunteer.t) (q : Quest.t) =
-    match Hashtbl.find_opt can_do_cache (v.id, q.id) with
+    let key = v.id ^ ":" ^ q.id in
+    match Hashtbl.find_opt can_do_cache key with
     | Some res -> res
     | None ->
         let res = v_can_do_q_res infos all_quests v q in
-        Hashtbl.add can_do_cache (v.id, q.id) res;
+        Hashtbl.add can_do_cache key res;
         res
   in
   let can_do v q =
@@ -164,7 +165,7 @@ let make infos all_quests () =
           Buffer.contents buf)
         key
     in
-    let key = (v.id, key) in
+    let key = v.id ^ ":" ^ key in
     match Hashtbl.find_opt max_doable_cache key with
     | Some res -> res
     | None ->
