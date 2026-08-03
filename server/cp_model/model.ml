@@ -3,8 +3,7 @@ open! Lunar_jsont
 open Data_repr
 open Rich
 open Normal
-open Shared
-open Static_checks
+open Static_analysis
 
 (* Utilities *)
 let is_false v = Sat.(var v == of_int 0)

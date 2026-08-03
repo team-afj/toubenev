@@ -32,7 +32,7 @@ let theoretical_load static_checks ~of_:(volunteer : Volunteer.t) ~on:date
         let key =
           Date.to_duration date |> Duration.to_int64 |> Int64.to_string
         in
-        static_checks.Static_checks.max_doable ~key volunteer day_quests
+        static_checks.Static_analysis.max_doable ~key volunteer day_quests
       in
       let theory =
         Duration.min volunteer.initial.daily_workload available_hours
@@ -48,7 +48,7 @@ let theoretical_load static_checks ~of_:(volunteer : Volunteer.t) ~on:date
         Quests.fold day_quests ~init:Duration.zero ~f:(fun acc q ->
             if
               (not (Quest.is_free q))
-              && Static_checks.v_is_manually_assigned_to_q volunteer q
+              && Static_analysis.v_is_manually_assigned_to_q volunteer q
             then Duration.(acc + q.slot.duration)
             else acc)
       in

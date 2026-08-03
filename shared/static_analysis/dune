@@ -1,0 +1,4 @@
+(library
+ (name static_analysis)
+ (flags :standard -open Std_js)
+ (libraries std data_repr))

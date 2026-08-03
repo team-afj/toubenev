@@ -170,7 +170,7 @@ let volunteer_analyses static_checks (planning : Planning.t)
       Volunteer.Map.add v { daily; event } acc)
 
 let of_planning (planning : Planning.t) (answer : Api.answer) (n : Api.data) =
-  let static_checks = Static_checks.make planning.infos n.quests () in
+  let static_checks = Static_analysis.make planning.infos n.quests () in
   {
     daily = daily static_checks planning n;
     volunteers = volunteer_analyses static_checks planning answer n;

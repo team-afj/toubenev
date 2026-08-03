@@ -15,7 +15,7 @@ type t = {
   vs : Volunteers.t;
   qs : Quests.t;
   by_day : Quests.t Date.Map.t;
-  static_checks : Shared.Static_checks.with_cache;
+  static_checks : Static_analysis.with_cache;
   quests_groups : Quests_group.t String.Map.t;
   breaks : Break.t list;
   task_types : Task_type.Set.t;
@@ -110,7 +110,7 @@ let prepare ~with_assumptions model (data : Planning.t) =
   let for_all_quests f = Quests.iter qs ~f in
   let for_all_volunteers f = Volunteers.iter ~f vs in
   let by_day = quests_by_day data.infos qs in
-  let static_checks = Shared.Static_checks.make data.infos qs () in
+  let static_checks = Static_analysis.make data.infos qs () in
   {
     model;
     with_assumptions;
