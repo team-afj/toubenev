@@ -11,18 +11,22 @@ let sat_check planning =
   let response = Ortools_solvers.Sat.solve ~parameters context.model in
   Logs.debug (fun m ->
       m "Solver took %fs" (Unix.gettimeofday () -. time_before));
-  Logs.debug (fun m -> m "Unfeasible, running again with assumptions.");
-  if Equal.poly response.status Ortools.Sat.Response.Infeasible then
+  if Equal.poly response.status Ortools.Sat.Response.Infeasible then begin
     (* If the model is not satisfaiable, we run again with assumptions to
        provide some hints about the conflicting constraints. We do this in a
        second pass because it requires running in single thread mode. *)
+    Logs.debug (fun m -> m "Unfeasible, running again with assumptions.");
     let context = Cp_model.Model.make ~with_assumptions:true planning in
     let parameters =
       Ortools.Sat_parameters.make_sat_parameters ~stop_after_first_solution:true
         ~log_search_progress:true ~log_to_stdout:false ~log_to_response:true
         ~num_workers:1l ()
     in
-    (context, Ortools_solvers.Sat.solve ~parameters context.model)
+    let response = Ortools_solvers.Sat.solve ~parameters context.model in
+    if Equal.poly response.status Ortools.Sat.Response.Infeasible then
+      Logs.debug (fun m -> m "Still unfeasible");
+    (context, response)
+  end
   else begin
     Logs.debug (fun m -> m "Feasible.");
     (context, response)
