@@ -95,6 +95,9 @@ let max_doable can_do (volunteer : Volunteer.t) quests =
           (Time_slot.end_ (Quest.real_slot q1))
           (Time_slot.end_ (Quest.real_slot q2)))
   in
+  let doable_quests =
+    List.filter ~f:(fun q -> not (Quest.is_free q)) doable_quests
+  in
   let quests = Array.of_list doable_quests in
   let quest_count = Array.length quests in
   if quest_count = 0 then Duration.zero
