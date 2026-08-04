@@ -335,17 +335,19 @@ let handle_grouped_quests (ctx : Context.t) =
         let n_quests = Quests.cardinal quests in
         let n_slots =
           Quests.fold quests ~init:0 ~f:(fun acc q ->
-              acc + q.initial.required_volunteers)
+              acc + Quest.required_volunteers ~filter:`Manually_assigned q)
         in
         let eligible_volunteers =
           (* Tipically, a volunteer will not be eligible if she does not have the
                correct skill *)
           Volunteers.filter
-            (fun v -> Quests.exists (ctx.static_checks.can_do v) quests)
+            (fun v ->
+              (not v.initial.manually_assigned)
+              && Quests.exists (ctx.static_checks.can_do v) quests)
             ctx.vs
         in
         let total_eligible = Volunteers.cardinal eligible_volunteers in
-        if total_eligible = 0 then ()
+        if total_eligible = 0 || n_slots = 0 then ()
         else
           let () =
             if log then
