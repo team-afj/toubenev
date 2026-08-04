@@ -458,9 +458,12 @@ let to_planning ?(id_map = new_id_map ())
         | "", s | s, "" -> s
         | n, p -> Printf.sprintf "%s %s" p n
       in
-      let name = String.trim name in
+      let nom = String.trim nom in
+      let prenom = String.trim prenom in
+      let public_name = String.trim public_name in
       let public_name =
-        if String.is_empty public_name then None else Some public_name
+        if String.is_empty public_name then Some (prenom ^ " " ^ nom)
+        else Some (public_name ^ " (" ^ prenom ^ ")")
       in
       let daily_workload =
         let seconds = nb_heures *. 60. *. 60. in
