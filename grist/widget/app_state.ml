@@ -11,7 +11,7 @@ type t = {
 type normal = {
   state : t;
   data : Api.data;
-  static_analyses : Static_analysis.with_cache;
+  static_analysis : Static_analysis.with_cache;
 }
 
 let last_answer : t option Lwd.var = Lwd.var None
@@ -21,10 +21,10 @@ let normal =
     | None -> None
     | Some ({ data_rich; _ } as state) ->
         let data = Conv.normalize data_rich in
-        let static_analyses =
+        let static_analysis =
           Static_analysis.make data_rich.infos data.quests ()
         in
-        Some { state; data; static_analyses })
+        Some { state; data; static_analysis })
 
 let check_btn : [ `Ready | `In_progress ] Lwd.var = Lwd.var `Ready
 

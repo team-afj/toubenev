@@ -233,8 +233,123 @@ let capacity_table ({ daily; _ } : Analysis.t) =
   in
   mk_capacity_table jours totals
 
+let capacity_table_for_tt (task_type : Task_type.t)
+    ({ state = { data_rich; _ }; data; static_analysis } : App_state.normal) =
+  let open Normal in
+  let td ?at v = El.td ?at [ El.txt' v ] in
+  let d_to_string d =
+    let h, m, s = Duration.hms d in
+    Printf.sprintf "%02d:%02d:%02d" h m s
+  in
+  let quests =
+    Quests.filter
+      (fun q ->
+        Option.map_or ~default:false
+          (Task_type.equal task_type)
+          q.initial.task_type)
+      data.quests
+  in
+  let volunteers =
+    Volunteers.filter
+      (fun v -> Task_type.Set.mem task_type v.skills)
+      data.volunteers
+  in
+  let total_q = ref Duration.zero in
+  let total_v = ref Duration.zero in
+  let jours =
+    List.rev
+    @@ Date.Map.fold
+         (fun day quests acc ->
+           let total_quest_time =
+             Quests.fold ~init:0
+               ~f:(fun acc q -> acc + Quest.weighted_duration ~unit:`Minutes q)
+               quests
+             |> Duration.from_minutes
+           in
+           (total_q := Duration.(!total_q + total_quest_time));
+           let volunteers =
+             let day' = day in
+             Volunteers.filter
+               (fun v ->
+                 match (v.initial.arrival, v.initial.departure) with
+                 | None, None -> true
+                 | Some arrival, None ->
+                     Date.(Zoned_datetime.local_date arrival <= day')
+                 | None, Some departure ->
+                     Date.(day' <= Zoned_datetime.local_date departure)
+                 | Some arrival, Some departure ->
+                     Date.(Zoned_datetime.local_date arrival <= day')
+                     && Date.(day' <= Zoned_datetime.local_date departure))
+               volunteers
+           in
+           let total_volunteer_time =
+             Volunteers.fold volunteers ~init:Duration.zero ~f:(fun acc v ->
+                 let theoretical_load =
+                   Workload_analysis.theoretical_load static_analysis ~of_:v
+                     ~on:day quests
+                   |> function
+                   | `Fixed load | `Flexible load -> load
+                 in
+                 Duration.(acc + theoretical_load))
+           in
+           (total_v := Duration.(!total_v + total_volunteer_time));
+           let max_concurrent_volunteers =
+             (* Classical two-steps algorithm for max interval overlap. Sort the list by
+       start time and with additional weights. Then sweep the list to accumulate
+       the weight and remember the maximum. *)
+             let events =
+               Quests.fold quests ~init:Zoned_datetime.Map.empty
+                 ~f:(fun acc q ->
+                   let required_volunteers = q.initial.required_volunteers in
+                   let add_delta acc time delta =
+                     Zoned_datetime.Map.update time
+                       (function
+                         | None -> Some delta
+                         | Some existing_delta -> Some (existing_delta + delta))
+                       acc
+                   in
+                   let acc = add_delta acc q.slot.start required_volunteers in
+                   add_delta acc (Time_slot.end_ q.slot) (-required_volunteers))
+             in
+             Zoned_datetime.Map.fold
+               (fun _time delta (current_active, current_peak) ->
+                 let current_active = current_active + delta in
+                 (current_active, max current_peak current_active))
+               events (0, 0)
+             |> snd
+           in
+           let available_volunteers = Volunteers.cardinal volunteers in
+           let at =
+             if Duration.(total_volunteer_time < total_quest_time) then
+               Some [ At.class' (Jstr.v "warn") ]
+             else None
+           in
+           let at_av =
+             if available_volunteers < max_concurrent_volunteers then
+               Some [ At.class' (Jstr.v "error") ]
+             else None
+           in
+           let td ?at v = El.td ?at [ El.txt' v ] in
+           El.tr
+             [
+               td (Date.to_string day);
+               td (d_to_string total_quest_time);
+               td ?at (d_to_string total_volunteer_time);
+               td (Int.to_string max_concurrent_volunteers);
+               td ?at:at_av (Int.to_string available_volunteers);
+             ]
+           :: acc)
+         (quests_by_day data_rich.infos quests)
+         []
+  in
+  let totals =
+    El.tr [ td "Total"; td (d_to_string !total_q); td (d_to_string !total_v) ]
+  in
+  mk_capacity_table jours totals
+
 let capacity_table
-    ({ state = { analysis; data_rich; _ }; _ } : App_state.normal) =
+    ({ state = { analysis; data_rich; _ }; _ } as s : App_state.normal) =
+  let rev_type = Hashtbl.create (CCRAL.length data_rich.task_types) in
   let type_select =
     let field_desc =
       { Forms.Field.name = "cap_type_select"; default = "#ALL"; label = [] }
@@ -243,12 +358,20 @@ let capacity_table
       CCRAL.fold data_rich.task_types
         ~x:[ ("#ALL", "Tous les types") ]
         ~f:(fun acc tt ->
-          if tt.Task_type.specialist_only then
-            (id_to_string tt.id, tt.name) :: acc
+          if tt.Task_type.specialist_only then begin
+            let id = id_to_string tt.id in
+            Hashtbl.add rev_type id tt;
+            (id, tt.name) :: acc
+          end
           else acc)
       |> List.rev
     in
     Forms.Field_select.make field_desc (Lwd.return (Lwd_seq.of_list options))
   in
-  let tbl = capacity_table analysis in
-  Elwd.div [ `R type_select.field; `P tbl ]
+  let tbl =
+    let$ type_id = Lwd.get type_select.value in
+    match Hashtbl.find_opt rev_type type_id with
+    | None -> capacity_table analysis
+    | Some tt -> capacity_table_for_tt tt s
+  in
+  Elwd.div [ `R type_select.field; `R tbl ]
