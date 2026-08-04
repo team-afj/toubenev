@@ -586,7 +586,7 @@ let minimize_f (ctx : Context.t) =
     (*options.large_amplitude_malus*)
   in
   let friendship_coef = options.friendship_bonus in
-  let resolution = `Minutes in
+  let resolution = `Fifteen_minutes in
   let open Sat.LinearExpr in
   ignore
     ( amplitude_coef,
