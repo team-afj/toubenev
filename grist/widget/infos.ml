@@ -359,8 +359,30 @@ let capacity_table
   in
   Elwd.div [ `R type_select.field; `R tbl ]
 
+open Normal
+
+let per_volunteer (assignations : Api.assignation list) (v : Normal.Volunteer.t)
+    =
+  let quests =
+    List.filter_map assignations ~f:(fun { Api.quest; volunteers } ->
+        if Volunteers.mem v volunteers then Some quest else None)
+  in
+  let tt_good, tt_bad, tt_neutral =
+    List.fold_left quests ~init:(0, 0, 0) ~f:(fun (gd, bd, ne) q ->
+        match q.Quest.initial.task_type with
+        | None -> (gd, bd, ne + 1)
+        | Some tt ->
+            if Task_type.Set.mem tt v.wanted_tasks then (gd + 1, bd, ne)
+            else if Task_type.Set.mem tt v.unwanted_tasks then (gd, bd + 1, ne)
+            else (gd, bd, ne + 1))
+  in
+  let txt =
+    Printf.sprintf "Quêtes de types appréciés: %i; contraintes: %i; neutres: %i"
+      tt_good tt_bad tt_neutral
+  in
+  El.div [ El.txt' txt ]
+
 let per_volunteer (n : App_state.normal) =
-  let open Normal in
   let data = n.data in
   let rev_v = Hashtbl.create (Volunteers.cardinal data.volunteers) in
   let v_select =
@@ -377,4 +399,8 @@ let per_volunteer (n : App_state.normal) =
     in
     Forms.Field_select.make field_desc (Lwd.return (Lwd_seq.of_list options))
   in
-  Elwd.div [ `R v_select.field ]
+  let v_infos =
+    Lwd.map (Lwd.get v_select.value) ~f:(fun v_id ->
+        per_volunteer n.state.answer.solution (Hashtbl.find rev_v v_id))
+  in
+  Elwd.div [ `R v_select.field; `R v_infos ]
