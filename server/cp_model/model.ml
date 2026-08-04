@@ -5,6 +5,10 @@ open Rich
 open Normal
 open Static_analysis
 
+let active_logs = [ `Groups ]
+
+module Log = (val Logs.src_log (Logs.Src.create "toubenev.model"))
+
 (* Utilities *)
 let is_false v = Sat.(var v == of_int 0)
 let is_true v = Sat.(var v == of_int 1)
@@ -317,6 +321,90 @@ let handle_grouped_quests (ctx : Context.t) =
         in
         let sum = Sat.LinearExpr.sum_vars vars in
         Sat.add ctx.model ~name ?only_enforce_if Sat.(sum <= of_int 1)
+    | Maximum_diversity ->
+        (* Spread the group's quests across available volunteers
+           Two cases:
+           n_volunteers < n_quests => we define a lower bound
+           n_volunteers >= n_quests => we define a upper bound *)
+        let log = List.mem `Groups active_logs in
+        let () =
+          if log then
+            Log.debug (fun m -> m "Enforcing Max diversity for %s" group_name)
+        in
+        let quests_list = Quests.to_list quests in
+        let n_quests = Quests.cardinal quests in
+        let n_slots =
+          Quests.fold quests ~init:0 ~f:(fun acc q ->
+              acc + q.initial.required_volunteers)
+        in
+        let eligible_volunteers =
+          (* Tipically, a volunteer will not be eligible if she does not have the
+               correct skill *)
+          Volunteers.filter
+            (fun v -> Quests.exists (ctx.static_checks.can_do v) quests)
+            ctx.vs
+        in
+        let total_eligible = Volunteers.cardinal eligible_volunteers in
+        if total_eligible = 0 then ()
+        else
+          let () =
+            if log then
+              Log.debug (fun m ->
+                  m "N quests: %i; N slots: %i; Total elligible: %i" n_quests
+                    n_slots total_eligible)
+          in
+          if total_eligible < n_slots then
+            let min_quests = n_slots / total_eligible in
+            let () =
+              if log then Log.debug (fun m -> m "Min quests: %i" min_quests)
+            in
+            Volunteers.iter eligible_volunteers ~f:(fun v ->
+                (* TODO We should cap the participationg to the actual number of quests a volunteer can do and adjust others accordingly *)
+                let name =
+                  Format.sprintf
+                    "max_diversity_group_%s[%s]_min_%s_at_%d_quests" group_name
+                    id v.name min_quests
+                in
+                let only_enforce_if =
+                  assume ctx
+                  @@ Format.sprintf
+                       "max diversity group %s[%s]: minimum %s at %d quests"
+                       group_name id v.name min_quests
+                in
+                let vars =
+                  List.filter_map quests_list ~f:(fun q ->
+                      if ctx.static_checks.can_do v q then
+                        Some (ctx.assignations v q)
+                      else None)
+                in
+                Sat.add ctx.model ~name ?only_enforce_if
+                  Sat.(LinearExpr.sum_vars vars >= of_int min_quests))
+          else
+            let max_quests = 1 + (n_quests / total_eligible) in
+            let () =
+              if log then Log.debug (fun m -> m "Max quests: %i" max_quests)
+            in
+            Volunteers.iter eligible_volunteers ~f:(fun v ->
+                (* TODO We should cap the participationg to the actual number of quests a volunteer can do and adjust others accordingly *)
+                let name =
+                  Format.sprintf
+                    "max_diversity_group_%s[%s]_max_%s_at_%d_quests" group_name
+                    id v.name max_quests
+                in
+                let only_enforce_if =
+                  assume ctx
+                  @@ Format.sprintf
+                       "max diversity group %s[%s]: maximum %s at %d quests"
+                       group_name id v.name max_quests
+                in
+                let vars =
+                  List.filter_map quests_list ~f:(fun q ->
+                      if ctx.static_checks.can_do v q then
+                        Some (ctx.assignations v q)
+                      else None)
+                in
+                Sat.add ctx.model ~name ?only_enforce_if
+                  Sat.(LinearExpr.sum_vars vars <= of_int max_quests))
     | _ -> failwith "not implemented"
   in
   String.Map.iter enforce_group ctx.quests_groups
