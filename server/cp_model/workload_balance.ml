@@ -29,11 +29,8 @@ let time_spent (ctx : Context.t) ~unit ~by:volunteer ~on:quests =
 
 (** Returns the difference between the theoretical load of the volunteer and the
     actual load in the current solution. *)
-let load_diff (ctx : Context.t) volunteer day day_quests =
-  let unit =
-    `Fifteen_minutes
-    (* `Five_minutes should be faster but does not give good results right now... *)
-  in
+let load_diff (ctx : Context.t) resolution volunteer day day_quests =
+  let unit = resolution in
   let time_spent = time_spent ctx ~unit ~by:volunteer ~on:day_quests in
   let adjusted_load =
     adjusted_load_minutes ctx.static_checks ~unit ctx.vs volunteer day
@@ -62,7 +59,8 @@ let bounds (ctx : Context.t) resolution day day_quests =
     |> Sat.Var.new_int ctx.model ~lb ~ub
   in
   let diffs =
-    Volunteers.to_list_map ctx.vs ~f:(fun v -> load_diff ctx v day day_quests)
+    Volunteers.to_list_map ctx.vs ~f:(fun v ->
+        load_diff ctx resolution v day day_quests)
   in
   Sat.(add ctx.model (Constraint.max_equality upper_bound diffs));
   Sat.(add ctx.model (Constraint.min_equality lower_bound diffs));
@@ -94,7 +92,8 @@ let event_bounds (ctx : Context.t) resolution =
   let diffs =
     Volunteers.to_list_map ctx.vs ~f:(fun v ->
         Date.Map.fold
-          (fun day day_quests acc -> Sat.(load_diff ctx v day day_quests + acc))
+          (fun day day_quests acc ->
+            Sat.(load_diff ctx resolution v day day_quests + acc))
           ctx.by_day (Sat.of_int 0))
   in
   Sat.(add ctx.model (Constraint.max_equality upper_bound diffs));
