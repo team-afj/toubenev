@@ -644,7 +644,13 @@ let app =
         | None -> Lwd.return (El.nbsp ())
         | Some { analysis; _ } -> Diffs_table.make analysis
       in
-      Pico_ui.Elwd.section [ `R txt; `R diffs ]
+      let by_volunteer_infos =
+        let$* state = App_state.normal in
+        match state with
+        | None -> Lwd.return (El.nbsp ())
+        | Some state -> Infos.per_volunteer state
+      in
+      Pico_ui.Elwd.section [ `R txt; `R by_volunteer_infos; `R diffs ]
     in
     Pico_ui.accordion ~name:"results" ~title [ `R results ]
   in

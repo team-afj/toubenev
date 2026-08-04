@@ -358,3 +358,23 @@ let capacity_table
     | Some tt -> capacity_table_for_tt tt s
   in
   Elwd.div [ `R type_select.field; `R tbl ]
+
+let per_volunteer (n : App_state.normal) =
+  let open Normal in
+  let data = n.data in
+  let rev_v = Hashtbl.create (Volunteers.cardinal data.volunteers) in
+  let v_select =
+    let options =
+      Volunteers.fold data.volunteers ~init:[] ~f:(fun acc v ->
+          Hashtbl.add rev_v v.id v;
+          (v.id, v.name) :: acc)
+      |> List.sort ~cmp:(fun (_, a) (_, b) ->
+          String.compare (String.lowercase_ascii a) (String.lowercase_ascii b))
+    in
+    let field_desc =
+      let default = Option.map_or ~default:"" fst (List.head_opt options) in
+      { Forms.Field.name = "infos_v_select"; default; label = [] }
+    in
+    Forms.Field_select.make field_desc (Lwd.return (Lwd_seq.of_list options))
+  in
+  Elwd.div [ `R v_select.field ]
