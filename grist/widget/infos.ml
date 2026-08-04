@@ -182,12 +182,34 @@ let mk_capacity_table lines footer =
       El.tfoot [ footer ];
     ]
 
-let capacity_table ({ daily; _ } : Analysis.t) =
-  let td ?at v = El.td ?at [ El.txt' v ] in
-  let d_to_string d =
-    let h, m, s = Duration.hms d in
-    Printf.sprintf "%02d:%02d:%02d" h m s
+let d_to_string d =
+  let h, m, s = Duration.hms d in
+  Printf.sprintf "%02d:%02d:%02d" h m s
+
+let td ?at v = El.td ?at [ El.txt' v ]
+
+let mk_day day total_quest_time total_volunteer_time max_concurrent_volunteers
+    available_volunteers =
+  let at =
+    if Duration.(total_volunteer_time < total_quest_time) then
+      Some [ At.class' (Jstr.v "warn") ]
+    else None
   in
+  let at_av =
+    if available_volunteers < max_concurrent_volunteers then
+      Some [ At.class' (Jstr.v "error") ]
+    else None
+  in
+  El.tr
+    [
+      td (Date.to_string day);
+      td (d_to_string total_quest_time);
+      td ?at (d_to_string total_volunteer_time);
+      td (Int.to_string max_concurrent_volunteers);
+      td ?at:at_av (Int.to_string available_volunteers);
+    ]
+
+let capacity_table ({ daily; _ } : Analysis.t) =
   let jours =
     List.rev
     @@ Date.Map.fold
@@ -198,25 +220,8 @@ let capacity_table ({ daily; _ } : Analysis.t) =
                 max_concurrent_volunteers;
                 available_volunteers;
               } acc ->
-           let at =
-             if Duration.(total_volunteer_time < total_quest_time) then
-               Some [ At.class' (Jstr.v "warn") ]
-             else None
-           in
-           let at_av =
-             if available_volunteers < max_concurrent_volunteers then
-               Some [ At.class' (Jstr.v "error") ]
-             else None
-           in
-           let td ?at v = El.td ?at [ El.txt' v ] in
-           El.tr
-             [
-               td (Date.to_string d);
-               td (d_to_string total_quest_time);
-               td ?at (d_to_string total_volunteer_time);
-               td (Int.to_string max_concurrent_volunteers);
-               td ?at:at_av (Int.to_string available_volunteers);
-             ]
+           mk_day d total_quest_time total_volunteer_time
+             max_concurrent_volunteers available_volunteers
            :: acc)
          daily []
   in
@@ -236,11 +241,6 @@ let capacity_table ({ daily; _ } : Analysis.t) =
 let capacity_table_for_tt (task_type : Task_type.t)
     ({ state = { data_rich; _ }; data; static_analysis } : App_state.normal) =
   let open Normal in
-  let td ?at v = El.td ?at [ El.txt' v ] in
-  let d_to_string d =
-    let h, m, s = Duration.hms d in
-    Printf.sprintf "%02d:%02d:%02d" h m s
-  in
   let quests =
     Quests.filter
       (fun q ->
@@ -319,25 +319,8 @@ let capacity_table_for_tt (task_type : Task_type.t)
              |> snd
            in
            let available_volunteers = Volunteers.cardinal volunteers in
-           let at =
-             if Duration.(total_volunteer_time < total_quest_time) then
-               Some [ At.class' (Jstr.v "warn") ]
-             else None
-           in
-           let at_av =
-             if available_volunteers < max_concurrent_volunteers then
-               Some [ At.class' (Jstr.v "error") ]
-             else None
-           in
-           let td ?at v = El.td ?at [ El.txt' v ] in
-           El.tr
-             [
-               td (Date.to_string day);
-               td (d_to_string total_quest_time);
-               td ?at (d_to_string total_volunteer_time);
-               td (Int.to_string max_concurrent_volunteers);
-               td ?at:at_av (Int.to_string available_volunteers);
-             ]
+           mk_day day total_quest_time total_volunteer_time
+             max_concurrent_volunteers available_volunteers
            :: acc)
          (quests_by_day data_rich.infos quests)
          []
