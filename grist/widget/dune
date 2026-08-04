@@ -14,6 +14,7 @@
   lwd
   brr-lwd
   brr-lwd-ui
-  shared)
+  shared
+  static_analysis)
  (preprocess
   (pps ppx_deriving_jsont)))

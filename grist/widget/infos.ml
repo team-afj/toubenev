@@ -5,6 +5,7 @@ open Brr_lwd_ui
 open Lunar_jsont
 open Shared
 open Data_repr
+open Rich
 open Lwd_infix
 
 let time_select () =
@@ -145,7 +146,7 @@ let available_volunteers_widget (data : Rich.Planning.t) =
       `R color_grad;
     ]
 
-let capacity_table ({ daily; _ } : Analysis.t) =
+let mk_capacity_table lines footer =
   let th ?tooltip v =
     let el =
       let txt = El.txt' v in
@@ -156,6 +157,32 @@ let capacity_table ({ daily; _ } : Analysis.t) =
     in
     El.th [ el ]
   in
+  Pico_ui.El.section
+    [
+      El.thead
+        [
+          El.tr
+            [
+              th "Jour";
+              th ~tooltip:"Durée totale des quêtes à accomplir" "⏱️ quêtes";
+              th ~tooltip:"Temps de bénévolat disponible" "⏱️👷‍♀️";
+              th
+                ~tooltip:
+                  "Nombre maximum de bénévoles devant effecter une tâche au \
+                   même moment."
+                "Max 👷‍♀️";
+              th
+                ~tooltip:
+                  "Nombre de bénévoles disponibles. Si < à \"Max 👷‍♀️\",\n\
+                   le planning est impossible à résoudre."
+                "#👷‍♀️";
+            ];
+        ];
+      El.tbody lines;
+      El.tfoot [ footer ];
+    ]
+
+let capacity_table ({ daily; _ } : Analysis.t) =
   let td ?at v = El.td ?at [ El.txt' v ] in
   let d_to_string d =
     let h, m, s = Duration.hms d in
@@ -181,6 +208,7 @@ let capacity_table ({ daily; _ } : Analysis.t) =
                Some [ At.class' (Jstr.v "error") ]
              else None
            in
+           let td ?at v = El.td ?at [ El.txt' v ] in
            El.tr
              [
                td (Date.to_string d);
@@ -201,29 +229,26 @@ let capacity_table ({ daily; _ } : Analysis.t) =
         daily
         (Duration.zero, Duration.zero)
     in
-    [ td "Total"; td (d_to_string total_q); td (d_to_string total_v) ]
+    El.tr [ td "Total"; td (d_to_string total_q); td (d_to_string total_v) ]
   in
-  Pico_ui.El.section
-    [
-      El.thead
-        [
-          El.tr
-            [
-              th "Jour";
-              th ~tooltip:"Durée totale des quêtes à accomplir" "⏱️ quêtes";
-              th ~tooltip:"Temps de bénévolat disponible" "⏱️👷‍♀️";
-              th
-                ~tooltip:
-                  "Nombre maximum de bénévoles devant effecter une tâche au \
-                   même moment."
-                "Max 👷‍♀️";
-              th
-                ~tooltip:
-                  "Nombre de bénévoles disponibles. Si < à \"Max 👷‍♀️\",\n\
-                   le planning est impossible à résoudre."
-                "#👷‍♀️";
-            ];
-        ];
-      El.tbody jours;
-      El.tfoot totals;
-    ]
+  mk_capacity_table jours totals
+
+let capacity_table
+    ({ state = { analysis; data_rich; _ }; _ } : App_state.normal) =
+  let type_select =
+    let field_desc =
+      { Forms.Field.name = "cap_type_select"; default = "#ALL"; label = [] }
+    in
+    let options =
+      CCRAL.fold data_rich.task_types
+        ~x:[ ("#ALL", "Tous les types") ]
+        ~f:(fun acc tt ->
+          if tt.Task_type.specialist_only then
+            (id_to_string tt.id, tt.name) :: acc
+          else acc)
+      |> List.rev
+    in
+    Forms.Field_select.make field_desc (Lwd.return (Lwd_seq.of_list options))
+  in
+  let tbl = capacity_table analysis in
+  Elwd.div [ `R type_select.field; `P tbl ]

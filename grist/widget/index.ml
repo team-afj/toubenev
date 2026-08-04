@@ -442,6 +442,7 @@ let optimize ~(chart_canvas : El.t) (current_state : App_state.t) =
     Jv.obj
       [| ("x", Jv.of_string (Float.to_string time)); ("y", Jv.of_float value) |]
   in
+  (* TODO use App_state.normal ? *)
   let normalized_planning = Conv.normalize planning in
   let last_answer = ref None in
   let _ =
@@ -669,10 +670,10 @@ let app =
     section
   in
   let analyses =
-    let$ results = Lwd.get App_state.last_answer in
+    let$* results = App_state.normal in
     match results with
-    | None -> El.nbsp ()
-    | Some { analysis; _ } -> Infos.capacity_table analysis
+    | None -> Lwd.return (El.nbsp ())
+    | Some state -> Infos.capacity_table state
   in
   let available_volunteers =
     let$* results = Lwd.get App_state.last_answer in

@@ -8,7 +8,24 @@ type t = {
 }
 [@@deriving jsont]
 
+type normal = {
+  state : t;
+  data : Api.data;
+  static_analyses : Static_analysis.with_cache;
+}
+
 let last_answer : t option Lwd.var = Lwd.var None
+
+let normal =
+  Lwd.map (Lwd.get last_answer) ~f:(function
+    | None -> None
+    | Some ({ data_rich; _ } as state) ->
+        let data = Conv.normalize data_rich in
+        let static_analyses =
+          Static_analysis.make data_rich.infos data.quests ()
+        in
+        Some { state; data; static_analyses })
+
 let check_btn : [ `Ready | `In_progress ] Lwd.var = Lwd.var `Ready
 
 type optimize_state = Not_ready | Ready of t | Running
