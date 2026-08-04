@@ -33,6 +33,7 @@ module Volunteer = struct
       id : string;
       name : string;
       initial : Volunteer.t;
+      skills : Task_type.Set.t;
       forbidden_tasks : Task_type.Set.t;
       wanted_tasks : Task_type.Set.t;
       unwanted_tasks : Task_type.Set.t;
@@ -52,6 +53,7 @@ module Volunteer = struct
       id = "";
       name = "";
       initial = Volunteer.dummy;
+      skills = Task_type.Set.empty;
       forbidden_tasks = Task_type.Set.empty;
       wanted_tasks = Task_type.Set.empty;
       unwanted_tasks = Task_type.Set.empty;

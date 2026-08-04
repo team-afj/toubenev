@@ -92,6 +92,7 @@ let normalize_volunteer event_infos (v : Rich.Volunteer.t) =
   let name =
     match v.public_name with Some public_name -> public_name | None -> v.name
   in
+  let skills = Rich.Task_type.Set.of_list (CCRAL.to_list v.proficiencies) in
   let forbidden_tasks =
     Rich.Task_type.Set.of_list (CCRAL.to_list v.forbidden_tasks)
   in
@@ -114,6 +115,7 @@ let normalize_volunteer event_infos (v : Rich.Volunteer.t) =
     Volunteer.id = Rich.id_to_string v.id;
     name;
     initial = v;
+    skills;
     forbidden_tasks;
     wanted_tasks;
     unwanted_tasks;
