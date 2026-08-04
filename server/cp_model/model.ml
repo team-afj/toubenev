@@ -596,12 +596,12 @@ let minimize_f (ctx : Context.t) =
       daily_bounds_coef );
   let objective_terms =
     [
-      scale (10 * nb_volunteers * 10_000 * 2)
-      @@ Workload_balance.event_abs_diffs ctx `Minutes;
       scale (10 * nb_volunteers * 10_000)
       @@ Workload_balance.event_bounds ctx resolution;
-      scale (1 * nb_volunteers * 10_000)
+      scale (10 * nb_volunteers * 10_000)
       @@ Workload_balance.daily_bounds ctx resolution;
+      scale (1 * nb_volunteers * 10_000)
+      @@ Workload_balance.event_abs_diffs ctx `Fifteen_minutes;
       scale (-1 * friendship_coef) @@ friendship_bonus ctx;
       scale (-1) @@ appreciation_of_planning options ctx;
     ]
