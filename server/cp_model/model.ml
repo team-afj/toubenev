@@ -508,10 +508,8 @@ let appreciation_of_planning opts (ctx : Context.t) =
           let appreciation = appreciation_of_quest opts v q in
           Logs.debug (fun msg -> msg "%s + %s = %i" v.name q.name appreciation);
           if appreciation = 0 then acc
-          else
-            Sat.scale appreciation (Sat.LinearExpr.var (ctx.assignations v q))
-            :: acc))
-  |> Sat.LinearExpr.sum (* maybe weighted sum *)
+          else (appreciation, ctx.assignations v q) :: acc))
+  |> Sat.LinearExpr.weighted_sum
 
 (* Amplitudes: daily work time span *)
 
