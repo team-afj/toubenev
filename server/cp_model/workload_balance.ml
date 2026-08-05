@@ -100,25 +100,47 @@ let event_bounds (ctx : Context.t) resolution =
   Sat.(add ctx.model (Constraint.min_equality lower_bound diffs));
   Sat.(var upper_bound - var lower_bound)
 
+let v_day_abs_diffs (ctx : Context.t) resolution (v : Volunteer.t)
+    (day, day_quests) =
+  let name = Printf.sprintf "abs_diff_day_%s_%s" (Date.to_string day) v.name in
+  let event_abs_diff =
+    let lb = 0 in
+    let ub = 60 * 24 in
+    name |> Sat.Var.new_int ctx.model ~lb ~ub
+  in
+  let abs =
+    Sat.Constraint.abs_equality event_abs_diff
+      [ load_diff ctx resolution v day day_quests ]
+  in
+  Sat.add ctx.model ~name abs;
+  event_abs_diff
+
+let v_days_abs_diffs (ctx : Context.t) resolution (v : Volunteer.t) =
+  Date.Map.to_list ctx.by_day
+  |> List.map ~f:(v_day_abs_diffs ctx resolution v)
+  |> Sat.LinearExpr.sum_vars
+
+let v_event_abs_diffs (ctx : Context.t) resolution (v : Volunteer.t) =
+  let name = Printf.sprintf "abs_diff_event_%s" v.name in
+  let event_abs_diff =
+    let lb = 0 in
+    let ub = 60 * 24 in
+    name |> Sat.Var.new_int ctx.model ~lb ~ub
+  in
+  let abs =
+    Sat.Constraint.abs_equality event_abs_diff
+      [
+        Date.Map.fold
+          (fun day day_quests acc ->
+            Sat.(load_diff ctx resolution v day day_quests + acc))
+          ctx.by_day (Sat.of_int 0);
+      ]
+  in
+  Sat.add ctx.model ~name abs;
+  event_abs_diff
+
 let event_abs_diffs (ctx : Context.t) resolution =
   let abs_diffs =
-    Volunteers.to_list_map ctx.vs ~f:(fun v ->
-        let name = Printf.sprintf "abs_diff_event_%s" v.name in
-        let event_abs_diff =
-          let lb = 0 in
-          let ub = 60 * 24 in
-          name |> Sat.Var.new_int ctx.model ~lb ~ub
-        in
-        let abs =
-          Sat.Constraint.abs_equality event_abs_diff
-            [
-              Date.Map.fold
-                (fun day day_quests acc ->
-                  Sat.(load_diff ctx resolution v day day_quests + acc))
-                ctx.by_day (Sat.of_int 0);
-            ]
-        in
-        Sat.add ctx.model ~name abs;
-        event_abs_diff)
+    Volunteers.to_list_map ctx.vs ~f:(v_event_abs_diffs ctx resolution)
   in
   Sat.LinearExpr.sum_vars abs_diffs
