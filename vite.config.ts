@@ -13,7 +13,7 @@ export default defineConfig({
   "base": "./",
 
   build: {
-    rollupOptions: {
+    rolldownOptions: {
       input: {
         main: resolve(import.meta.dirname, root, 'index.html'),
         plannings: resolve(import.meta.dirname, root, 'plannings.html'),
