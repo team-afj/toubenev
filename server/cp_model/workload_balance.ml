@@ -120,6 +120,12 @@ let v_days_abs_diffs (ctx : Context.t) resolution (v : Volunteer.t) =
   |> List.map ~f:(v_day_abs_diffs ctx resolution v)
   |> Sat.LinearExpr.sum_vars
 
+let days_abs_diffs (ctx : Context.t) resolution =
+  let abs_diffs =
+    Volunteers.to_list_map ctx.vs ~f:(v_days_abs_diffs ctx resolution)
+  in
+  Sat.LinearExpr.sum abs_diffs
+
 let v_event_abs_diffs (ctx : Context.t) resolution (v : Volunteer.t) =
   let name = Printf.sprintf "abs_diff_event_%s" v.name in
   let event_abs_diff =
@@ -140,6 +146,31 @@ let v_event_abs_diffs (ctx : Context.t) resolution (v : Volunteer.t) =
   event_abs_diff
 
 let event_abs_diffs (ctx : Context.t) resolution =
+  let abs_diffs =
+    Volunteers.to_list_map ctx.vs ~f:(v_event_abs_diffs ctx resolution)
+  in
+  Sat.LinearExpr.sum_vars abs_diffs
+
+let v_event_pow_diffs (ctx : Context.t) resolution (v : Volunteer.t) =
+  let name = Printf.sprintf "abs_diff_event_%s" v.name in
+  let event_abs_diff =
+    let lb = 0 in
+    let ub = 60 * 24 in
+    name |> Sat.Var.new_int ctx.model ~lb ~ub
+  in
+  let abs =
+    let v =
+      Date.Map.fold
+        (fun day day_quests acc ->
+          Sat.(load_diff ctx resolution v day day_quests + acc))
+        ctx.by_day (Sat.of_int 0)
+    in
+    Sat.Constraint.multiplication_equality event_abs_diff [ v; v ]
+  in
+  Sat.add ctx.model ~name abs;
+  event_abs_diff
+
+let event_pow_diffs (ctx : Context.t) resolution =
   let abs_diffs =
     Volunteers.to_list_map ctx.vs ~f:(v_event_abs_diffs ctx resolution)
   in
