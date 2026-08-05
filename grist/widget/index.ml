@@ -650,7 +650,10 @@ let app =
         | None -> Lwd.return (El.nbsp ())
         | Some state -> Infos.per_volunteer state
       in
-      Pico_ui.Elwd.section [ `R txt; `R by_volunteer_infos; `R diffs ]
+      Pico_ui.Elwd.section
+        [
+          `R txt; `P (El.hr ()); `R by_volunteer_infos; `P (El.hr ()); `R diffs;
+        ]
     in
     Pico_ui.accordion ~name:"results" ~title [ `R results ]
   in

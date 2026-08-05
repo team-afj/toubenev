@@ -361,6 +361,8 @@ let capacity_table
 
 open Normal
 
+let fifteen_minutes = Duration.from_minutes 15
+
 let per_volunteer (assignations : Api.assignation list) (v : Normal.Volunteer.t)
     =
   let quests =
@@ -376,11 +378,41 @@ let per_volunteer (assignations : Api.assignation list) (v : Normal.Volunteer.t)
             else if Task_type.Set.mem tt v.unwanted_tasks then (gd, bd + 1, ne)
             else (gd, bd, ne + 1))
   in
-  let txt =
-    Printf.sprintf "Quêtes de types appréciés: %i; contraintes: %i; neutres: %i"
-      tt_good tt_bad tt_neutral
+  let good15, bad15, neutral15 =
+    List.fold_left quests ~init:(0, 0, 0) ~f:(fun (gd, bd, ne) q ->
+        let quest_end = Time_slot.end_ q.Quest.slot in
+        let rec loop acc current =
+          if Zoned_datetime.(current >= quest_end) then acc
+          else
+            let next_time =
+              Zoned_datetime.(min (current + fifteen_minutes) quest_end)
+            in
+            let block_duration =
+              Duration.(
+                Zoned_datetime.to_local_duration next_time
+                - Zoned_datetime.to_local_duration current)
+            in
+            let current_block =
+              { Time_slot.start = current; duration = block_duration }
+            in
+            let preferences_score =
+              List.fold_left v.preferences ~init:(gd, bd, ne)
+                ~f:(fun (gd, bd, ne) (pref_score, pref_slot) ->
+                  if Time_slot.overlaps current_block pref_slot then
+                    if pref_score > 0 then (gd + 1, bd, ne) else (gd, bd + 1, ne)
+                  else (gd, bd, ne + 1))
+            in
+            loop preferences_score next_time
+        in
+        loop (0, 0, 0) q.slot.start)
   in
-  El.div [ El.txt' txt ]
+  let txt_tt =
+    Printf.sprintf "Types de quêtes: %i 😃 %i 😕 %i 🙂" tt_good tt_bad tt_neutral
+  in
+  let txt_15 =
+    Printf.sprintf "Quarts d'heures: %i 😃 %i 😕 %i 🙂" good15 bad15 neutral15
+  in
+  El.div [ El.div [ El.txt' txt_tt ]; El.div [ El.txt' txt_15 ] ]
 
 let per_volunteer (n : App_state.normal) =
   let data = n.data in
