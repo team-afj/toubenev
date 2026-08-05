@@ -1,14 +1,26 @@
-import { UserConfig } from 'vite'
+import { defineConfig } from 'vite'
 import fs from 'node:fs';
+import { resolve } from 'node:path'
 
 const https_options = {
   key: fs.readFileSync('certs/localhost+2-key.pem'),
   cert: fs.readFileSync('certs/localhost+2.pem'),
 };
 
-export default {
-  root: 'docs/grist',
+const root = 'docs/grist'
+export default defineConfig({
+  root,
   "base": "./",
+
+  build: {
+    rollupOptions: {
+      input: {
+        main: resolve(import.meta.dirname, root, 'index.html'),
+        plannings: resolve(import.meta.dirname, root, 'plannings.html'),
+      },
+    },
+  },
+
   server: {
     https: https_options,
     cors: true,
@@ -18,4 +30,4 @@ export default {
       '/optim': 'http://localhost:1357/grist',
     }
   },
-} satisfies UserConfig
+})
