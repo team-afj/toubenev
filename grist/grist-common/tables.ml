@@ -87,3 +87,50 @@ module Solutions = struct
     let answer = Jv.get first "last_answer" in
     Fut.return @@ Jsont_brr.decode jsont (Jv.to_jstr answer)
 end
+
+module Assignations = struct
+  let assignations_table () =
+    Lazy.force (lazy (Grist.get_table ~table_id:Data.assignations_tbl_id ()))
+
+  let remove_assignations ~solution =
+    let* current_assignations = Data.(fetch assignations_tbl_id) in
+    let current_assignations =
+      Jv.to_list
+        (fun obj ->
+          (Jv.get obj "id" |> Jv.to_int, Jv.get obj "solution" |> Jv.to_int))
+        current_assignations
+    in
+    let solution_1_assignations =
+      List.filter_map
+        ~f:(function id, s when s = solution -> Some id | _ -> None)
+        current_assignations
+    in
+    let record_ids = solution_1_assignations in
+    Grist.Table_operations.destroy (assignations_table ()) ~record_ids
+
+  let insert_assignations assignations =
+    let open Grist in
+    let records =
+      List.map assignations ~f:(fun (a : Grist_import.Assignation.t) ->
+          let list to_jv l =
+            if List.is_empty l then Jv.null
+            else Jv.of_jv_list (Jv.of_string "L" :: List.map ~f:to_jv l)
+          in
+          let fields =
+            [|
+              (Jstr.v "volunteers", list Jv.of_int a.volunteers);
+              (Jstr.v "start", Jv.of_int a.start);
+              (Jstr.v "end_", Jv.of_int a.end_);
+            |]
+          in
+          let require =
+            [|
+              (Jstr.v "ref", Jv.of_string a.ref);
+              (Jstr.v "solution", Jv.of_int a.solution);
+              (Jstr.v "initial_quest", Jv.of_int a.initial_quest);
+            |]
+          in
+          Add_or_update_record.v ~require ~fields ())
+    in
+    Grist.Table_operations.upsert (assignations_table ()) ~records ()
+end
