@@ -580,7 +580,7 @@ let minimize_f (ctx : Context.t) =
   let event_bounds_coef = options.event_equilibrium_malus in
   let daily_bounds_coef = options.daily_equilibrium_malus in
   let amplitude_coef =
-    0
+    1
     (*options.large_amplitude_malus*)
   in
   let friendship_coef = options.friendship_bonus in
@@ -602,6 +602,8 @@ let minimize_f (ctx : Context.t) =
       @@ Workload_balance.daily_bounds ctx resolution;
       scale (1 * nb_volunteers * 10_000)
       @@ Workload_balance.event_pow_diffs ctx `Minutes;
+      scale (10 * nb_volunteers * 10_000)
+      @@ Workload_balance.daily_pow_diffs ctx `Minutes;
       (* scale (1 * nb_volunteers * 10_000)
       @@ Workload_balance.days_abs_diffs ctx `Minutes; *)
       scale (-1 * friendship_coef) @@ friendship_bonus ctx;
