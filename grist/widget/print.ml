@@ -96,7 +96,7 @@ let modal () =
     let print =
       let on_click _ =
         Lwd.peek App_state.last_answer
-        |> Option.iter @@ fun { App_state.data_rich; answer; _ } ->
+        |> Option.iter @@ fun { Tables.Solutions.data_rich; answer; _ } ->
            let planning =
              let sections, details = peek_options () in
              Render.make_plannings ~details data_rich answer sections
