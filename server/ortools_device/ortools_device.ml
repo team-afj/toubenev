@@ -51,7 +51,7 @@ let new_optim t (p : Data_repr.Rich.Planning.t) =
           loop ())
     in
     let time = ref (Sys.time ()) in
-    let observer response =
+    let observer response _stop =
       let new_time = Sys.time () in
       Logs.info (fun m ->
           m "Ortools_device: new solution after %f score [%f] (%f)"

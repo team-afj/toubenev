@@ -686,7 +686,7 @@ end (* }}} *)
     for the parameters and the model and should return a protocol buffer for
     the response. *)
 type raw_solver =
-     ?observer_pb:(string -> unit)
+  ?observer_pb:(string -> (unit -> unit) -> unit)
   -> parameters_pb:string
   -> model_pb:string
   -> unit
@@ -694,11 +694,12 @@ type raw_solver =
 
 (** Calls a {!type:raw_solver} with encoded versions of the parameters and
     model and returns the decoded response. If a (feasible solution) observer
-    is given, it will be invoked for each feasible solution. Set
-    {!Sat_parameters.enumerate_all_solutions}, to observe them all. *)
+  is given, it will be invoked for each feasible solution and receives a
+  thunk that stops the solver when called. Set
+  {!Sat_parameters.enumerate_all_solutions}, to observe them all. *)
 val solve :
      raw_solver
-  -> ?observer:(Response.t -> unit)
+  -> ?observer:(Response.t -> (unit -> unit) -> unit)
   -> ?parameters:Parameters.t
   -> model
   -> Response.t

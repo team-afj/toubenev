@@ -17,9 +17,10 @@ module Sat : sig
 
   (** Interface to {{:https://developers.google.com/optimization/cp}CP-SAT}. *)
 
-  (** Try to solve the given model. *)
+   (** Try to solve the given model. The observer, if provided, receives the
+         response and a thunk that stops the solver when called. *)
   val solve :
-       ?observer:(Ortools.Sat.Response.t -> unit)
+     ?observer:(Ortools.Sat.Response.t -> (unit -> unit) -> unit)
     -> ?parameters:Ortools.Sat.Parameters.t
     -> Ortools.Sat.model
     -> Ortools.Sat.Response.t

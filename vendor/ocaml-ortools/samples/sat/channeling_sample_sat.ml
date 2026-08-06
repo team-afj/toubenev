@@ -61,7 +61,7 @@ let main () =
   in
 
   (* Search and print out all solutions. *)
-  let observer CP.Response.{ solution = sol; _ } =
+  let observer CP.Response.{ solution = sol; _ } _stop =
     printf "x=%d y=%d b=%d@;%!"
       sol.(CP.Var.to_index x) sol.(CP.Var.to_index y) sol.(CP.Var.to_index b)
   in

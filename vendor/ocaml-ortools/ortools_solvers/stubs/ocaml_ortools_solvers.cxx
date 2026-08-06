@@ -34,7 +34,14 @@
 
 using namespace operations_research::sat;
 
-static CAMLprim value val_response(const CpSolverResponse& res)
+namespace
+{
+
+    thread_local Model *current_model = nullptr;
+
+} // namespace
+
+static CAMLprim value val_response(const CpSolverResponse &res)
 {
     CAMLparam0();
     CAMLlocal1(vres);
@@ -43,7 +50,7 @@ static CAMLprim value val_response(const CpSolverResponse& res)
     CHECK(res.SerializeToString(&res_str));
 
     if (res_str.data() == nullptr)
-	caml_failwith("Empty Solver Response");
+        caml_failwith("Empty Solver Response");
 
     int cres_len = static_cast<int>(res_str.size());
     vres = caml_alloc_initialized_string(cres_len, res_str.data());
@@ -51,33 +58,43 @@ static CAMLprim value val_response(const CpSolverResponse& res)
     CAMLreturn(vres);
 }
 
-static CAMLprim void do_callback(value vcbf, const CpSolverResponse& res)
+static CAMLprim void do_callback(value vcbf, value vstop, const CpSolverResponse &res)
 {
-    CAMLparam1(vcbf);
+    CAMLparam2(vcbf, vstop);
     CAMLlocal1(vresponse);
 
     vresponse = val_response(res);
-    caml_callback(vcbf, vresponse);
+    caml_callback2(vcbf, vresponse, vstop);
 
     CAMLreturn0;
 }
 
-extern "C" {
-
-CAMLprim value ocaml_ortools_sat_solve(value vmodel, value vparams, value vocbf)
+extern "C" CAMLprim value ocaml_ortools_sat_stop_search(value unit)
 {
-    CAMLparam3(vparams, vmodel, vocbf);
+    CAMLparam1(unit);
+
+    if (current_model == nullptr)
+        caml_failwith("ocaml_ortools_sat_stop_search: no active solver");
+
+    StopSearch(current_model);
+
+    CAMLreturn(Val_unit);
+}
+
+extern "C" CAMLprim value ocaml_ortools_sat_solve(value vmodel, value vparams, value vocbf, value vstop)
+{
+    CAMLparam4(vparams, vmodel, vocbf, vstop);
     CAMLlocal2(vresponse, vcbf);
 
     // convert OCaml model to protocol buffer strings
-    const void* creq = String_val(vmodel);
+    const void *creq = String_val(vmodel);
     int creq_len = caml_string_length(vmodel);
 
     CpModelProto req;
     CHECK(req.ParseFromArray(creq, creq_len));
 
     // convert OCaml parameters to protocol buffer strings
-    const void* cparams = String_val(vparams);
+    const void *cparams = String_val(vparams);
     int cparams_len = caml_string_length(vparams);
 
     SatParameters params;
@@ -88,25 +105,30 @@ CAMLprim value ocaml_ortools_sat_solve(value vmodel, value vparams, value vocbf)
     model.Add(NewSatParameters(params));
 
     // attach a callback if requested
-    if (Is_some(vocbf)) {
-	std::thread::id thread_ocaml = std::this_thread::get_id();
-	vcbf = Some_val(vocbf);
+    if (Is_some(vocbf))
+    {
+        std::thread::id thread_ocaml = std::this_thread::get_id();
+        vcbf = Some_val(vocbf);
 
-	auto wrapper = [&vcbf, thread_ocaml](const CpSolverResponse& res) {
-	    std::thread::id thread_callback = std::this_thread::get_id();
+        auto wrapper = [&model, &vcbf, thread_ocaml, vstop](const CpSolverResponse &res)
+        {
+            Model *previous_model = current_model;
+            current_model = &model;
+            std::thread::id thread_callback = std::this_thread::get_id();
 
-	    if (thread_callback != thread_ocaml)
-		caml_c_thread_register();
+            if (thread_callback != thread_ocaml)
+                caml_c_thread_register();
 
-	    caml_acquire_runtime_system();
-	    do_callback(vcbf, res);
-	    caml_release_runtime_system();
+            caml_acquire_runtime_system();
+            do_callback(vcbf, vstop, res);
+            caml_release_runtime_system();
 
-	    if (thread_callback != thread_ocaml)
-		caml_c_thread_unregister();
-	  };
+            if (thread_callback != thread_ocaml)
+                caml_c_thread_unregister();
+            current_model = previous_model;
+        };
 
-	model.Add(NewFeasibleSolutionObserver(wrapper));
+        model.Add(NewFeasibleSolutionObserver(wrapper));
     }
 
     // call CP-SAT
@@ -118,6 +140,3 @@ CAMLprim value ocaml_ortools_sat_solve(value vmodel, value vparams, value vocbf)
     vresponse = val_response(res);
     CAMLreturn(vresponse);
 }
-
-}  // extern "C"
-

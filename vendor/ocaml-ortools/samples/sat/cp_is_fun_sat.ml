@@ -66,7 +66,7 @@ let main () =
   in
   Sat_parameters.sat_parameters_set_enumerate_all_solutions parameters true;
   let num_solutions = ref 0 in
-  let observer CP.Response.{ solution; _ } =
+  let observer CP.Response.{ solution; _ } _stop =
     incr num_solutions;
     let sep = ref "" in
     List.iter (fun v ->

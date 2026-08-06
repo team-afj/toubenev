@@ -15,17 +15,20 @@
 
 module Sat = struct
 
+  external c_stop_search : unit -> unit = "ocaml_ortools_sat_stop_search"
+
   external c_solve
     :    string (* model protocol buffer *)
       -> string (* parameters protocol buffer *)
-      -> (string -> unit) option (* solution callback *)
+      -> (string -> (unit -> unit) -> unit) option (* solution callback *)
+      -> (unit -> unit) (* stop search callback *)
       -> string (* response protocol buffer *)
     = "ocaml_ortools_sat_solve"
 
   let solve ?observer ?parameters model =
     Ortools.Sat.solve
       (fun ?observer_pb ~parameters_pb ~model_pb () ->
-        c_solve model_pb parameters_pb observer_pb)
+        c_solve model_pb parameters_pb observer_pb c_stop_search)
       ?observer
       ?parameters
       model
