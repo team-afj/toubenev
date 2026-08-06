@@ -105,7 +105,7 @@ let sat =
         let () = Console.info [ "TBN"; "Nothing to do, data didn't change" ] in
         let last = Lwd.peek App_state.last_answer in
         Option.iter
-          (fun (data : App_state.t) ->
+          (fun (data : Solutions.t) ->
             if Equal.poly data.answer.status Feasible then
               Lwd.set App_state.optimize_state (Ready data))
           last;
@@ -298,7 +298,7 @@ let init_optimization_chart =
     let () = Chart.set_data chart data in
     (chart, d_objective, d_satisfaction)
 
-let optimize ~(chart_canvas : El.t) (current_state : App_state.t) =
+let optimize ~(chart_canvas : El.t) (current_state : Solutions.t) =
   let planning = current_state.data_rich in
   let+ handle =
     let open Brr_io.Fetch in
@@ -532,7 +532,8 @@ let app =
         let$* state = App_state.normal in
         match state with
         | None -> Lwd.return (El.nbsp ())
-        | Some state -> Infos.per_volunteer state
+        | Some state ->
+            Infos.per_volunteer state.data state.state.answer.solution
       in
       Pico_ui.Elwd.section
         [

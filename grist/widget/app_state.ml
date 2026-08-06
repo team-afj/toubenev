@@ -1,12 +1,5 @@
 open! Data_repr
-
-type t = Tables.Solutions.t [@@deriving jsont]
-
-type normal = {
-  state : t;
-  data : Api.data;
-  static_analysis : Static_analysis.with_cache;
-}
+open Tables.Solutions
 
 let grist_selected_solution : int Lwd.var = Lwd.var 1
 let grist_solutions : (int * Jstr.t * Jv.t) list Lwd.var = Lwd.var []

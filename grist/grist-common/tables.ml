@@ -60,6 +60,19 @@ module Solutions = struct
   }
   [@@deriving jsont]
 
+  type normal = {
+    state : t;
+    data : Api.data;
+    static_analysis : Static_analysis.with_cache;
+  }
+
+  let data_rich_path =
+    Jsont.(path (Path.mem "data_rich" Path.root) Rich.Planning.jsont)
+
+  let data_rich jv =
+    let answer = Jv.Jstr.get jv "last_answer" in
+    Jsont_brr.decode data_rich_path answer
+
   let table () =
     Lazy.force (lazy (Grist.get_table ~table_id:Data.solutions_tbl_id ()))
 
@@ -81,10 +94,15 @@ module Solutions = struct
     in
     Grist.Table_operations.update (table ()) ~records ()
 
+  let get_solution i =
+    let+ solutions = Data.fetch Data.solutions_tbl_id in
+    let first = Jv.call solutions "at" [| Jv.of_int i |] in
+    Console.log [ "TBN ASS DBG ON RECORDS SOLUTIOn"; first ];
+    first
+
   let get_solution_1 () =
-    let* solutions = Data.fetch Data.solutions_tbl_id in
-    let first = Jv.call solutions "at" [| Jv.of_int 0 |] in
-    let answer = Jv.get first "last_answer" in
+    let* s = get_solution 0 in
+    let answer = Jv.get s "last_answer" in
     Fut.return @@ Jsont_brr.decode jsont (Jv.to_jstr answer)
 end
 

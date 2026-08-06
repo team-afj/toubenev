@@ -239,7 +239,8 @@ let capacity_table ({ daily; _ } : Analysis.t) =
   mk_capacity_table jours totals
 
 let capacity_table_for_tt (task_type : Task_type.t)
-    ({ state = { data_rich; _ }; data; static_analysis } : App_state.normal) =
+    ({ state = { data_rich; _ }; data; static_analysis } :
+      Tables.Solutions.normal) =
   let open Normal in
   let quests =
     Quests.filter
@@ -331,7 +332,7 @@ let capacity_table_for_tt (task_type : Task_type.t)
   mk_capacity_table jours totals
 
 let capacity_table
-    ({ state = { analysis; data_rich; _ }; _ } as s : App_state.normal) =
+    ({ state = { analysis; data_rich; _ }; _ } as s : Tables.Solutions.normal) =
   let rev_type = Hashtbl.create (CCRAL.length data_rich.task_types) in
   let type_select =
     let field_desc =
@@ -414,8 +415,7 @@ let per_volunteer (assignations : Api.assignation list) (v : Normal.Volunteer.t)
   in
   El.div [ El.div [ El.txt' txt_tt ]; El.div [ El.txt' txt_15 ] ]
 
-let per_volunteer (n : App_state.normal) =
-  let data = n.data in
+let per_volunteer (data : Api.data) (assignations : Api.assignation list) =
   let rev_v = Hashtbl.create (Volunteers.cardinal data.volunteers) in
   let v_select =
     let options =
@@ -434,7 +434,7 @@ let per_volunteer (n : App_state.normal) =
   let v_infos =
     Lwd.map (Lwd.get v_select.value) ~f:(fun v_id ->
         match Hashtbl.find_opt rev_v v_id with
-        | Some v -> per_volunteer n.state.answer.solution v
+        | Some v -> per_volunteer assignations v
         | None -> El.nbsp ())
   in
   Elwd.div [ `R v_select.field; `R v_infos ]
