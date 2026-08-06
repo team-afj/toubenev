@@ -433,6 +433,8 @@ let per_volunteer (n : App_state.normal) =
   in
   let v_infos =
     Lwd.map (Lwd.get v_select.value) ~f:(fun v_id ->
-        per_volunteer n.state.answer.solution (Hashtbl.find rev_v v_id))
+        match Hashtbl.find_opt rev_v v_id with
+        | Some v -> per_volunteer n.state.answer.solution v
+        | None -> El.nbsp ())
   in
   Elwd.div [ `R v_select.field; `R v_infos ]

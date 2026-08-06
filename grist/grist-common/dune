@@ -1,0 +1,4 @@
+(library
+ (name grist_common)
+ (flags :standard -open Std_js)
+ (libraries std_js brr))
