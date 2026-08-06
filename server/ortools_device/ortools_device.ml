@@ -67,7 +67,11 @@ let new_optim t (p : Data_repr.Rich.Planning.t) =
       Logs.info (fun m -> m "Ortools_device: start solving.");
       Ortools_solvers.Sat.solve ~observer ~parameters context.model
     in
-    Logs.info (fun m -> m "Ortools_device: finished solving.");
+    Logs.info (fun m ->
+        m "Ortools_device: finished solving. Status = %s"
+          (Ortools.Sat.Response.string_of_status response.status));
+    if Equal.poly response.status Infeasible then
+      Logs.info (fun m -> m "%s" response.solve_log);
     let date = now ~tz:p.infos.timezone () in
     let answer = Cp_model.Context.prepare_answer date context response in
     Miou.cancel listener;
