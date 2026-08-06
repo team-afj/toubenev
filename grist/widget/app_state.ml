@@ -1,12 +1,6 @@
 open! Data_repr
 
-type t = {
-  data : Grist_import.data;
-  data_rich : Rich.Planning.t;
-  answer : Api.answer;
-  analysis : Shared.Analysis.t;
-}
-[@@deriving jsont]
+type t = Tables.Solutions.t [@@deriving jsont]
 
 type normal = {
   state : t;

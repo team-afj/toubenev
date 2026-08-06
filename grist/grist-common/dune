@@ -1,4 +1,8 @@
 (library
  (name grist_common)
  (flags :standard -open Std_js)
- (libraries std_js brr))
+ (js_of_ocaml
+  (javascript_files stubs.js))
+ (libraries std_js logs logs.browser brr jsont.brr shared grist_import)
+ (preprocess
+  (pps ppx_deriving_jsont)))

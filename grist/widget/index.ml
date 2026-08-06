@@ -4,8 +4,8 @@ open Brr_lwd
 open Fut.Result_syntax
 open Lunar_jsont
 open! Data_repr
+open Tables
 
-let debug = true
 let () = Logs.set_reporter (Logs_browser.console_reporter ())
 let () = Logs.set_level ~all:true (Some Debug)
 
@@ -21,53 +21,6 @@ API with short-live tokens. *)
   -- [Conv.normalize] -> [Api.data]
      -- Used for "Dummy assignations" -> [Grist_import.Assignation.t list]
 *)
-
-module Data = struct
-  let infos_tbl_id = Jstr.v "Infos_generales"
-  let options_tbl_id = Jstr.v "Options_du_solveur"
-  let places_tbl_id = Jstr.v "Lieux"
-  let task_types_tbl_id = Jstr.v "Types_de_quetes"
-  let time_slots_tbl_id = Jstr.v "Plages_horaires_ponctuelles"
-  let volunteers_tbl_id = Jstr.v "Benevoles"
-  let breaks_tbl_id = Jstr.v "Breaks"
-  let quests_groups_tbl_id = Jstr.v "Quests_groups"
-  let quests_tbl_id = Jstr.v "Quetes"
-  let solutions_tbl_id = Jstr.v "Solutions"
-  let assignations_tbl_id = Jstr.v "Assignations"
-
-  let fetch table_id =
-    let open Grist in
-    let+ result = Doc_API.fetch_table ~table_id in
-    Data.Row_records.by_row result
-
-  let fetch_all () =
-    let* infos = fetch infos_tbl_id in
-    let* options = fetch options_tbl_id in
-    let* places = fetch places_tbl_id in
-    let* task_types = fetch task_types_tbl_id in
-    let* time_specs = fetch time_slots_tbl_id in
-    let* volunteers = fetch volunteers_tbl_id in
-    let* breaks = fetch breaks_tbl_id in
-    let* quests_groups = fetch quests_groups_tbl_id in
-    let* quests = fetch quests_tbl_id in
-    let data_json =
-      Jv.obj
-        [|
-          ("infos", infos);
-          ("options", options);
-          ("places", places);
-          ("task_types", task_types);
-          ("time_specs", time_specs);
-          ("volunteers", volunteers);
-          ("breaks", breaks);
-          ("quests_groups", quests_groups);
-          ("quests", quests);
-        |]
-      |> Json.encode
-    in
-    if debug then Console.debug [ "DBG"; "Fetched data: "; data_json ];
-    Fut.return @@ Jsont_brr.decode Grist_import.data_jsont data_json
-end
 
 module Titles = struct
   (* TODO: This is kinda hackish since we modify a internal, undocumented,
@@ -111,35 +64,6 @@ module Titles = struct
     Console.error [ "DBG4"; all_widget_uses () ];
     let* ids = all_widget_uses () in
     meta_update_title ~ids @@ prefix ^ " " ^ widget_base_name
-end
-
-module Solutions = struct
-  let table () =
-    Lazy.force (lazy (Grist.get_table ~table_id:Data.solutions_tbl_id ()))
-
-  let of_jv obj =
-    (Jv.Int.get obj "id", Jv.Jstr.get obj "name", Jv.get obj "last_answer")
-
-  let ls () =
-    let+ solutions = Data.fetch Data.solutions_tbl_id in
-    Jv.to_list of_jv solutions
-
-  let upsert_solution_1 state =
-    let* json = Fut.return @@ Jsont_brr.encode App_state.jsont state in
-    let records =
-      [
-        Grist.Record.v ~id:1
-          ~fields:[| (Jstr.v "last_answer", Jv.of_jstr json) |]
-          ();
-      ]
-    in
-    Grist.Table_operations.update (table ()) ~records ()
-
-  let get_solution_1 () =
-    let* solutions = Data.fetch Data.solutions_tbl_id in
-    let first = Jv.call solutions "at" [| Jv.of_int 0 |] in
-    let answer = Jv.get first "last_answer" in
-    Fut.return @@ Jsont_brr.decode App_state.jsont (Jv.to_jstr answer)
 end
 
 module Assignations = struct
@@ -333,7 +257,7 @@ let sat =
               Shared.Analysis.of_planning planning answer normalized_planning
             in
             let state =
-              { App_state.data; data_rich = planning; answer; analysis }
+              { Tables.Solutions.data; data_rich = planning; answer; analysis }
             in
             Lwd.set App_state.last_answer (Some state);
             let* () = Solutions.upsert_solution_1 state in
@@ -354,7 +278,7 @@ let sat =
               Shared.Analysis.of_planning planning answer normalized_planning
             in
             let state =
-              { App_state.data; data_rich = planning; answer; analysis }
+              { Tables.Solutions.data; data_rich = planning; answer; analysis }
             in
             let () =
               match answer.status with
