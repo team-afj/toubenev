@@ -14,6 +14,8 @@ type normal = {
   static_analysis : Static_analysis.with_cache;
 }
 
+let grist_selected_solution : int Lwd.var = Lwd.var 1
+let grist_solutions : (int * Jstr.t * Jv.t) list Lwd.var = Lwd.var []
 let last_answer : t option Lwd.var = Lwd.var None
 
 let normal =
