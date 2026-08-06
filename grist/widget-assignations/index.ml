@@ -33,16 +33,13 @@ let resolve_assignation_jv (data : Api.data) ass =
   in
   let volunteers =
     List.fold_left volunteers_ids ~init:Volunteers.empty ~f:(fun acc i ->
-        Console.log [ "TBN ASS DBG LK FOR V"; i ];
         try
           let v = Hashtbl.find by_id (string_of_int i) in
-          Console.log [ "TBN ASS FOUND "; v.name ];
           Volunteers.add v acc
         with err ->
-          Console.log [ "TBN ASS OUPS "; err ];
+          Console.error [ "TBN ASS OUPS "; err ];
           acc)
   in
-  Console.log [ "TBN ASS FNISHE " ];
   { Api.quest; volunteers }
 
 let on_records () =
@@ -51,7 +48,6 @@ let on_records () =
      ASSIGNATIONS table. *)
   let f =
    fun v ->
-    Console.log [ "TBN ASS DBG ON RECORDS"; v ];
     match Jv.to_jv_list v with
     | [] -> Fut.ok ()
     | hd :: _ as assignations ->
@@ -71,7 +67,6 @@ let on_records () =
         let assignations =
           List.map assignations ~f:(resolve_assignation_jv normal)
         in
-        Console.log [ "TBN ASS DBG ON RECORDS ASS3" ];
         Lwd.set App_state.active_assignations
           (Some (data, normal, assignations))
   in
