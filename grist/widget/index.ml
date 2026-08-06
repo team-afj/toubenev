@@ -600,10 +600,9 @@ let app =
   in *)
   Elwd.div [ `R controls; `R diagnostics; `R analyses; `R results ]
 
+(* If the widget is correctly set this means rows from the
+     SOLUTION table. *)
 let on_record () =
-  (* For custom widgets, add a handler that will be called whenever the row with
-     the cursor changes. If the widget is correctly set this means rows from the
-     SOLUTIONS table. *)
   let f =
    fun obj ->
     Console.log [ "TBN DBG ON RECORD"; obj ];
@@ -617,14 +616,7 @@ let on_record () =
   Grist.on_record ~callback ()
 
 let on_records () =
-  (* For custom widgets, add a handler that will be called whenever the selected
-     records change. If the widget is correctly set this means rows from the
-     ASSIGNATIONS table. *)
-  let f =
-   fun v ->
-    let solutions = Solutions.ls () in
-    Console.log [ "TBN DBG ON RECORDS"; v; solutions ]
-  in
+  let f = fun v -> Console.log [ "TBN DBG ON RECORDS"; v ] in
   let callback = Jv.callback ~arity:1 f in
   Grist.on_records ~callback ()
 
