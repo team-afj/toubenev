@@ -19,7 +19,6 @@ module App_state = struct
 end
 
 let resolve_assignation_jv (data : Api.data) ass =
-  Console.log [ "TBN ASS ASS "; ass ];
   let quest_id = Jv.Jstr.get ass "ref" |> Jstr.to_string in
   let volunteers_ids =
     let jv = Jv.get ass "volunteers" in
