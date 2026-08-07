@@ -600,9 +600,9 @@ let minimize_f (ctx : Context.t) =
       @@ Workload_balance.event_bounds ctx resolution;
       scale (10 * nb_volunteers * 10_000)
       @@ Workload_balance.daily_bounds ctx resolution;
-      scale (1 * nb_volunteers * 10_000)
-      @@ Workload_balance.event_pow_diffs ctx `Minutes;
       scale (10 * nb_volunteers * 10_000)
+      @@ Workload_balance.event_pow_diffs ctx `Minutes;
+      scale (1 * nb_volunteers * 10_000)
       @@ Workload_balance.daily_pow_diffs ctx `Minutes;
       (* scale (1 * nb_volunteers * 10_000)
       @@ Workload_balance.days_abs_diffs ctx `Minutes; *)

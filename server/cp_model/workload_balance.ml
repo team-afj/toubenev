@@ -182,7 +182,7 @@ let v_day_pow_diff (ctx : Context.t) resolution (v : Volunteer.t) day day_quests
   let name = Printf.sprintf "pow_diff_%s_day_%s" v.name s_date in
   let v_day_pow_diff =
     let lb = 0 in
-    let ub = 60 * 24 in
+    let ub = Date.Map.cardinal ctx.by_day *  60 * 24 in
     name |> Sat.Var.new_int ctx.model ~lb ~ub
   in
   let pow =
