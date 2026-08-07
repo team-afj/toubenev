@@ -89,7 +89,7 @@ let make (analysis : t) =
                    "Montrer les temps prévus en théorie plutôt que les temps \
                     \"ajustés\"");
             ]);
-        state = false;
+        state = true;
       }
   in
   let table =
