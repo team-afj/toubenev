@@ -1,7 +1,7 @@
 open Brrer
 open Brr
 open Brr_lwd
-open Lwd_infix
+open! Lwd_infix
 open! Fut.Result_syntax
 open! Lunar_jsont
 open! Data_repr
@@ -13,53 +13,57 @@ open! Tables
    SOLUTION *)
 
 module App_state = struct
-  let active_solution : int Lwd.var = Lwd.var 0
+  let solutions : (int * string * Jstr.t) Lwd_seq.t Lwd.var =
+    Lwd.var Lwd_seq.empty
+
+  let sol_select =
+    let options =
+      Lwd.get solutions
+      |> Lwd_seq.map (fun (id, name, _) -> (string_of_int id, name))
+    in
+    let field_desc =
+      let default = "1" in
+      { Forms.Field.name = "sol_solutions_select"; default; label = [] }
+    in
+    Forms.Field_select.make field_desc options
 end
-(*
-let resolve_assignation_jv (data : Api.data) ass =
-  Console.log [ "TBN ASS ASS "; ass ];
-  let quest_id = Jv.Jstr.get ass "ref" |> Jstr.to_string in
-  let volunteers_ids =
-    let jv = Jv.get ass "volunteers" in
-    if Jv.is_none jv then [] else Jv.to_list Jv.to_int jv
+
+let decode_solution_jv sol =
+  let sol_id = Jv.Int.get sol "id" in
+  let sol_name = Jv.Jstr.get sol "name" |> Jstr.to_string in
+  let sol_raw = Jv.Jstr.get sol "last_answer" in
+  (sol_id, sol_name, sol_raw)
+
+let on_record () =
+  let f =
+   fun v ->
+    let id = Jv.Int.get v "id" in
+    Lwd.set App_state.sol_select.value (string_of_int id)
   in
-  let quest = Quests.find_by_id quest_id data.quests in
-  let by_id =
-    let tbl = Hashtbl.create 128 in
-    Volunteers.iter data.volunteers ~f:(fun v -> Hashtbl.add tbl v.id v);
-    tbl
+  let callback = Jv.callback ~arity:1 f in
+  let options =
+    Jv.obj [| ("keepEncoded", Jv.false'); ("expandRefs", Jv.false') |]
   in
-  let volunteers =
-    List.fold_left volunteers_ids ~init:Volunteers.empty ~f:(fun acc i ->
-        try
-          let v = Hashtbl.find by_id (string_of_int i) in
-          Volunteers.add v acc
-        with err ->
-          Console.error [ "TBN ASS OUPS "; err ];
-          acc)
-  in
-  { Api.quest; volunteers } *)
+  Grist.on_record ~callback ~options ()
 
 let on_records () =
-  (* For custom widgets, add a handler that will be called whenever the selected
-     records change. If the widget is correctly set this means rows from the
-     ASSIGNATIONS table. *)
-  let f = fun v -> Console.log [ "TBN DBG Solutions records"; v ] in
+  let f =
+   fun v ->
+    let sols = Jv.to_list decode_solution_jv v in
+    Console.log [ "TBN DBG SOL Solutions records DEC"; sols ];
+    Lwd.set App_state.solutions (Lwd_seq.of_list sols)
+  in
   let callback = Jv.callback ~arity:1 f in
   let options =
     Jv.obj [| ("keepEncoded", Jv.false'); ("expandRefs", Jv.false') |]
   in
   Grist.on_records ~callback ~options ()
 
-let app =
-  let content =
-    let$* state = Lwd.get App_state.active_solution in
-    Lwd.return (El.txt' (string_of_int state))
-  in
-  Elwd.div [ `R content ]
+let app = Elwd.div [ `R App_state.sol_select.field ]
 
 let _ =
   let on_load _ =
+    let () = on_record () in
     let () = on_records () in
     let root = El.find_first_by_selector (Jstr.v "main") |> Option.get in
     let app = Lwd.observe app in
