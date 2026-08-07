@@ -13,6 +13,8 @@ open! Tables
    SOLUTION *)
 
 module App_state = struct
+  let selected_in_grist : int Lwd.var = Lwd.var 1
+
   let solutions : (int * string * Jstr.t) Lwd_seq.t Lwd.var =
     Lwd.var Lwd_seq.empty
 
@@ -26,6 +28,8 @@ module App_state = struct
       { Forms.Field.name = "sol_solutions_select"; default; label = [] }
     in
     Forms.Field_select.make field_desc options
+
+  let selected_solution = Lwd.get sol_select.value
 end
 
 let grist_set_pointer id =
@@ -36,7 +40,13 @@ let grist_set_pointer id =
 let app =
   let solution_manager =
     let focus_btn =
+      let disabled =
+        Lwd.map2 (Lwd.get App_state.selected_in_grist)
+          App_state.selected_solution ~f:(fun g f ->
+            if g = int_of_string f then At.disabled else At.void)
+      in
       Pico_ui.Elwd.button
+        ~at:[ `R disabled ]
         ~ev:
           [
             `P
@@ -60,7 +70,8 @@ let on_record () =
   let f =
    fun v ->
     let id = Jv.Int.get v "id" in
-    Lwd.set App_state.sol_select.value (string_of_int id)
+    Lwd.set App_state.sol_select.value (string_of_int id);
+    Lwd.set App_state.selected_in_grist id
   in
   let callback = Jv.callback ~arity:1 f in
   let options =
