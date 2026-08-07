@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import fs from 'node:fs';
 import { resolve } from 'node:path'
+import { nodePolyfills } from 'vite-plugin-node-polyfills'
 
 const https_options = {
   key: fs.readFileSync('certs/localhost+2-key.pem'),
@@ -11,6 +12,10 @@ const root = 'docs/grist'
 export default defineConfig({
   root,
   "base": "./",
+
+  plugins: [
+    nodePolyfills()
+  ],
 
   build: {
     rolldownOptions: {
