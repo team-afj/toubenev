@@ -153,6 +153,7 @@ let jour_list_jsont = grist_list jour_jsont
 
 module Time_spec = struct
   type t = {
+    id : int;
     recurrence : string;
     start : int;
     duration_h : float;
@@ -395,11 +396,14 @@ let to_planning ?(id_map = new_id_map ())
     (id_map, CCRAL.of_list task_types)
   in
   let time_specs =
-    let convert_spec { Time_spec.recurrence; start; duration_h; days; end_date }
-        =
+    let convert_spec
+        { Time_spec.recurrence; start; duration_h; days; end_date; _ } =
       make_spec ~rec_flag:recurrence ~days ~start ~duration_h ~end_date
     in
-    List.map ~f:convert_spec time_specs |> Array.of_list
+    List.map
+      ~f:(fun ({ Time_spec.id; _ } as spec) -> (id, convert_spec spec))
+      time_specs
+    |> Hashtbl.of_list
   in
   let id_map, volunteers =
     let gather_time_slots l =
@@ -462,8 +466,8 @@ let to_planning ?(id_map = new_id_map ())
       let prenom = String.trim prenom in
       let public_name = String.trim public_name in
       let public_name =
-        if String.is_empty public_name then Some (prenom ^ " " ^ nom)
-        else Some (public_name ^ " (" ^ prenom ^ ")")
+        if String.is_empty public_name then prenom ^ " " ^ nom
+        else public_name ^ " (" ^ prenom ^ ")"
       in
       let daily_workload =
         let seconds = nb_heures *. 60. *. 60. in
@@ -514,8 +518,13 @@ let to_planning ?(id_map = new_id_map ())
         in
         let ponctually_unavailable =
           List.map indisponibilites_ponctuelles ~f:(fun i ->
-              let slot = time_specs.(i - 1) in
-              { Rich.Availability.status = Unavailable; slot })
+              try
+                let slot =
+                  Hashtbl.get time_specs i |> Option.get_exn_or "Bad time spec"
+                in
+                { Rich.Availability.status = Unavailable; slot }
+              with _ ->
+                failwith ("pouet " ^ public_name ^ " " ^ string_of_int (i - 1)))
         in
         let best =
           daily_spec horaires_preferes
@@ -544,7 +553,7 @@ let to_planning ?(id_map = new_id_map ())
         Duration.(equal zero daily_workload)
       in
       let v =
-        Rich.Volunteer.make ~id:ids ?public_name ~name ~daily_workload
+        Rich.Volunteer.make ~id:ids ~public_name ~name ~daily_workload
           ~proficiencies ~forbidden_tasks ~forbidden_places ~wanted_tasks
           ~unwanted_tasks ~availabilities ?arrival ?departure ~manually_assigned
           ()
@@ -583,7 +592,10 @@ let to_planning ?(id_map = new_id_map ())
     let convert_break { Pause.name; duration_m; time_specs = specs; _ } =
       let name = String.trim name in
       let duration = Duration.from_minutes duration_m in
-      let specs = List.map specs ~f:(fun i -> time_specs.(i - 1)) in
+      let specs =
+        List.map specs ~f:(fun i ->
+            Hashtbl.get time_specs i |> Option.get_exn_or "Bad time spec")
+      in
       Rich.Break.make ~name duration (CCRAL.of_list specs) ()
     in
     let breaks = List.map ~f:convert_break breaks in
