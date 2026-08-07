@@ -1,0 +1,20 @@
+(executable
+ (name index)
+ (modes js)
+ (js_of_ocaml
+  (flags :standard --target-env=browser))
+ (flags :standard -open Std_js -open Grist_common)
+ (libraries
+  std_js
+  logs.browser
+  brr
+  jsont.brr
+  grist_import
+  lwd
+  brr-lwd
+  brr-lwd-ui
+  grist_common
+  shared
+  static_analysis)
+ (preprocess
+  (pps ppx_deriving_jsont)))

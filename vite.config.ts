@@ -17,6 +17,7 @@ export default defineConfig({
       input: {
         main: resolve(import.meta.dirname, root, 'index.html'),
         plannings: resolve(import.meta.dirname, root, 'plannings.html'),
+        solution: resolve(import.meta.dirname, root, 'solutions/index.html'),
         assignations: resolve(import.meta.dirname, root, 'assignations/index.html'),
       },
     },
