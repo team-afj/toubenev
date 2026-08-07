@@ -45,6 +45,10 @@ let app =
           App_state.selected_solution ~f:(fun g f ->
             if g = int_of_string f then At.disabled else At.void)
       in
+      let handler =
+        Elwd.handler Ev.click (fun _ ->
+            ignore @@ grist_set_pointer (Lwd.peek App_state.sol_select.value))
+      in
       Pico_ui.Elwd.button
         ~at:[ `R disabled ]
         ~ev:
