@@ -28,6 +28,28 @@ module App_state = struct
     Forms.Field_select.make field_desc options
 end
 
+let grist_set_pointer id =
+  let pos = Jv.obj [| ("rowId", Jv.of_int (int_of_string id)) |] in
+  (* This requires ready({allowSelectBy:true}) *)
+  Grist.set_cursor_pos ~pos
+
+let app =
+  let solution_manager =
+    let focus_btn =
+      Pico_ui.Elwd.button
+        ~ev:
+          [
+            `P
+              (Elwd.handler Ev.click (fun _ ->
+                   ignore
+                   @@ grist_set_pointer (Lwd.peek App_state.sol_select.value)));
+          ]
+        [ `P (El.txt' "Select in Grist") ]
+    in
+    Elwd.div [ `R App_state.sol_select.field; `R focus_btn ]
+  in
+  Elwd.div [ `R solution_manager ]
+
 let decode_solution_jv sol =
   let sol_id = Jv.Int.get sol "id" in
   let sol_name = Jv.Jstr.get sol "name" |> Jstr.to_string in
@@ -58,8 +80,6 @@ let on_records () =
     Jv.obj [| ("keepEncoded", Jv.false'); ("expandRefs", Jv.false') |]
   in
   Grist.on_records ~callback ~options ()
-
-let app = Elwd.div [ `R App_state.sol_select.field ]
 
 let _ =
   let on_load _ =
