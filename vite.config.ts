@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import fs from 'node:fs';
 import { resolve } from 'node:path'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
+import { nodeExternals } from 'rollup-plugin-node-externals'
 
 const https_options = {
   key: fs.readFileSync('certs/localhost+2-key.pem'),
@@ -14,7 +15,7 @@ export default defineConfig({
   "base": "./",
 
   plugins: [
-    nodePolyfills()
+    nodeExternals(),
   ],
 
   build: {
