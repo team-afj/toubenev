@@ -37,6 +37,39 @@ let grist_set_pointer id =
   (* This requires ready({allowSelectBy:true}) *)
   Grist.set_cursor_pos ~pos
 
+let get_solution id : (int * string * Jstr.t) option =
+  Lwd_seq.to_list (Lwd.peek App_state.solutions)
+  |> List.find_opt ~f:(fun (i, _, _) -> id = i)
+
+let now () =
+  Unix.time () |> Float.to_int |> Duration.from_seconds
+  |> Zoned_datetime.from_duration
+  |> Zoned_datetime.change_timezone ~tz:(Timezone.make ~hour:2 ~min:0)
+  |> Zoned_datetime.to_local_datetime
+
+let copy_from id =
+  let id = int_of_string id in
+  let _, _name, data = get_solution id |> Option.get_exn_or "bad solution" in
+  let* assignations = Tables.Assignations.get_assignations ~solution:id in
+  let assignations =
+    List.map assignations ~f:(fun obj ->
+        ( Jv.get obj "initial_quest",
+          Jv.get obj "ref",
+          Jv.get obj "start",
+          Jv.get obj "end_",
+          Jv.get obj "volunteers",
+          Jv.get obj "assigned_volunteers",
+          Jv.get obj "keep" ))
+  in
+  let now = now () |> Datetime.to_string in
+  let+ res = Solutions.create ~name:(Jstr.v now) data in
+  let solution = Jv.Int.get (Jv.Jarray.get res 0) "id" in
+  Tables.Assignations.create_solution_assignations ~solution assignations
+
+let delete ~solution =
+  let* _ = Tables.Assignations.remove_assignations ~solution in
+  Tables.Solutions.remove ~solution
+
 let app =
   let solution_manager =
     let focus_btn =
@@ -51,16 +84,54 @@ let app =
       in
       Pico_ui.Elwd.button
         ~at:[ `R disabled ]
+        ~ev:[ `P handler ]
+        [ `P (El.txt' "Select in Grist") ]
+    in
+    let copy_btn =
+      let in_progress = Lwd.var false in
+      let disabled =
+        Lwd.map (Lwd.get in_progress) ~f:(function
+          | true -> At.disabled
+          | false -> At.void)
+      in
+      Pico_ui.Elwd.button
+        ~at:[ `R disabled ]
         ~ev:
           [
             `P
               (Elwd.handler Ev.click (fun _ ->
-                   ignore
-                   @@ grist_set_pointer (Lwd.peek App_state.sol_select.value)));
+                   Lwd.set in_progress true;
+                   Fut.await (copy_from (Lwd.peek App_state.sol_select.value))
+                   @@ fun _ -> Lwd.set in_progress false));
           ]
-        [ `P (El.txt' "Select in Grist") ]
+        [ `P (El.txt' "Copy") ]
     in
-    Elwd.div [ `R App_state.sol_select.field; `R focus_btn ]
+    let delete_btn =
+      let in_progress = Lwd.var false in
+      let disabled =
+        Lwd.map2 App_state.selected_solution (Lwd.get in_progress)
+          ~f:(fun i p ->
+            if p || int_of_string i <= 2 then At.disabled else At.void)
+      in
+      Pico_ui.Elwd.button
+        ~at:[ `R disabled ]
+        ~ev:
+          [
+            `P
+              (Elwd.handler Ev.click (fun _ ->
+                   Lwd.set in_progress true;
+                   let solution =
+                     int_of_string (Lwd.peek App_state.sol_select.value)
+                   in
+                   Fut.await (delete ~solution) @@ fun _ ->
+                   Lwd.set in_progress false));
+          ]
+        [ `P (El.txt' "Delete") ]
+    in
+    Elwd.div
+      [
+        `R App_state.sol_select.field; `R focus_btn; `R copy_btn; `R delete_btn;
+      ]
   in
   Elwd.div [ `R solution_manager ]
 
@@ -87,7 +158,8 @@ let on_records () =
   let f =
    fun v ->
     let sols = Jv.to_list decode_solution_jv v in
-    Console.log [ "TBN DBG SOL Solutions records DEC"; sols ];
+    (* TODO update active solution *)
+    (* let current = Lwd.peek App_state.sol_select.value in *)
     Lwd.set App_state.solutions (Lwd_seq.of_list sols)
   in
   let callback = Jv.callback ~arity:1 f in

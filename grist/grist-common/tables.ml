@@ -83,6 +83,24 @@ module Solutions = struct
     let+ solutions = Data.fetch Data.solutions_tbl_id in
     Jv.to_list of_jv solutions
 
+  let create ~name state =
+    let records =
+      [
+        Grist.New_record.v
+          ~fields:
+            [|
+              (Jstr.v "name", Jv.of_jstr name);
+              (Jstr.v "last_answer", Jv.of_jstr state);
+            |]
+          ();
+      ]
+    in
+    Grist.Table_operations.create (table ()) ~records ()
+
+  let remove ~solution =
+    let record_ids = [ solution ] in
+    Grist.Table_operations.destroy (table ()) ~record_ids
+
   let upsert_solution_1 state =
     let* json = Fut.return @@ Jsont_brr.encode jsont state in
     let records =
@@ -97,7 +115,6 @@ module Solutions = struct
   let get_solution i =
     let+ solutions = Data.fetch Data.solutions_tbl_id in
     let first = Jv.call solutions "at" [| Jv.of_int i |] in
-    Console.log [ "TBN ASS DBG ON RECORDS SOLUTIOn"; first ];
     first
 
   let get_solution_1 () =
@@ -110,21 +127,53 @@ module Assignations = struct
   let assignations_table () =
     Lazy.force (lazy (Grist.get_table ~table_id:Data.assignations_tbl_id ()))
 
+  let get_assignations ~solution =
+    let+ current_assignations = Data.(fetch assignations_tbl_id) in
+    let current_assignations = Jv.to_jv_list current_assignations in
+    List.filter
+      ~f:(fun obj -> Jv.Int.get obj "solution" = solution)
+      current_assignations
+
   let remove_assignations ~solution =
-    let* current_assignations = Data.(fetch assignations_tbl_id) in
-    let current_assignations =
-      Jv.to_list
-        (fun obj ->
-          (Jv.get obj "id" |> Jv.to_int, Jv.get obj "solution" |> Jv.to_int))
-        current_assignations
-    in
+    let* current_assignations = get_assignations ~solution in
     let solution_1_assignations =
-      List.filter_map
-        ~f:(function id, s when s = solution -> Some id | _ -> None)
-        current_assignations
+      List.map ~f:(fun obj -> Jv.get obj "id" |> Jv.to_int) current_assignations
     in
     let record_ids = solution_1_assignations in
     Grist.Table_operations.destroy (assignations_table ()) ~record_ids
+
+  let create_solution_assignations ~solution assignations =
+    let records =
+      List.map assignations
+        ~f:(fun
+            ( initial_quest,
+              ref,
+              start,
+              end_,
+              volunteers,
+              assigned_volunteers,
+              keep )
+          ->
+          Grist.Add_or_update_record.v
+            ~require:
+              [|
+                (Jstr.v "ref", ref);
+                (Jstr.v "solution", Jv.of_int solution);
+                (Jstr.v "initial_quest", initial_quest);
+              |]
+            ~fields:
+              (Array.filter
+                 ~f:(fun (_, v) -> not (Jv.is_none v))
+                 [|
+                   (Jstr.v "start", start);
+                   (Jstr.v "end_", end_);
+                   (Jstr.v "volunteers", volunteers);
+                   (Jstr.v "assigned_volunteers", assigned_volunteers);
+                   (Jstr.v "keep", keep);
+                 |])
+            ())
+    in
+    Grist.Table_operations.upsert (assignations_table ()) ~records ()
 
   let insert_assignations assignations =
     let open Grist in
