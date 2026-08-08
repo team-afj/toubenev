@@ -238,23 +238,10 @@ let capacity_table ({ daily; _ } : Analysis.t) =
   in
   mk_capacity_table jours totals
 
-let capacity_table_for_tt (task_type : Task_type.t)
-    ({ state = { data_rich; _ }; data; static_analysis } :
-      Tables.Solutions.normal) =
+let capacity_for quests volunteers
+    ({ state = { data_rich; _ }; static_analysis; _ } : Tables.Solutions.normal)
+    =
   let open Normal in
-  let quests =
-    Quests.filter
-      (fun q ->
-        Option.map_or ~default:false
-          (Task_type.equal task_type)
-          q.initial.task_type)
-      data.quests
-  in
-  let volunteers =
-    Volunteers.filter
-      (fun v -> Task_type.Set.mem task_type v.skills)
-      data.volunteers
-  in
   let total_q = ref Duration.zero in
   let total_v = ref Duration.zero in
   let jours =
@@ -331,6 +318,40 @@ let capacity_table_for_tt (task_type : Task_type.t)
   in
   mk_capacity_table jours totals
 
+let capacity_table_for_tt (task_type : Task_type.t)
+    ({ Tables.Solutions.data; _ } as n) =
+  let open Normal in
+  let quests =
+    Quests.filter
+      (fun q ->
+        Option.map_or ~default:false
+          (Task_type.equal task_type)
+          q.initial.task_type)
+      data.quests
+  in
+  let volunteers =
+    Volunteers.filter
+      (fun v -> Task_type.Set.mem task_type v.skills)
+      data.volunteers
+  in
+  capacity_for quests volunteers n
+
+(* TODO should be factored with others *)
+let capacity_table_for_generic_tasks ({ Tables.Solutions.data; _ } as n) =
+  let open Normal in
+  let quests =
+    Quests.filter
+      (fun q ->
+        Option.map_or ~default:true
+          (fun task_type -> not task_type.Task_type.specialist_only)
+          q.initial.task_type)
+      data.quests
+  in
+  let volunteers =
+    Volunteers.filter (fun v -> Task_type.Set.is_empty v.skills) data.volunteers
+  in
+  capacity_for quests volunteers n
+
 let capacity_table
     ({ state = { analysis; data_rich; _ }; _ } as s : Tables.Solutions.normal) =
   let rev_type = Hashtbl.create (CCRAL.length data_rich.task_types) in
@@ -340,7 +361,7 @@ let capacity_table
     in
     let options =
       CCRAL.fold data_rich.task_types
-        ~x:[ ("#ALL", "Tous les types") ]
+        ~x:[ ("#ALL", "Tous les types"); ("#ALLGENERIC", "Sans spécialiste") ]
         ~f:(fun acc tt ->
           if tt.Task_type.specialist_only then begin
             let id = id_to_string tt.id in
@@ -355,6 +376,8 @@ let capacity_table
   let tbl =
     let$ type_id = Lwd.get type_select.value in
     match Hashtbl.find_opt rev_type type_id with
+    | None when String.equal "#ALLGENERIC" type_id ->
+        capacity_table_for_generic_tasks s
     | None -> capacity_table analysis
     | Some tt -> capacity_table_for_tt tt s
   in
