@@ -336,7 +336,7 @@ let make_table capacity_by_day =
   in
   mk_capacity_table jours totals
 
-let capacity_table_for_tt (task_type : Task_type.t)
+let capacity_for_tt (task_type : Task_type.t)
     ({ Tables.Solutions.data; _ } as n) =
   let open Normal in
   let quests =
@@ -352,10 +352,13 @@ let capacity_table_for_tt (task_type : Task_type.t)
       (fun v -> Task_type.Set.mem task_type v.skills)
       data.volunteers
   in
-  capacity_for quests volunteers n |> make_table
+  capacity_for quests volunteers n
+
+let capacity_table_for_tt tt n = capacity_for_tt tt n |> make_table
 
 (* TODO should be factored with others *)
-let capacity_table_for_generic_tasks ({ Tables.Solutions.data; _ } as n) =
+let capacity_table_for_generic_tasks
+    ({ Tables.Solutions.data; state = { data_rich; _ }; _ } as n) =
   let open Normal in
   let quests =
     Quests.filter
@@ -368,7 +371,33 @@ let capacity_table_for_generic_tasks ({ Tables.Solutions.data; _ } as n) =
   let volunteers =
     Volunteers.filter (fun v -> Task_type.Set.is_empty v.skills) data.volunteers
   in
-  capacity_for quests volunteers n |> make_table
+  let remains_from_specialists_quests =
+    CCRAL.fold data_rich.task_types ~x:Date.Map.empty ~f:(fun acc tt ->
+        if tt.Task_type.specialist_only then begin
+          let cap = capacity_for_tt tt n in
+          let diff a =
+            let open Duration in
+            max zero
+              (a.Analysis.total_volunteer_time - a.Analysis.total_quest_time)
+          in
+          Date.Map.map diff cap
+          |> Date.Map.union (fun _day da db -> Some Duration.(da + db)) acc
+        end
+        else acc)
+  in
+  let cap = capacity_for quests volunteers n in
+  Date.Map.merge
+    (fun _day cap add ->
+      match (cap, add) with
+      | None, _ -> None
+      | Some c, None -> Some c
+      | Some c, Some a ->
+          let total_volunteer_time =
+            Duration.(c.Analysis.total_volunteer_time + a)
+          in
+          Some { c with total_volunteer_time })
+    cap remains_from_specialists_quests
+  |> make_table
 
 let capacity_table
     ({ state = { analysis; data_rich; _ }; _ } as s : Tables.Solutions.normal) =
@@ -379,7 +408,7 @@ let capacity_table
     in
     let options =
       CCRAL.fold data_rich.task_types
-        ~x:[ ("#ALL", "Tous les types"); ("#ALLGENERIC", "Sans spécialiste") ]
+        ~x:[ ("#ALLGENERIC", "Sans spécialiste"); ("#ALL", "Tous les types") ]
         ~f:(fun acc tt ->
           if tt.Task_type.specialist_only then begin
             let id = id_to_string tt.id in
