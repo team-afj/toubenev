@@ -188,8 +188,13 @@ let d_to_string d =
 
 let td ?at v = El.td ?at [ El.txt' v ]
 
-let mk_day day total_quest_time total_volunteer_time max_concurrent_volunteers
-    available_volunteers =
+let mk_day day
+    {
+      Analysis.total_quest_time;
+      total_volunteer_time;
+      max_concurrent_volunteers;
+      available_volunteers;
+    } =
   let at =
     if Duration.(total_volunteer_time < total_quest_time) then
       Some [ At.class' (Jstr.v "warn") ]
@@ -213,15 +218,20 @@ let capacity_table ({ daily; _ } : Analysis.t) =
   let jours =
     List.rev
     @@ Date.Map.fold
-         (fun d
+         (fun day
               {
                 Analysis.total_quest_time;
                 total_volunteer_time;
                 max_concurrent_volunteers;
                 available_volunteers;
               } acc ->
-           mk_day d total_quest_time total_volunteer_time
-             max_concurrent_volunteers available_volunteers
+           mk_day day
+             {
+               total_quest_time;
+               total_volunteer_time;
+               max_concurrent_volunteers;
+               available_volunteers;
+             }
            :: acc)
          daily []
   in
@@ -242,79 +252,87 @@ let capacity_for quests volunteers
     ({ state = { data_rich; _ }; static_analysis; _ } : Tables.Solutions.normal)
     =
   let open Normal in
-  let total_q = ref Duration.zero in
-  let total_v = ref Duration.zero in
-  let jours =
-    List.rev
-    @@ Date.Map.fold
-         (fun day quests acc ->
-           let total_quest_time =
-             Quests.fold ~init:0
-               ~f:(fun acc q -> acc + Quest.weighted_duration ~unit:`Minutes q)
-               quests
-             |> Duration.from_minutes
-           in
-           (total_q := Duration.(!total_q + total_quest_time));
-           let volunteers =
-             let day' = day in
-             Volunteers.filter
-               (fun v ->
-                 match (v.initial.arrival, v.initial.departure) with
-                 | None, None -> true
-                 | Some arrival, None ->
-                     Date.(Zoned_datetime.local_date arrival <= day')
-                 | None, Some departure ->
-                     Date.(day' <= Zoned_datetime.local_date departure)
-                 | Some arrival, Some departure ->
-                     Date.(Zoned_datetime.local_date arrival <= day')
-                     && Date.(day' <= Zoned_datetime.local_date departure))
-               volunteers
-           in
-           let total_volunteer_time =
-             Volunteers.fold volunteers ~init:Duration.zero ~f:(fun acc v ->
-                 let theoretical_load =
-                   Workload_analysis.theoretical_load static_analysis ~of_:v
-                     ~on:day quests
-                   |> function
-                   | `Fixed load | `Flexible load -> load
-                 in
-                 Duration.(acc + theoretical_load))
-           in
-           (total_v := Duration.(!total_v + total_volunteer_time));
-           let max_concurrent_volunteers =
-             (* Classical two-steps algorithm for max interval overlap. Sort the list by
+  Date.Map.mapi
+    (fun day quests ->
+      let total_quest_time =
+        Quests.fold ~init:0
+          ~f:(fun acc q -> acc + Quest.weighted_duration ~unit:`Minutes q)
+          quests
+        |> Duration.from_minutes
+      in
+      let volunteers =
+        let day' = day in
+        Volunteers.filter
+          (fun v ->
+            match (v.initial.arrival, v.initial.departure) with
+            | None, None -> true
+            | Some arrival, None ->
+                Date.(Zoned_datetime.local_date arrival <= day')
+            | None, Some departure ->
+                Date.(day' <= Zoned_datetime.local_date departure)
+            | Some arrival, Some departure ->
+                Date.(Zoned_datetime.local_date arrival <= day')
+                && Date.(day' <= Zoned_datetime.local_date departure))
+          volunteers
+      in
+      let total_volunteer_time =
+        Volunteers.fold volunteers ~init:Duration.zero ~f:(fun acc v ->
+            let theoretical_load =
+              Workload_analysis.theoretical_load static_analysis ~of_:v ~on:day
+                quests
+              |> function
+              | `Fixed load | `Flexible load -> load
+            in
+            Duration.(acc + theoretical_load))
+      in
+      let max_concurrent_volunteers =
+        (* Classical two-steps algorithm for max interval overlap. Sort the list by
        start time and with additional weights. Then sweep the list to accumulate
        the weight and remember the maximum. *)
-             let events =
-               Quests.fold quests ~init:Zoned_datetime.Map.empty
-                 ~f:(fun acc q ->
-                   let required_volunteers = q.initial.required_volunteers in
-                   let add_delta acc time delta =
-                     Zoned_datetime.Map.update time
-                       (function
-                         | None -> Some delta
-                         | Some existing_delta -> Some (existing_delta + delta))
-                       acc
-                   in
-                   let acc = add_delta acc q.slot.start required_volunteers in
-                   add_delta acc (Time_slot.end_ q.slot) (-required_volunteers))
-             in
-             Zoned_datetime.Map.fold
-               (fun _time delta (current_active, current_peak) ->
-                 let current_active = current_active + delta in
-                 (current_active, max current_peak current_active))
-               events (0, 0)
-             |> snd
-           in
-           let available_volunteers = Volunteers.cardinal volunteers in
-           mk_day day total_quest_time total_volunteer_time
-             max_concurrent_volunteers available_volunteers
-           :: acc)
-         (quests_by_day data_rich.infos quests)
-         []
+        let events =
+          Quests.fold quests ~init:Zoned_datetime.Map.empty ~f:(fun acc q ->
+              let required_volunteers = q.initial.required_volunteers in
+              let add_delta acc time delta =
+                Zoned_datetime.Map.update time
+                  (function
+                    | None -> Some delta
+                    | Some existing_delta -> Some (existing_delta + delta))
+                  acc
+              in
+              let acc = add_delta acc q.slot.start required_volunteers in
+              add_delta acc (Time_slot.end_ q.slot) (-required_volunteers))
+        in
+        Zoned_datetime.Map.fold
+          (fun _time delta (current_active, current_peak) ->
+            let current_active = current_active + delta in
+            (current_active, max current_peak current_active))
+          events (0, 0)
+        |> snd
+      in
+      let available_volunteers = Volunteers.cardinal volunteers in
+      {
+        Analysis.total_quest_time;
+        total_volunteer_time;
+        max_concurrent_volunteers;
+        available_volunteers;
+      })
+    (quests_by_day data_rich.infos quests)
+
+let make_table capacity_by_day =
+  let total_q, total_v =
+    Date.Map.fold
+      (fun _day { Analysis.total_quest_time; total_volunteer_time; _ }
+           (acc_q, acc_v) ->
+        Duration.(acc_q + total_quest_time, acc_v + total_volunteer_time))
+      capacity_by_day
+      Duration.(zero, zero)
+  in
+  let jours =
+    Date.Map.to_list capacity_by_day
+    |> List.map ~f:(fun (day, v) -> mk_day day v)
   in
   let totals =
-    El.tr [ td "Total"; td (d_to_string !total_q); td (d_to_string !total_v) ]
+    El.tr [ td "Total"; td (d_to_string total_q); td (d_to_string total_v) ]
   in
   mk_capacity_table jours totals
 
@@ -334,7 +352,7 @@ let capacity_table_for_tt (task_type : Task_type.t)
       (fun v -> Task_type.Set.mem task_type v.skills)
       data.volunteers
   in
-  capacity_for quests volunteers n
+  capacity_for quests volunteers n |> make_table
 
 (* TODO should be factored with others *)
 let capacity_table_for_generic_tasks ({ Tables.Solutions.data; _ } as n) =
@@ -350,7 +368,7 @@ let capacity_table_for_generic_tasks ({ Tables.Solutions.data; _ } as n) =
   let volunteers =
     Volunteers.filter (fun v -> Task_type.Set.is_empty v.skills) data.volunteers
   in
-  capacity_for quests volunteers n
+  capacity_for quests volunteers n |> make_table
 
 let capacity_table
     ({ state = { analysis; data_rich; _ }; _ } as s : Tables.Solutions.normal) =
