@@ -14,19 +14,25 @@ open Tables
 
 module App_state = struct
   let active_assignations :
-      (Rich.Planning.t * Api.data * Api.assignation list * Shared.Analysis.t)
+      (Jstr.t
+      * Rich.Planning.t
+      * Api.data
+      * Api.assignation list
+      * Shared.Analysis.t)
       option
       Lwd.var =
     Lwd.var None
 end
 
 let app =
-  let render (_, data, assignations, analysis) =
+  let render (name, _, data, assignations, analysis) =
+    let title = Jstr.append (Jstr.v "Assignations de ") name in
     let per_volunteer = Infos.per_volunteer_el data assignations in
     let all_volunteers_sorted = Infos.list data assignations in
     let complete_diff_table = Diffs_table.make analysis in
     Elwd.div
       [
+        `P (El.h2 [ El.txt title ]);
         `P (El.h3 [ El.txt' "Infos par bénévoles:" ]);
         `R per_volunteer;
         `P (El.hr ());
@@ -85,6 +91,7 @@ let on_records () =
           let solution_id = Jv.(Int.get (get hd "solution") "rowId") in
           Solutions.get_solution (solution_id - 1)
         in
+        let name = Solutions.name solution in
         let* data = Solutions.data_rich solution |> Fut.return in
         let+ analyses = Solutions.analysis solution |> Fut.return in
         let normal = Conv.normalize data in
@@ -98,7 +105,7 @@ let on_records () =
           List.map assignations ~f:(resolve_assignation_jv normal)
         in
         Lwd.set App_state.active_assignations
-          (Some (data, normal, assignations, analyses))
+          (Some (name, data, normal, assignations, analyses))
   in
   let callback = Jv.callback ~arity:1 f in
   let options =

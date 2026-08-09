@@ -72,6 +72,8 @@ module Solutions = struct
   let data_rich_path =
     Jsont.(path (Path.mem "data_rich" Path.root) Rich.Planning.jsont)
 
+  let name jv = Jv.Jstr.get jv "name"
+
   let data_rich jv =
     let answer = Jv.Jstr.get jv "last_answer" in
     Jsont_brr.decode data_rich_path answer
