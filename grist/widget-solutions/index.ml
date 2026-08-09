@@ -206,7 +206,14 @@ let app =
       Elwd.button
         ~at:[ `R disabled ]
         ~ev:[ `P ev ]
-        [ `P (El.txt' "1. Déplier les quêtes et vérifier la faisabilité") ]
+        [
+          `P (El.txt' "1. Déplier les quêtes et vérifier la faisabilité");
+          `P (El.br ());
+          `P
+            (El.span
+               ~at:[ At.style (Jstr.v "font-size:0.5rem") ]
+               [ El.txt' "(remplace la solution \"Aperçu\")" ]);
+        ]
     in
     let btns =
       Elwd.fieldset
@@ -229,7 +236,7 @@ let app =
       Pico_ui.Elwd.button
         ~at:[ `R disabled ]
         ~ev:[ `P handler ]
-        [ `P (El.txt' "Select in Grist") ]
+        [ `P (El.txt' "Selectioner") ]
     in
     let copy_btn =
       let in_progress = Lwd.var false in
@@ -272,12 +279,37 @@ let app =
           ]
         [ `P (El.txt' "Delete") ]
     in
-    Elwd.div
+    Pico_ui.Elwd.section
       [
-        `R App_state.sol_select.field; `R focus_btn; `R copy_btn; `R delete_btn;
+        `P (El.h3 [ El.txt' "Gestion des solutions" ]);
+        `R App_state.sol_select.field;
+        `R focus_btn;
+        `R copy_btn;
+        `R delete_btn;
       ]
   in
-  Elwd.div [ `R controls; `R solution_manager ]
+  let analyses =
+    let$* results = App_state.active_solution_normal in
+    match results with
+    | None ->
+        Lwd.return
+          (El.h3
+             [ El.txt' "Cette solution ne contient pas de données dépliées." ])
+    | Some n ->
+        let capacity_table = Infos.capacity_table n in
+        let available_volunteers =
+          Infos.available_volunteers_widget n.state.data_rich
+        in
+        Pico_ui.Elwd.section
+          [
+            `P (El.h3 [ El.txt' "Analyses des données initiales" ]);
+            `P (El.h4 [ El.txt' "Compteur de bénévoles" ]);
+            `R available_volunteers;
+            `P (El.h4 [ El.txt' "Main d'oeuvre requise / disponible" ]);
+            `R capacity_table;
+          ]
+  in
+  Elwd.div [ `R controls; `R solution_manager; `R analyses ]
 
 let decode_solution_jv sol =
   let sol_id = Jv.Int.get sol "id" in

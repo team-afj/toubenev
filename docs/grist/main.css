@@ -4,6 +4,7 @@
 
    .container {
      overflow-x: auto;
+     overflow-y: visible;
      position: relative;
    }
 
