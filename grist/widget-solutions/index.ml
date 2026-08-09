@@ -330,6 +330,15 @@ let on_record () =
   in
   Grist.on_record ~callback ~options ()
 
+let fetch_solutions () =
+  let sols = Lwd.peek App_state.solutions in
+  if Equal.poly (Lwd_seq.view sols) Lwd_seq.Empty then
+    ignore
+    @@
+    let+ sols = Tables.Data.(fetch solutions_tbl_id) in
+    let sols = Jv.to_list decode_solution_jv sols in
+    Lwd.set App_state.solutions (Lwd_seq.of_list sols)
+
 let on_records () =
   let f =
    fun v ->
@@ -348,6 +357,10 @@ let _ =
   let on_load _ =
     let () = on_record () in
     let () = on_records () in
+    let _ =
+      (* This is jank to fix jank: there are some race conditions between on_record and on_records *)
+      G.set_timeout ~ms:2000 fetch_solutions
+    in
     let root = El.find_first_by_selector (Jstr.v "main") |> Option.get in
     let app = Lwd.observe app in
     let f _ = ignore @@ Lwd.quick_sample app in
