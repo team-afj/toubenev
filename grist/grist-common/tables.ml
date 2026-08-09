@@ -66,12 +66,19 @@ module Solutions = struct
     static_analysis : Static_analysis.with_cache;
   }
 
+  let analysis_path =
+    Jsont.(path (Path.mem "analysis" Path.root) Shared.Analysis.jsont)
+
   let data_rich_path =
     Jsont.(path (Path.mem "data_rich" Path.root) Rich.Planning.jsont)
 
   let data_rich jv =
     let answer = Jv.Jstr.get jv "last_answer" in
     Jsont_brr.decode data_rich_path answer
+
+  let analysis jv =
+    let answer = Jv.Jstr.get jv "last_answer" in
+    Jsont_brr.decode analysis_path answer
 
   let table () =
     Lazy.force (lazy (Grist.get_table ~table_id:Data.solutions_tbl_id ()))

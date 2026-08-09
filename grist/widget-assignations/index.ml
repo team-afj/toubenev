@@ -14,7 +14,9 @@ open Tables
 
 module App_state = struct
   let active_assignations :
-      (Rich.Planning.t * Api.data * Api.assignation list) option Lwd.var =
+      (Rich.Planning.t * Api.data * Api.assignation list * Shared.Analysis.t)
+      option
+      Lwd.var =
     Lwd.var None
 end
 
@@ -55,7 +57,8 @@ let on_records () =
           let solution_id = Jv.(Int.get (get hd "solution") "rowId") in
           Solutions.get_solution (solution_id - 1)
         in
-        let+ data = Solutions.data_rich solution |> Fut.return in
+        let* data = Solutions.data_rich solution |> Fut.return in
+        let+ analyses = Solutions.analysis solution |> Fut.return in
         let normal = Conv.normalize data in
         (* Console.log
           [
@@ -67,7 +70,7 @@ let on_records () =
           List.map assignations ~f:(resolve_assignation_jv normal)
         in
         Lwd.set App_state.active_assignations
-          (Some (data, normal, assignations))
+          (Some (data, normal, assignations, analyses))
   in
   let callback = Jv.callback ~arity:1 f in
   let options =
@@ -76,11 +79,16 @@ let on_records () =
   Grist.on_records ~callback ~options ()
 
 let app =
+  let render (_, data, assignations, _) =
+    let per_volunteer = Infos.per_volunteer data assignations in
+    Elwd.div [ `R per_volunteer ]
+  in
+
   let content =
     let$* state = Lwd.get App_state.active_assignations in
     match state with
     | None -> Lwd.return (El.nbsp ())
-    | Some (_, data, assignations) -> Infos.per_volunteer data assignations
+    | Some state -> render state
   in
   Elwd.div [ `R content ]
 
