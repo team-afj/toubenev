@@ -87,10 +87,8 @@ let on_records () =
     | [] -> Fut.ok ()
     | hd :: _ as assignations ->
         (* Solution should contain a ROW ID *)
-        let* solution =
-          let solution_id = Jv.(Int.get (get hd "solution") "rowId") in
-          Solutions.get_solution (solution_id - 1)
-        in
+        let solution_id = Jv.(Int.get (get hd "solution") "rowId") in
+        let* solution = Solutions.get_solution solution_id in
         let name = Solutions.name solution in
         let* data = Solutions.data_rich solution |> Fut.return in
         let+ analyses = Solutions.analysis solution |> Fut.return in

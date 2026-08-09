@@ -123,11 +123,12 @@ module Solutions = struct
 
   let get_solution i =
     let+ solutions = Data.fetch Data.solutions_tbl_id in
-    let first = Jv.call solutions "at" [| Jv.of_int i |] in
+    let solutions = Jv.to_jv_list solutions in
+    let first = List.find solutions ~f:(fun jv -> Jv.Int.get jv "id" = i) in
     first
 
   let get_solution_1 () =
-    let* s = get_solution 0 in
+    let* s = get_solution 1 in
     let answer = Jv.get s "last_answer" in
     Fut.return @@ Jsont_brr.decode jsont (Jv.to_jstr answer)
 end
