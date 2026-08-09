@@ -440,7 +440,7 @@ let per_volunteer (assignations : Api.assignation list) (v : Normal.Volunteer.t)
     List.filter_map assignations ~f:(fun { Api.quest; volunteers } ->
         if Volunteers.mem v volunteers then Some quest else None)
   in
-  let tt_good, tt_bad, tt_neutral =
+  let tt =
     List.fold_left quests ~init:(0, 0, 0) ~f:(fun (gd, bd, ne) q ->
         match q.Quest.initial.task_type with
         | None -> (gd, bd, ne + 1)
@@ -449,7 +449,7 @@ let per_volunteer (assignations : Api.assignation list) (v : Normal.Volunteer.t)
             else if Task_type.Set.mem tt v.unwanted_tasks then (gd, bd + 1, ne)
             else (gd, bd, ne + 1))
   in
-  let good15, bad15, neutral15 =
+  let slots =
     List.fold_left quests ~init:(0, 0, 0) ~f:(fun acc q ->
         let quest_end = Time_slot.end_ q.Quest.slot in
         let rec loop acc current =
@@ -479,15 +479,29 @@ let per_volunteer (assignations : Api.assignation list) (v : Normal.Volunteer.t)
         in
         loop acc q.slot.start)
   in
+  (tt, slots)
+
+let hours_of_m15 m15 =
+  let hs = m15 / 4 in
+  let m = m15 mod 4 * 15 in
+  if m > 0 then string_of_int hs ^ "h" ^ string_of_int m
+  else string_of_int hs ^ "h"
+
+let per_volunteer_el (assignations : Api.assignation list)
+    (v : Normal.Volunteer.t) =
+  let (tt_good, tt_bad, tt_neutral), (good15, bad15, neutral15) =
+    per_volunteer assignations v
+  in
   let txt_tt =
     Printf.sprintf "Types de quêtes: %i 😃 %i 😕 %i 🙂" tt_good tt_bad tt_neutral
   in
   let txt_15 =
-    Printf.sprintf "Quarts d'heures: %i 😃 %i 😕 %i 🙂" good15 bad15 neutral15
+    Printf.sprintf "Quarts d'heures: %s 😃 %s 😕 %s 🙂" (hours_of_m15 good15)
+      (hours_of_m15 bad15) (hours_of_m15 neutral15)
   in
   El.div [ El.div [ El.txt' txt_tt ]; El.div [ El.txt' txt_15 ] ]
 
-let per_volunteer (data : Api.data) (assignations : Api.assignation list) =
+let per_volunteer_el (data : Api.data) (assignations : Api.assignation list) =
   let rev_v = Hashtbl.create (Volunteers.cardinal data.volunteers) in
   let v_select =
     let options =
@@ -506,7 +520,54 @@ let per_volunteer (data : Api.data) (assignations : Api.assignation list) =
   let v_infos =
     Lwd.map (Lwd.get v_select.value) ~f:(fun v_id ->
         match Hashtbl.find_opt rev_v v_id with
-        | Some v -> per_volunteer assignations v
+        | Some v -> per_volunteer_el assignations v
         | None -> El.nbsp ())
   in
   Elwd.div [ `R v_select.field; `R v_infos ]
+
+let list (data : Api.data) (assignations : Api.assignation list) =
+  let all =
+    Volunteers.to_list_map data.volunteers ~f:(fun v ->
+        (v, per_volunteer assignations v))
+  in
+  let non_zero =
+    List.filter all ~f:(fun (_, ((_, tt_bad, _), (_, bad15, _))) ->
+        not (tt_bad = 0 && bad15 = 0))
+  in
+  let non_zero =
+    List.sort
+      ~cmp:(fun
+          (_, ((_, tt_bad, _), (_, bad15, _)))
+          (_, ((_, tt_bad', _), (_, bad15', _)))
+        ->
+        let c = Int.compare bad15' bad15 in
+        if c = 0 then Int.compare tt_bad' tt_bad else c)
+      non_zero
+  in
+  let rows =
+    List.map non_zero
+      ~f:(fun
+          (v, ((tt_good, tt_bad, tt_neutral), (good15, bad15, neutral15))) ->
+        let txt_tt =
+          Printf.sprintf "%i 😃 %i 😕 %i 🙂" tt_good tt_bad tt_neutral
+        in
+        let txt_15 =
+          Printf.sprintf "%s 😃 %s 😕 %s 🙂" (hours_of_m15 good15)
+            (hours_of_m15 bad15) (hours_of_m15 neutral15)
+        in
+        El.tr
+          [
+            El.td [ El.txt' v.Volunteer.name ];
+            El.td [ El.txt' txt_tt ];
+            El.td [ El.txt' txt_15 ];
+          ])
+  in
+  let head =
+    El.tr
+      [
+        El.th [ El.txt' "Bénévole" ];
+        El.th [ El.txt' "Types de quêtes" ];
+        El.th [ El.txt' "Horaires (par 15min)" ];
+      ]
+  in
+  El.table (head :: rows)

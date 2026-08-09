@@ -489,7 +489,7 @@ let app =
         match state with
         | None -> Lwd.return (El.nbsp ())
         | Some state ->
-            Infos.per_volunteer state.data state.state.answer.solution
+            Infos.per_volunteer_el state.data state.state.answer.solution
       in
       Pico_ui.Elwd.section
         [

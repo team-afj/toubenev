@@ -22,13 +22,19 @@ end
 
 let app =
   let render (_, data, assignations, analysis) =
-    let per_volunteer = Infos.per_volunteer data assignations in
+    let per_volunteer = Infos.per_volunteer_el data assignations in
+    let all_volunteers_sorted = Infos.list data assignations in
     let complete_diff_table = Diffs_table.make analysis in
     Elwd.div
       [
         `P (El.h3 [ El.txt' "Infos par bénévoles:" ]);
         `R per_volunteer;
         `P (El.hr ());
+        `R
+          (Pico_ui.accordion ~name:"all_v"
+             ~title:
+               (Lwd.return (El.txt' "Classement (des bénévoles insatisfaits)"))
+             [ `P all_volunteers_sorted ]);
         `P (El.h3 [ El.txt' "Écarts de temps:" ]);
         `R complete_diff_table;
       ]
