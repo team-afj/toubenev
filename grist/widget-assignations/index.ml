@@ -21,9 +21,17 @@ module App_state = struct
 end
 
 let app =
-  let render (_, data, assignations, _) =
+  let render (_, data, assignations, analysis) =
     let per_volunteer = Infos.per_volunteer data assignations in
-    Elwd.div [ `R per_volunteer ]
+    let complete_diff_table = Diffs_table.make analysis in
+    Elwd.div
+      [
+        `P (El.h3 [ El.txt' "Infos par bénévoles:" ]);
+        `R per_volunteer;
+        `P (El.hr ());
+        `P (El.h3 [ El.txt' "Écarts de temps:" ]);
+        `R complete_diff_table;
+      ]
   in
 
   let content =
