@@ -20,6 +20,20 @@ module App_state = struct
     Lwd.var None
 end
 
+let app =
+  let render (_, data, assignations, _) =
+    let per_volunteer = Infos.per_volunteer data assignations in
+    Elwd.div [ `R per_volunteer ]
+  in
+
+  let content =
+    let$* state = Lwd.get App_state.active_assignations in
+    match state with
+    | None -> Lwd.return (El.nbsp ())
+    | Some state -> render state
+  in
+  Elwd.div [ `R content ]
+
 let resolve_assignation_jv (data : Api.data) ass =
   let quest_id = Jv.Jstr.get ass "ref" |> Jstr.to_string in
   let volunteers_ids =
@@ -77,20 +91,6 @@ let on_records () =
     Jv.obj [| ("keepEncoded", Jv.false'); ("expandRefs", Jv.false') |]
   in
   Grist.on_records ~callback ~options ()
-
-let app =
-  let render (_, data, assignations, _) =
-    let per_volunteer = Infos.per_volunteer data assignations in
-    Elwd.div [ `R per_volunteer ]
-  in
-
-  let content =
-    let$* state = Lwd.get App_state.active_assignations in
-    match state with
-    | None -> Lwd.return (El.nbsp ())
-    | Some state -> render state
-  in
-  Elwd.div [ `R content ]
 
 let _ =
   let on_load _ =
