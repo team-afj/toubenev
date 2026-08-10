@@ -9,6 +9,11 @@ open! Rich
 open Normal
 open Tables
 
+let () = Logs.set_reporter (Logs_browser.console_reporter ())
+let () = Logs.set_level ~all:true (Some Debug)
+
+module Logs = (val Logs.src_log (Logs.Src.create "TBNASS"))
+
 (* This widget should be associated to the ASSIGNATION table and filtered by
    SOLUTION *)
 
