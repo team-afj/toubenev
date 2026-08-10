@@ -81,6 +81,29 @@ let enforce_volunteers_restrictions (ctx : Context.t) =
       let assignation = ctx.assignations v q in
       Sat.(add ctx.model ~name ?only_enforce_if (is_false assignation)))
 
+let cap_volunteers_diffs ?(epsilon = Duration.from_hours 1) (ctx : Context.t) =
+  ctx.for_all_volunteers @@ fun v ->
+  let v_time_m = Duration.(to_minutes (v.initial.daily_workload + epsilon)) in
+  ctx.by_day
+  |> Date.Map.iter (fun day quests ->
+      let quests =
+        Quests.to_list_map
+          ~f:(fun q ->
+            (Duration.to_minutes q.slot.duration, ctx.assignations v q))
+          quests
+      in
+      let sum = Sat.LinearExpr.weighted_sum quests in
+      let name =
+        Format.sprintf "%s_time_is_capped_on_%s" v.initial.name
+          (Date.to_string day)
+      in
+      let only_enforce_if =
+        assume ctx
+        @@ Format.sprintf "%s time is capped on %s" v.initial.name
+             (Date.to_string day)
+      in
+      Sat.(add ctx.model ~name ?only_enforce_if (sum < of_int v_time_m)))
+
 (** Enforces manual assignations of volunteers, and prevents manually assigned
     volunteers from doing anything else. *)
 let enforce_assignations (ctx : Context.t) =
@@ -637,6 +660,9 @@ let make ?(no_optim = false) ~with_assumptions (data : Planning.t) =
   let () = handle_grouped_quests context in
   let () = distribute_breaks context in
 
+  (* This one can easily lead to unfeasability but is useful when planning are
+     known to be balanced.  *)
+  (* let () = cap_volunteers_diffs ~epsilon:(Duration.from_minutes 50) context in *)
   let () = if not (with_assumptions || no_optim) then minimize_f context in
 
   Logs.debug (fun m ->
