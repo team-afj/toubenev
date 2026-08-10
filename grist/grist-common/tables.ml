@@ -7,6 +7,7 @@ let debug = false
 module Data = struct
   let infos_tbl_id = Jstr.v "Infos_generales"
   let options_tbl_id = Jstr.v "Options_du_solveur"
+  let spread_prefs_tbl_id = Jstr.v "Spread_taste"
   let places_tbl_id = Jstr.v "Lieux"
   let task_types_tbl_id = Jstr.v "Types_de_quetes"
   let time_slots_tbl_id = Jstr.v "Plages_horaires_ponctuelles"
@@ -25,6 +26,7 @@ module Data = struct
   let fetch_all () =
     let* infos = fetch infos_tbl_id in
     let* options = fetch options_tbl_id in
+    let* spread_prefs = fetch spread_prefs_tbl_id in
     let* places = fetch places_tbl_id in
     let* task_types = fetch task_types_tbl_id in
     let* time_specs = fetch time_slots_tbl_id in
@@ -37,6 +39,7 @@ module Data = struct
         [|
           ("infos", infos);
           ("options", options);
+          ("spread_prefs", spread_prefs);
           ("places", places);
           ("task_types", task_types);
           ("time_specs", time_specs);

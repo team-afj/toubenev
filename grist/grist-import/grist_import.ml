@@ -30,6 +30,10 @@ module Options = struct
   [@@deriving jsont]
 end
 
+module Spread_prefs = struct
+  type t = { id : int; display : string; value : int } [@@deriving jsont]
+end
+
 module Task_type = struct
   type t = {
     id : int;
@@ -123,6 +127,7 @@ module Benevole = struct
     horaires_contraints : grist_int_list; [@default []]
     indisponibilites_ponctuelles : grist_int_list;
         [@default []] [@key "autres_indisponibilites"]
+    spread_pref : int option;
   }
   [@@deriving jsont]
 end
@@ -229,6 +234,7 @@ end
 type data = {
   options : Options.t list;
   infos : Infos.t list;
+  spread_prefs : Spread_prefs.t list;
   places : Lieu.t list;
   task_types : Task_type.t list;
   time_specs : Time_spec.t list;
@@ -270,6 +276,7 @@ let to_planning ?(id_map = new_id_map ())
     ({
        infos;
        options;
+       spread_prefs;
        places;
        task_types;
        time_specs;
@@ -453,6 +460,7 @@ let to_planning ?(id_map = new_id_map ())
           indisponibilites_ponctuelles;
           date_d_arrivee;
           date_de_depart;
+          spread_pref;
           _;
         } =
       let ids = Rich.id_of_int id in
@@ -552,11 +560,20 @@ let to_planning ?(id_map = new_id_map ())
            quests and they to it for free. *)
         Duration.(equal zero daily_workload)
       in
+      let spread_pref =
+        Option.bind spread_pref @@ fun id' ->
+        List.find_map spread_prefs ~f:(function
+          | { Spread_prefs.id; value; _ } when id = id' ->
+              if value > 0 then Some (Rich.Volunteer.Grouped, value)
+              else if value < 0 then Some (Spreaded, value)
+              else None
+          | _ -> None)
+      in
       let v =
         Rich.Volunteer.make ~id:ids ~public_name ~name ~daily_workload
           ~proficiencies ~forbidden_tasks ~forbidden_places ~wanted_tasks
           ~unwanted_tasks ~availabilities ?arrival ?departure ~manually_assigned
-          ()
+          ?spread_pref ()
       in
       ({ id_map with volunteers = Int.Map.add id v id_map.volunteers }, v)
     in

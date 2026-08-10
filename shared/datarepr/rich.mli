@@ -202,6 +202,8 @@ module Availabilities : sig
 end
 
 module Volunteer : sig
+  type spread_pref = Spreaded | Grouped [@@deriving jsont]
+
   type t = private {
     id : t id;
     public_name : string option;
@@ -218,6 +220,7 @@ module Volunteer : sig
     forbidden_places : Places.t;
     wanted_tasks : Task_types.t;
     unwanted_tasks : Task_types.t;
+    spread_pref : (spread_pref * int) option;
   }
 
   include S with type t := t
@@ -240,6 +243,7 @@ module Volunteer : sig
     daily_workload:Duration.t ->
     name:string ->
     ?public_name:string ->
+    ?spread_pref:spread_pref * int ->
     unit ->
     t
 

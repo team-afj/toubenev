@@ -325,6 +325,8 @@ end
 module Availabilities = Random_access_list (Availability)
 
 module Volunteer = struct
+  type spread_pref = Spreaded | Grouped [@@deriving jsont]
+
   type t = {
     id : t id;
     public_name : string option;
@@ -341,6 +343,7 @@ module Volunteer = struct
     forbidden_places : Places.t;
     wanted_tasks : Task_types.t;
     unwanted_tasks : Task_types.t;
+    spread_pref : (spread_pref * int) option;
   }
   [@@deriving jsont]
 
@@ -361,6 +364,7 @@ module Volunteer = struct
       forbidden_places = CCRAL.empty;
       wanted_tasks = CCRAL.empty;
       unwanted_tasks = CCRAL.empty;
+      spread_pref = None;
     }
 
   type edit =
@@ -393,7 +397,8 @@ module Volunteer = struct
       ?(forbidden_tasks = CCRAL.empty) ?(forbidden_places = CCRAL.empty)
       ?(wanted_tasks = CCRAL.empty) ?(unwanted_tasks = CCRAL.empty)
       ?(availabilities = CCRAL.empty) ?arrival ?departure
-      ?(manually_assigned = false) ~daily_workload ~name ?public_name () =
+      ?(manually_assigned = false) ~daily_workload ~name ?public_name
+      ?spread_pref () =
     let id = Option.get_lazy make_id id in
     {
       id;
@@ -411,6 +416,7 @@ module Volunteer = struct
       forbidden_places;
       wanted_tasks;
       unwanted_tasks;
+      spread_pref;
     }
 
   let set_friends t fs = t.friends <- fs
