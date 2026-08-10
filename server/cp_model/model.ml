@@ -519,15 +519,6 @@ let quest_time_range (ctx : Context.t) (v : Volunteer.t) (quests : Quests.t) =
   let approx minutes =
     Float.(of_int minutes / granulatity_m |> round |> to_int)
   in
-  (* let first_starting_quest =
-    Quests.fold quests ~init:None ~f:(fun acc q ->
-        match acc with
-        | None -> Some q
-        | Some q' ->
-            if Zoned_datetime.(q.slot.start < q'.slot.start) then Some q
-            else Some q')
-    |> Option.get
-  in *)
   let last_ending_quest =
     Quests.fold quests ~init:None ~f:(fun acc q ->
         match acc with
