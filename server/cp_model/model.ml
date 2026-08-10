@@ -565,9 +565,9 @@ let amplitudes (ctx : Context.t) =
         match v.initial.spread_pref with
         | None -> default_coef
         | Some (Grouped, c (*>=0*)) ->
-            if default_coef >= 0 then default_coef + c else c
+            if default_coef >= 0 then default_coef + c else c - default_coef
         | Some (Spreaded, c (* <= 0 *)) ->
-            if default_coef <= 0 then default_coef + c else c
+            if default_coef <= 0 then default_coef + c else c - default_coef
       in
       if coef = 0 then acc
       else
