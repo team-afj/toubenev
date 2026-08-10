@@ -605,6 +605,7 @@ let amplitudes (ctx : Context.t) =
 
 let minimize_f (ctx : Context.t) =
   let options = ctx.data.options in
+  let nb_volunteers = Volunteers.cardinal ctx.vs in
   let event_bounds_coef = options.event_equilibrium_malus in
   let daily_bounds_coef = options.daily_equilibrium_malus in
   let friendship_coef = options.friendship_bonus in
@@ -618,9 +619,9 @@ let minimize_f (ctx : Context.t) =
       daily_bounds_coef );
   let objective_terms =
     [
-      scale (event_bounds_coef * Date.Map.cardinal ctx.by_day * 15 * 1000)
+      scale (event_bounds_coef * nb_volunteers  * 15 * 10_000 * Date.Map.cardinal ctx.by_day)
       @@ Workload_balance.event_pow_diffs ctx `Fifteen_minutes;
-      scale (daily_bounds_coef * 15 * 1000)
+      scale (daily_bounds_coef * nb_volunteers * 15 * 10_000)
       @@ Workload_balance.daily_pow_diffs ctx `Fifteen_minutes;
       scale (-1 * friendship_coef) @@ friendship_bonus ctx;
       (* Fridenshipness: 1 * coef per pairing.
