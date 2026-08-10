@@ -60,16 +60,18 @@ let sat =
     | Ok data, Some last when Equal.poly last data ->
         let () = Console.info [ "TBN"; "Nothing to do, data didn't change" ] in
         let last = Lwd.peek App_state.last_answer in
+        let grist_data = data in
         Option.iter
           (fun (data : Solutions.t) ->
             if Equal.poly data.answer.status Feasible then
-              Lwd.set App_state.optimize_state (Ready data))
+              Lwd.set App_state.optimize_state (Ready (grist_data, data)))
           last;
         Fut.return (Ok ())
     | Ok data, _ -> begin
         let () = Lwd.set App_state.optimize_state Not_ready in
         let () = Console.info [ "TBN"; "Data changed" ] in
         let () = last_data := Some data in
+        let grist_data = data in
         let _id_map, planning = Grist_import.to_planning data in
         let () = Console.debug [ "TBN"; "Normalize" ] in
         let normalized_planning = Conv.normalize planning in
@@ -166,7 +168,7 @@ let sat =
               Shared.Analysis.of_planning planning answer normalized_planning
             in
             let state =
-              { Tables.Solutions.data; data_rich = planning; answer; analysis }
+              { Tables.Solutions.data_rich = planning; answer; analysis }
             in
             Lwd.set App_state.last_answer (Some state);
             let* () = Solutions.upsert_solution_1 state in
@@ -187,12 +189,12 @@ let sat =
               Shared.Analysis.of_planning planning answer normalized_planning
             in
             let state =
-              { Tables.Solutions.data; data_rich = planning; answer; analysis }
+              { Tables.Solutions.data_rich = planning; answer; analysis }
             in
             let () =
               match answer.status with
               | Feasible | Optimal ->
-                  Lwd.set App_state.optimize_state (Ready state)
+                  Lwd.set App_state.optimize_state (Ready (grist_data, state))
               | Api.Unknown | Api.ModelInvalid | Api.Infeasible ->
                   Lwd.set App_state.optimize_state Not_ready
             in
@@ -254,12 +256,12 @@ let init_optimization_chart =
     let () = Chart.set_data chart data in
     (chart, d_objective, d_satisfaction)
 
-let optimize ~(chart_canvas : El.t) (current_state : Solutions.t) =
+let optimize ~(chart_canvas : El.t) grist_data (current_state : Solutions.t) =
   let planning = current_state.data_rich in
   let+ handle =
     let open Brr_io.Fetch in
     let* json =
-      Fut.return @@ Jsont_brr.encode Grist_import.data_jsont current_state.data
+      Fut.return @@ Jsont_brr.encode Grist_import.data_jsont grist_data
     in
     let body = Body.of_jstr json in
     let method' = Jstr.v "PUT" in
@@ -405,9 +407,9 @@ let app =
         let$ state = Lwd.get App_state.optimize_state in
         match state with
         | Not_ready | Running -> Elwd.handler Ev.click (fun _ -> ())
-        | Ready state ->
+        | Ready (grist_data, state) ->
             Elwd.handler Ev.click (fun _ ->
-                ignore (optimize ~chart_canvas state))
+                ignore (optimize ~chart_canvas grist_data state))
       in
       Elwd.button
         ~at:[ `R disabled ]

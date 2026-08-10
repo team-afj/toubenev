@@ -56,7 +56,6 @@ end
 
 module Solutions = struct
   type t = {
-    data : Grist_import.data;
     data_rich : Rich.Planning.t;
     answer : Api.answer;
     analysis : Shared.Analysis.t;

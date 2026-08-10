@@ -83,8 +83,8 @@ let unwind_planning () =
       in
       Pico_ui.Modal.one_shot ~title:"Oups !" error;
       Fut.error jv_err
-  | Ok data ->
-      let _id_map, planning = Grist_import.to_planning data in
+  | Ok grist_data ->
+      let _id_map, planning = Grist_import.to_planning grist_data in
       let normalized_planning = Conv.normalize planning in
       let initial_answer =
         {
@@ -98,8 +98,7 @@ let unwind_planning () =
       in
       let state =
         {
-          Tables.Solutions.data;
-          data_rich = planning;
+          Tables.Solutions.data_rich = planning;
           answer = initial_answer;
           analysis;
         }
@@ -107,7 +106,7 @@ let unwind_planning () =
       (* let* () = Assignations.remove_assignations ~solution:1 in
       let* () = Solutions.upsert_solution_1 state in
       let* () = Assignations.insert_assignations initial_assignations in *)
-      Fut.ok (state, normalized_planning)
+      Fut.ok (state, grist_data, normalized_planning)
 
 let server_sat_check_query data =
   let open Brr_io.Fetch in
@@ -139,9 +138,9 @@ let server_sat_check_query data =
 let rev_append_diags diags (answer : Api.answer) =
   { answer with diagnostics = List.rev_append diags answer.diagnostics }
 
-let server_sat_check (state : Solutions.t) normalized_planning =
+let server_sat_check (state : Solutions.t) grist_data normalized_planning =
   let open Fut.Syntax in
-  let* response = server_sat_check_query state.data in
+  let* response = server_sat_check_query grist_data in
   let initial_answer = state.answer in
   let planning = state.data_rich in
   let open Fut.Result_syntax in
@@ -202,8 +201,12 @@ let app =
         Elwd.handler Ev.click (fun _ ->
             Lwd.set in_progress true;
             let fut =
-              let* new_state, normalized_planning = unwind_planning () in
-              let* new_state = server_sat_check new_state normalized_planning in
+              let* new_state, grist_data, normalized_planning =
+                unwind_planning ()
+              in
+              let* new_state =
+                server_sat_check new_state grist_data normalized_planning
+              in
               update_solution new_state
             in
             Fut.await fut (fun _ -> Lwd.set in_progress false))

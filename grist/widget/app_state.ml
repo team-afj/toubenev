@@ -17,7 +17,7 @@ let normal =
 
 let check_btn : [ `Ready | `In_progress ] Lwd.var = Lwd.var `Ready
 
-type optimize_state = Not_ready | Ready of t | Running
+type optimize_state = Not_ready | Ready of (Grist_import.data * t) | Running
 
 let optimize_state : optimize_state Lwd.var = Lwd.var Not_ready
 
