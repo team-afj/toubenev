@@ -42,7 +42,7 @@ let app =
         `R per_volunteer;
         `P (El.hr ());
         `R
-          (Pico_ui.accordion ~name:"all_v"
+          (Pico_ui.accordion ~name:"all_v" ~closed:true
              ~title:
                (Lwd.return (El.txt' "Classement (des bénévoles insatisfaits)"))
              [ `P all_volunteers_sorted ]);
