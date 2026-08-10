@@ -105,10 +105,6 @@ module Solutions = struct
   let of_jv obj =
     (Jv.Int.get obj "id", Jv.Jstr.get obj "name", Jv.get obj "last_answer")
 
-  let ls () =
-    let+ solutions = Data.fetch Data.solutions_tbl_id in
-    Jv.to_list of_jv solutions
-
   let create_solution ~name state =
     let records =
       [
