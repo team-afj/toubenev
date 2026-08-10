@@ -582,11 +582,9 @@ let amplitudes (ctx : Context.t) =
 
 let minimize_f (ctx : Context.t) =
   let options = ctx.data.options in
-  let nb_volunteers = Volunteers.cardinal ctx.vs in
   let event_bounds_coef = options.event_equilibrium_malus in
   let daily_bounds_coef = options.daily_equilibrium_malus in
   let friendship_coef = options.friendship_bonus in
-  let resolution = `Minutes in
   let open Sat.LinearExpr in
   ignore
     ( friendship_coef,
@@ -597,19 +595,30 @@ let minimize_f (ctx : Context.t) =
       daily_bounds_coef );
   let objective_terms =
     [
-      scale (10 * nb_volunteers * 10_000)
-      @@ Workload_balance.event_bounds ctx resolution;
-      scale (10 * nb_volunteers * 10_000)
-      @@ Workload_balance.daily_bounds ctx resolution;
-      scale (10 * nb_volunteers * 10_000)
-      @@ Workload_balance.event_pow_diffs ctx `Minutes;
-      scale (1 * nb_volunteers * 10_000)
-      @@ Workload_balance.daily_pow_diffs ctx `Minutes;
-      (* scale (1 * nb_volunteers * 10_000)
-      @@ Workload_balance.days_abs_diffs ctx `Minutes; *)
+      scale (event_bounds_coef * Date.Map.cardinal ctx.by_day * 15 * 1000)
+      @@ Workload_balance.event_pow_diffs ctx `Fifteen_minutes;
+      scale (daily_bounds_coef * 15 * 1000)
+      @@ Workload_balance.daily_pow_diffs ctx `Fifteen_minutes;
       scale (-1 * friendship_coef) @@ friendship_bonus ctx;
+      (* Fridenshipness: 1 * coef per pairing.
+         TODO we probably want to scale that with quest duration *)
       scale (-1) @@ appreciation_of_planning options ctx;
+      (* Appreciation:
+          ∑qs (coef_pref_type + ∑15m (coef_pref_time))
+
+        ex: 4 * 1h with only good times and quest types (with coefs at 1):
+            - 4 * 1 + 4 * 4 * 1 (= 20)
+      *)
       amplitudes ctx;
+      (* Amplitudes:
+         ∑ ((default_coef + individual_coef)
+             * [hours between the start and the end of the day])
+
+        ex: if the default coef is +1, a volunteer that prefers grouped
+        quests at +1 and does 2 2h quests will range between:
+          - 2 * 4 if quests are consecutive (8)
+          - and 2 * 24 if first and last quest of the day (48)
+      *)
     ]
   in
   sum objective_terms |> Sat.minimize ctx.model
