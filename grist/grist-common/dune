@@ -11,6 +11,8 @@
   brr-lwd-ui
   jsont.brr
   shared
-  grist_import)
+  grist_import
+  checkseum.ocaml
+  decompress.gz)
  (preprocess
   (pps ppx_deriving_jsont)))
