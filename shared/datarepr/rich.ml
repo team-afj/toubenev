@@ -343,7 +343,9 @@ module Volunteer = struct
     forbidden_places : Places.t;
     wanted_tasks : Task_types.t;
     unwanted_tasks : Task_types.t;
-    spread_pref : (spread_pref * int) option;
+    spread_pref : (spread_pref * int) option; [@default None]
+        (* TODO this has been made optional to stay compatible with earlier
+                versions but should be enforced in the future. *)
   }
   [@@deriving jsont]
 
