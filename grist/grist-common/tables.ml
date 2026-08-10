@@ -1,8 +1,23 @@
+module B64 = Base64
 open Brr
 open Fut.Result_syntax
 open! Data_repr
 
 let debug = false
+
+let maybe_decompress jstr =
+  (* Required for compatibility pre-compression *)
+  if not (Jstr.is_empty jstr || Jstr.starts_with ~prefix:(Jstr.v "{\"") jstr)
+  then
+    Jstr.to_string jstr |> B64.decode_exn |> Decompress.decompress_string
+    |> Result.map_error (fun (`Msg msg) -> msg)
+    |> Result.get_or_failwith |> Option.some
+  else None
+
+let maybe_decompress_f jstr =
+  match maybe_decompress jstr with
+  | Some str -> str
+  | None -> Jstr.to_string jstr
 
 module Data = struct
   let infos_tbl_id = Jstr.v "Infos_generales"
@@ -94,7 +109,7 @@ module Solutions = struct
     let+ solutions = Data.fetch Data.solutions_tbl_id in
     Jv.to_list of_jv solutions
 
-  let create ~name state =
+  let create_solution ~name state =
     let records =
       [
         Grist.New_record.v
@@ -113,11 +128,17 @@ module Solutions = struct
     Grist.Table_operations.destroy (table ()) ~record_ids
 
   let upsert_solution_1 state =
-    let* json = Fut.return @@ Jsont_brr.encode jsont state in
+    let json =
+      Jsont_bytesrw.encode_string jsont state |> Result.get_or_failwith
+    in
+    let l = String.length json in
+    let json = Decompress.compress_string ~level:8 json |> B64.encode_exn in
+    let l' = String.length json in
+    Console.error [ "Compress "; l; " -> "; l' ];
     let records =
       [
         Grist.Record.v ~id:1
-          ~fields:[| (Jstr.v "last_answer", Jv.of_jstr json) |]
+          ~fields:[| (Jstr.v "last_answer", Jv.of_string json) |]
           ();
       ]
     in
@@ -127,6 +148,11 @@ module Solutions = struct
     let+ solutions = Data.fetch Data.solutions_tbl_id in
     let solutions = Jv.to_jv_list solutions in
     let first = List.find solutions ~f:(fun jv -> Jv.Int.get jv "id" = i) in
+    let () =
+      match maybe_decompress (Jv.Jstr.get first "last_answer") with
+      | Some json -> Jstr.v json |> Jv.Jstr.set first "last_answer"
+      | None -> ()
+    in
     first
 
   let get_solution_1 () =

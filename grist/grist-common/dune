@@ -4,6 +4,7 @@
  (js_of_ocaml
   (javascript_files stubs.js))
  (libraries
+  base64
   std_js
   logs
   logs.browser

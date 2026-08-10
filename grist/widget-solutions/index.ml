@@ -47,7 +47,7 @@ let copy_from id =
           Jv.get obj "keep" ))
   in
   let now = now () |> Datetime.to_string in
-  let+ res = Solutions.create ~name:(Jstr.v now) data in
+  let+ res = Solutions.create_solution ~name:(Jstr.v now) data in
   let solution = Jv.Int.get (Jv.Jarray.get res 0) "id" in
   Tables.Assignations.create_solution_assignations ~solution assignations
 
@@ -103,9 +103,6 @@ let unwind_planning () =
           analysis;
         }
       in
-      (* let* () = Assignations.remove_assignations ~solution:1 in
-      let* () = Solutions.upsert_solution_1 state in
-      let* () = Assignations.insert_assignations initial_assignations in *)
       Fut.ok (state, grist_data, normalized_planning)
 
 let server_sat_check_query data =

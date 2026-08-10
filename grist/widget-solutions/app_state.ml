@@ -27,7 +27,8 @@ let active_solution_state =
         List.find_opt solutions ~f:(fun (id', _name, _state) -> id = id')
       in
       Option.bind sol_opt (fun (_, _, state) ->
-          Jsont_brr.decode Solutions.jsont state |> Result.to_option))
+          let str = Tables.maybe_decompress_f state in
+          Jsont_bytesrw.decode_string Solutions.jsont str |> Result.to_option))
 
 let active_solution_normal =
   Lwd.map active_solution_state ~f:(function
