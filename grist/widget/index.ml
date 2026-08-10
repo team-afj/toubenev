@@ -556,31 +556,9 @@ let app =
   in *)
   Elwd.div [ `R controls; `R diagnostics; `R analyses; `R results ]
 
-(* If the widget is correctly set this means rows from the
-     SOLUTION table. *)
-let on_record () =
-  let f =
-   fun obj ->
-    Console.log [ "TBN DBG ON RECORD"; obj ];
-    let o =
-      (Jv.Int.get obj "id", Jv.Jstr.get obj "name", Jv.get obj "last_answer")
-    in
-    (* Lwd.set App_state.grist_solutions o; *)
-    Console.log [ "TBN DBG ON RECORD PARSED"; o ]
-  in
-  let callback = Jv.callback ~arity:1 f in
-  Grist.on_record ~callback ()
-
-let on_records () =
-  let f = fun v -> Console.log [ "TBN DBG ON RECORDS"; v ] in
-  let callback = Jv.callback ~arity:1 f in
-  Grist.on_records ~callback ()
-
 let _ =
   let on_load _ =
     let _ = fetch_last () in
-    let () = on_record () in
-    let () = on_records () in
     let root = El.find_first_by_selector (Jstr.v "main") |> Option.get in
     let app = Lwd.observe app in
     let f _ = ignore @@ Lwd.quick_sample app in
