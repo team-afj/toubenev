@@ -60,14 +60,14 @@ let grist_list elt_jsont =
     | Ok r -> r
     | Error err -> raise (Jsont.Error err)
   in
-  let tag_l = Jsont.Json.encode' Jsont.string "L" |> Result.get_ok in
+  let tag_l = Jsont.Json.encode Jsont.string "L" |> Result.get_or_failwith in
   let enc f acc l =
     let i = ref 0 in
 
     Stdlib.List.fold_left
       (fun acc e ->
         incr i;
-        f acc !i (Jsont.Json.encode' elt_jsont e |> Result.get_ok))
+        f acc !i (Jsont.Json.encode elt_jsont e |> Result.get_or_failwith))
       (f acc 0 tag_l) l
   in
   let dec_empty () = [] in
@@ -416,7 +416,7 @@ let to_planning ?(id_map = new_id_map ())
     let gather_time_slots l =
       let mk start end_ =
         let start_time =
-          Time.make ~hour:(start - 1) ~min:0 ~sec:0 () |> Result.get_ok
+          Time.make ~hour:(start - 1) ~min:0 ~sec:0 () |> Time.get_or_failwith
         in
         (start_time, Duration.from_hours (end_ - start))
       in

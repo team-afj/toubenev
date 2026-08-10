@@ -102,8 +102,11 @@ module Map = struct
   module Make_jsont (C : OrderedTypeJsont) = struct
     include Make (C)
 
-    let of_string s = Jsont_bytesrw.decode_string C.jsont s |> Result.get_ok
-    let to_string v = Jsont_bytesrw.encode_string C.jsont v |> Result.get_ok
+    let of_string s =
+      Jsont_bytesrw.decode_string C.jsont s |> Result.get_or_failwith
+
+    let to_string v =
+      Jsont_bytesrw.encode_string C.jsont v |> Result.get_or_failwith
 
     (* TODO an array of couples would be a better fit *)
     let string_map ?kind ?doc type' =

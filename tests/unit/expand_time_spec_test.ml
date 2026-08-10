@@ -4,7 +4,7 @@ open Data_repr
 open Rich
 
 let utc = Timezone.make ~hour:2 ~min:0
-let date y m day = Date.make ~year:y ~month:m ~day () |> Result.get_ok
+let date y m day = Date.make ~year:y ~month:m ~day () |> Date.get_or_failwith
 
 let event_infos ?(day_start_h = 5) ~start_date ~end_date () =
   let day_start_local = Time.make_exn ~hour:day_start_h ~min:0 ~sec:0 () in

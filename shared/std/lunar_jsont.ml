@@ -140,6 +140,9 @@ end
 module Date = struct
   include Lunar.Date
 
+  let get_or_failwith r =
+    Result.map_error (fun _ -> "Bad date") r |> CCResult.get_or_failwith
+
   let to_intl_long_string lang t =
     let weekday = weekday t in
     let day_of_month = day_of_month t in
@@ -177,6 +180,9 @@ end
 
 module Time = struct
   include Lunar.Time
+
+  let get_or_failwith r =
+    Result.map_error (fun _ -> "Bad time") r |> CCResult.get_or_failwith
 
   let jsont : t Jsont.t =
     Jsont.map ~dec:from_string_exn ~enc:to_string Jsont.string

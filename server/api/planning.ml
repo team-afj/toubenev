@@ -54,7 +54,7 @@ let optim_stream req handle server () =
           (fun answer ->
             let json =
               Jsont_bytesrw.encode_string Data_repr.Api.answer_jsont answer
-              |> Result.get_ok
+              |> Result.get_or_failwith
             in
             Printf.sprintf "data: %s\n\n" json)
           src
