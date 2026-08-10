@@ -568,27 +568,37 @@ let quest_time_range (ctx : Context.t) (v : Volunteer.t) (quests : Quests.t) =
   Sat.(var end_ - var start)
 
 let amplitudes (ctx : Context.t) =
-  Volunteers.fold ctx.vs ~init:(Sat.of_int 0) ~f:(fun acc v ->
-      Date.Map.fold
-        (fun _day day_quests acc ->
-          Sat.(acc + quest_time_range ctx v day_quests))
-        ctx.by_day acc)
+  let default_coef = ctx.data.options.large_amplitude_malus in
+  Volunteers.fold ctx.vs ~init:[] ~f:(fun acc v ->
+      let coef =
+        match v.initial.spread_pref with
+        | None -> default_coef
+        | Some (Grouped, c (*>=0*)) ->
+            if default_coef >= 0 then default_coef + c else c
+        | Some (Spreaded, c (* <= 0 *)) ->
+            if default_coef <= 0 then default_coef + c else c
+      in
+      if coef = 0 then acc
+      else
+        let sum =
+          Date.Map.fold
+            (fun _day day_quests acc ->
+              Sat.(acc + quest_time_range ctx v day_quests))
+            ctx.by_day (Sat.of_int 0)
+        in
+        Sat.scale coef sum :: acc)
+  |> Sat.LinearExpr.sum
 
 let minimize_f (ctx : Context.t) =
   let options = ctx.data.options in
   let nb_volunteers = Volunteers.cardinal ctx.vs in
   let event_bounds_coef = options.event_equilibrium_malus in
   let daily_bounds_coef = options.daily_equilibrium_malus in
-  let amplitude_coef =
-    1
-    (*options.large_amplitude_malus*)
-  in
   let friendship_coef = options.friendship_bonus in
   let resolution = `Minutes in
   let open Sat.LinearExpr in
   ignore
-    ( amplitude_coef,
-      friendship_coef,
+    ( friendship_coef,
       friendship_bonus,
       appreciation_of_planning,
       amplitudes,
@@ -608,11 +618,8 @@ let minimize_f (ctx : Context.t) =
       @@ Workload_balance.days_abs_diffs ctx `Minutes; *)
       scale (-1 * friendship_coef) @@ friendship_bonus ctx;
       scale (-1) @@ appreciation_of_planning options ctx;
+      amplitudes ctx;
     ]
-  in
-  let objective_terms =
-    if amplitude_coef = 0 then objective_terms
-    else (scale amplitude_coef @@ amplitudes ctx) :: objective_terms
   in
   sum objective_terms |> Sat.minimize ctx.model
 
