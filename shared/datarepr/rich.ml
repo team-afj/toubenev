@@ -84,6 +84,7 @@ end
 
 module Options = struct
   type t = {
+    solver_timeout : Duration.t;
     min_quest_duration : Duration.t;
     max_quest_duration : Duration.t;
     daily_pos_diff_cap : Duration.t option;
@@ -100,6 +101,7 @@ module Options = struct
 
   let default =
     {
+      solver_timeout = Duration.from_minutes 20;
       min_quest_duration = Duration.from_minutes 45;
       max_quest_duration = Duration.from_minutes 120;
       daily_pos_diff_cap = None;

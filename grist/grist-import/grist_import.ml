@@ -16,6 +16,7 @@ end
 
 module Options = struct
   type t = {
+    max_search_time_m : int;  (** minutes *)
     min_quest_duration : int;  (** minutes *)
     max_quest_duration : int;  (** minutes *)
     max_day_diff_cap : int option;  (** minutes *)
@@ -340,6 +341,10 @@ let to_planning ?(id_map = new_id_map ())
     let options = List.hd options in
     Rich.Options.
       {
+        solver_timeout =
+          (if options.max_search_time_m >= 0 then
+             Duration.from_minutes options.max_search_time_m
+           else Rich.Options.default.solver_timeout);
         min_quest_duration = Duration.from_minutes options.min_quest_duration;
         max_quest_duration = Duration.from_minutes options.max_quest_duration;
         daily_pos_diff_cap =

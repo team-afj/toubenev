@@ -62,6 +62,7 @@ end
 
 module Options : sig
   type t = {
+    solver_timeout : Duration.t;
     min_quest_duration : Duration.t;  (** Used when dividing quests. *)
     max_quest_duration : Duration.t;  (** Used when dividing quests. *)
     daily_pos_diff_cap : Duration.t option;

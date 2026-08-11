@@ -17,6 +17,9 @@ type t = {
 
 let new_optim t (p : Data_repr.Rich.Planning.t) =
   let handle = new_random_uuid_v4 () |> Uuidm.to_string in
+  let max_time_in_seconds =
+    Lunar.Duration.to_seconds p.options.solver_timeout |> Float.of_int
+  in
   let queue =
     (* TODO This can block if there is not enogh readers... an unbounded queue
        would be a better fit. *)
@@ -36,8 +39,8 @@ let new_optim t (p : Data_repr.Rich.Planning.t) =
          - interleave_search:true better coordination between parallel workers.
            Fact check: this is much slower in practice. *)
       Ortools.Sat_parameters.make_sat_parameters ~log_search_progress:false
-        ~num_workers:16l ~max_time_in_seconds:(60. *. 20.)
-        ~linearization_level:2l ~interleave_search:false ()
+        ~num_workers:16l ~max_time_in_seconds ~linearization_level:2l
+        ~interleave_search:false ()
     in
     let atomic_queue = Miou.Queue.create () in
     let listener =
