@@ -64,6 +64,7 @@ module Options : sig
   type t = {
     min_quest_duration : Duration.t;  (** Used when dividing quests. *)
     max_quest_duration : Duration.t;  (** Used when dividing quests. *)
+    daily_pos_diff_cap : Duration.t option;
     friendship_bonus : int;  (** Working with friends bonus coefficient. *)
     desired_time_bonus : int;
         (** Applied for each 15 minutes done at a desired time. *)

@@ -104,6 +104,11 @@ let cap_volunteers_diffs ?(epsilon = Duration.from_hours 1) (ctx : Context.t) =
       in
       Sat.(add ctx.model ~name ?only_enforce_if (sum < of_int v_time_m)))
 
+let cap_volunteers_diffs (ctx : Context.t) =
+  match ctx.data.options.daily_pos_diff_cap with
+  | None -> ()
+  | Some epsilon -> cap_volunteers_diffs ~epsilon ctx
+
 (** Enforces manual assignations of volunteers, and prevents manually assigned
     volunteers from doing anything else. *)
 let enforce_assignations (ctx : Context.t) =
@@ -668,7 +673,7 @@ let make ?(no_optim = false) ~with_assumptions (data : Planning.t) =
 
   (* This one can easily lead to unfeasability but is useful when planning are
      known to be balanced.  *)
-  (* let () = cap_volunteers_diffs ~epsilon:(Duration.from_minutes 50) context in *)
+  let () = cap_volunteers_diffs context in
   let () = if not (with_assumptions || no_optim) then minimize_f context in
 
   Logs.debug (fun m ->
