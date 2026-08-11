@@ -620,7 +620,7 @@ let minimize_f (ctx : Context.t) =
       daily_bounds_coef );
   let objective_terms =
     [
-      (* Diffs should always be the most important weights, so we scale them by 
+      (* Diffs should always be the most important weights, so we scale them by
          the number of volunteers and quests which impact other coefs. *)
       scale
         (event_bounds_coef * nb_volunteers * nb_quests * 15 * 10_000
