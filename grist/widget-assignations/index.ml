@@ -30,14 +30,26 @@ module App_state = struct
 end
 
 let app =
-  let render (name, _, data, assignations, analysis) =
+  let render (name, rich_data, data, assignations, analysis) =
+    let infos = rich_data.Planning.infos in
+    let static_checks = Static_analysis.make infos data.Api.quests () in
     let title = Jstr.append (Jstr.v "Assignations de ") name in
+    let verif =
+      match Check.assignations infos static_checks assignations with
+      | [] -> El.txt' "La solution ne présente pas d'incohérence majeure."
+      | errors ->
+          El.div (List.map errors ~f:(fun err -> El.div [ El.txt' err ]))
+    in
     let per_volunteer = Infos.per_volunteer_el data assignations in
     let all_volunteers_sorted = Infos.list data assignations in
     let complete_diff_table = Diffs_table.make analysis in
     Elwd.div
       [
         `P (El.h2 [ El.txt title ]);
+        `R
+          (Pico_ui.accordion ~name:"verifs" ~closed:false
+             ~title:(Lwd.return (El.txt' "Vérifications"))
+             [ `P verif ]);
         `P (El.h3 [ El.txt' "Infos par bénévoles:" ]);
         `R per_volunteer;
         `P (El.hr ());
