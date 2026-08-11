@@ -178,10 +178,12 @@ let server_sat_check (state : Solutions.t) grist_data normalized_planning =
 (* Fut.ok @@ Lwd.set App_state.last_answer (Some state) *)
 
 let update_solution state =
-  let* () = Assignations.remove_assignations ~solution:1 in
-  let* () = Solutions.upsert_solution_1 state in
+  let s_id_1 = 1 in
+  let* () = Assignations.remove_assignations ~solution:s_id_1 in
+  let* () = Solutions.upsert_solution s_id_1 state in
   let assignations =
-    List.map state.answer.solution ~f:(Grist_import.Assignation.v ~solution:1)
+    List.map state.answer.solution
+      ~f:(Grist_import.Assignation.v ~solution:s_id_1)
   in
   Assignations.insert_assignations assignations
 

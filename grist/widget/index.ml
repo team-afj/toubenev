@@ -31,6 +31,7 @@ let rev_append_diags diags (answer : Api.answer) =
   { answer with diagnostics = List.rev_append diags answer.diagnostics }
 
 let sat =
+  let s_id_1 = 1 in
   let last_data = ref None in
   fun () ->
     Fut.bind (Data.fetch_all ()) @@ fun data ->
@@ -105,7 +106,7 @@ let sat =
                 |> Zoned_datetime.to_utc_duration |> Duration.to_seconds
               in
               {
-                Grist_import.Assignation.solution = 1;
+                Grist_import.Assignation.solution = s_id_1;
                 name;
                 ref = id;
                 initial_quest;
@@ -119,7 +120,7 @@ let sat =
             normalized_planning.quests
         in
         let () = Console.debug [ "TBN"; "Update assignations" ] in
-        let* () = Assignations.remove_assignations ~solution:1 in
+        let* () = Assignations.remove_assignations ~solution:s_id_1 in
         let* () = Assignations.insert_assignations assignations in
         let open Fut.Syntax in
         let* res =
@@ -171,7 +172,7 @@ let sat =
               { Tables.Solutions.data_rich = planning; answer; analysis }
             in
             Lwd.set App_state.last_answer (Some state);
-            let* () = Solutions.upsert_solution_1 state in
+            let* () = Solutions.upsert_solution s_id_1 state in
             Fut.ok (Console.error [ jv ])
         | Ok answer ->
             let* answer =
@@ -198,7 +199,7 @@ let sat =
               | Api.Unknown | Api.ModelInvalid | Api.Infeasible ->
                   Lwd.set App_state.optimize_state Not_ready
             in
-            let* () = Solutions.upsert_solution_1 state in
+            let* () = Solutions.upsert_solution s_id_1 state in
             Fut.ok @@ Lwd.set App_state.last_answer (Some state)
       end
 
@@ -307,10 +308,11 @@ let optimize ~(chart_canvas : El.t) grist_data (current_state : Solutions.t) =
               Lwd.set App_state.last_answer (Some state);
               ignore
               @@
-              let* () = Solutions.upsert_solution_1 state in
+              let s_id_2 = 2 in
+              let* () = Solutions.upsert_solution s_id_2 state in
               let assignations =
                 List.map answer.solution
-                  ~f:(Grist_import.Assignation.v ~solution:1)
+                  ~f:(Grist_import.Assignation.v ~solution:s_id_2)
               in
               let analysis =
                 Shared.Analysis.of_planning planning answer normalized_planning

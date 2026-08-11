@@ -123,7 +123,7 @@ module Solutions = struct
     let record_ids = [ solution ] in
     Grist.Table_operations.destroy (table ()) ~record_ids
 
-  let upsert_solution_1 state =
+  let upsert_solution id state =
     let json =
       Jsont_bytesrw.encode_string jsont state |> Result.get_or_failwith
     in
@@ -133,7 +133,7 @@ module Solutions = struct
     Console.error [ "Compress "; l; " -> "; l' ];
     let records =
       [
-        Grist.Record.v ~id:1
+        Grist.Record.v ~id
           ~fields:[| (Jstr.v "last_answer", Jv.of_string json) |]
           ();
       ]
