@@ -81,7 +81,33 @@ let make_table (analysis : t) real_time hide_zeros =
     |> List.sort ~cmp:(fun (d1, _) (d2, _) -> Int.compare d2 d1)
     |> List.map ~f:snd
   in
-  El.table ~at:[ Pico_ui.At.overflow_auto ] (head :: volunteers)
+  let total_plus, total_minus =
+    Volunteer.Map.fold
+      (fun _v (va : volunteer_analyses) acc ->
+        Date.Map.fold
+          (fun _day (facts : facts) (acc_p, acc_m) ->
+            let expected_load =
+              if real_time then facts.theoretical_load else facts.adjusted_load
+            in
+            let diff =
+              Duration.(facts.actual_load - expected_load |> to_minutes)
+            in
+            if diff >= 0 then (acc_p + diff, acc_m) else (acc_p, acc_m + diff))
+          va.daily acc)
+      analysis.volunteers (0, 0)
+  in
+  let totals =
+    El.txt'
+      ("Total diffs: "
+      ^ print_signed_int total_plus
+      ^ " / "
+      ^ print_signed_int total_minus)
+  in
+  El.div
+    [
+      El.div [ totals ];
+      El.table ~at:[ Pico_ui.At.overflow_auto ] (head :: volunteers);
+    ]
 
 let make (analysis : t) =
   let { element = check_kind; desc = Check { state; _ } } =
