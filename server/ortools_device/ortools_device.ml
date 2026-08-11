@@ -97,7 +97,8 @@ let rec clean_up orphans =
 
 let v =
   let finally (t : t) = Miou.cancel t.task_launcher in
-  Vif.Device.v ~name:"ortools" ~finally [] @@ fun () ->
+  Vif.Device.v ~name:"ortools" ~finally []
+  @@ fun ((_, ()) : Vif.Server.t * unit) ->
   let task_queue : (task, task option) Bqueue.t =
     Bqueue.(create with_close 256)
   in
