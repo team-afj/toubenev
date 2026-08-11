@@ -343,7 +343,8 @@ let to_planning ?(id_map = new_id_map ())
         min_quest_duration = Duration.from_minutes options.min_quest_duration;
         max_quest_duration = Duration.from_minutes options.max_quest_duration;
         daily_pos_diff_cap =
-          Option.map Duration.from_minutes options.max_day_diff_cap;
+          Option.bind options.max_day_diff_cap (fun mddc ->
+              if mddc >= 0 then Some (Duration.from_minutes mddc) else None);
         friendship_bonus = options.coef_friend;
         desired_time_bonus = options.coef_good_time;
         undesired_time_malus = options.coef_bad_time;
