@@ -291,12 +291,12 @@ let app =
         Lwd.map App_state.active_solution_state ~f:(fun sol ->
             Print.modal (fun () -> sol))
       in
-      (* let disabled =
-        let$ answer = Lwd.get App_state.last_answer in
+      let disabled =
+        let$ answer = App_state.active_solution_state in
         match answer with
         | None | Some { answer = { solution = []; _ }; _ } -> At.disabled
         | Some _ -> At.void
-      in *)
+      in
       let ev =
         let f = fun _ -> Lwd.set show_modal true in
         Elwd.handler Ev.click f
@@ -305,7 +305,8 @@ let app =
         [
           `R print_options_modal;
           `R
-            (Elwd.button (* ~at:[ `R disabled ] *)
+            (Elwd.button
+               ~at:[ `R disabled ]
                ~ev:[ `P ev ]
                [ `P (El.txt' "Imprimer") ]);
         ]
