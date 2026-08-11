@@ -40,7 +40,12 @@ let check_can_do dedup (infos : Event_infos.t)
            ~f:(fun { Api.quest = q'; volunteers } ->
              let key = sort_ids quest q' in
              if Hashtbl.mem dedup key then Ok ()
-             else if Volunteers.mem v volunteers then (
+             else if
+               (not
+                  (Static_analysis.v_is_manually_assigned_to_q v quest
+                  && Static_analysis.v_is_manually_assigned_to_q v q'))
+               && Volunteers.mem v volunteers
+             then (
                Hashtbl.add dedup key ();
                Error (`Multiple_assignements (v, quest, q')))
              else Ok ()))
