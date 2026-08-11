@@ -418,7 +418,9 @@ let app =
         ~ev:[ `R ev ]
         [ `P (El.txt' "2. Optimiser") ]
     in
-    let print_options_modal, show_modal = Print.modal () in
+    let print_options_modal, show_modal =
+      Print.modal (fun () -> Lwd.peek App_state.last_answer)
+    in
     let print_btn =
       let disabled =
         let$ answer = Lwd.get App_state.last_answer in

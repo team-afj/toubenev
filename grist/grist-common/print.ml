@@ -11,7 +11,7 @@ let print el =
         [ At.src (Jstr.v "plannings.html"); At.style (Jstr.v "display: none;") ]
       []
   in
-  El.append_children (Document.body G.document) [ iframe ];
+  El.prepend_children (Document.body G.document) [ iframe ];
   ignore
   @@ Ev.listen Ev.load
        (fun _ ->
@@ -22,7 +22,7 @@ let print el =
          G.set_timeout ~ms:250 (fun () -> Window.print i_win) |> ignore)
        (El.as_target iframe)
 
-let modal () =
+let modal get_solution =
   let show_modal = Lwd.var false in
   let options, peek_options =
     let bp =
@@ -95,7 +95,7 @@ let modal () =
     in
     let print =
       let on_click _ =
-        Lwd.peek App_state.last_answer
+        get_solution ()
         |> Option.iter @@ fun { Tables.Solutions.data_rich; answer; _ } ->
            let planning =
              let sections, details = peek_options () in

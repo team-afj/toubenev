@@ -286,6 +286,30 @@ let app =
           ]
         [ `P (El.txt' "Delete") ]
     in
+    let print_btn =
+      let$* print_options_modal, show_modal =
+        Lwd.map App_state.active_solution_state ~f:(fun sol ->
+            Print.modal (fun () -> sol))
+      in
+      (* let disabled =
+        let$ answer = Lwd.get App_state.last_answer in
+        match answer with
+        | None | Some { answer = { solution = []; _ }; _ } -> At.disabled
+        | Some _ -> At.void
+      in *)
+      let ev =
+        let f = fun _ -> Lwd.set show_modal true in
+        Elwd.handler Ev.click f
+      in
+      Elwd.div
+        [
+          `R print_options_modal;
+          `R
+            (Elwd.button (* ~at:[ `R disabled ] *)
+               ~ev:[ `P ev ]
+               [ `P (El.txt' "Imprimer") ]);
+        ]
+    in
     Pico_ui.Elwd.section
       [
         `P (El.h3 [ El.txt' "Gestion des solutions" ]);
@@ -293,6 +317,7 @@ let app =
         `R focus_btn;
         `R copy_btn;
         `R delete_btn;
+        `R print_btn;
       ]
   in
   let analyses =
