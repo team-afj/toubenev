@@ -18,7 +18,7 @@ module Options = struct
   type t = {
     min_quest_duration : int;  (** minutes *)
     max_quest_duration : int;  (** minutes *)
-    daily_pos_diff_cap : int option; [@default None]  (** minutes *)
+    max_day_diff_cap : int option;  (** minutes *)
     coef_friend : int;
     coef_bad_time : int;
     coef_good_time : int;
@@ -343,7 +343,7 @@ let to_planning ?(id_map = new_id_map ())
         min_quest_duration = Duration.from_minutes options.min_quest_duration;
         max_quest_duration = Duration.from_minutes options.max_quest_duration;
         daily_pos_diff_cap =
-          Option.map Duration.from_minutes options.daily_pos_diff_cap;
+          Option.map Duration.from_minutes options.max_day_diff_cap;
         friendship_bonus = options.coef_friend;
         desired_time_bonus = options.coef_good_time;
         undesired_time_malus = options.coef_bad_time;
