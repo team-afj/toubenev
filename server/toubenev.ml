@@ -97,7 +97,7 @@ let _cfg =
       Vif.config ~http:(`H2 H2.Config.default) ~tls sockaddr
 
 let cfg =
-  let sockaddr = Unix.(ADDR_INET (Unix.inet_addr_loopback, 1357)) in
+  let sockaddr = Unix.(ADDR_INET (Unix.inet6_addr_any, 1357)) in
   Vif.config sockaddr
 
 let devices = Devices.[ Ortools_device.v ]
