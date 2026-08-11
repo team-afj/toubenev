@@ -3,11 +3,6 @@ module Lunar_jsont = Lunar_jsont
 
 let () = Hashtbl.randomize ()
 
-(* These modules are known to be quite detrimental to javascript bundle size. We
-   shadow them to enforce their non-usage in client-side code. *)
-module Format = struct end
-module Printexc = struct end
-
 let new_random_uuid_v4 =
   let state = Random.get_state () in
   fun () -> Uuidm.v4_gen state ()
