@@ -84,10 +84,10 @@ end
 
 module Options = struct
   type t = {
-    solver_timeout : Duration.t;
+    solver_timeout : Duration.t; [@default Duration.from_minutes 20]
     min_quest_duration : Duration.t;
     max_quest_duration : Duration.t;
-    daily_pos_diff_cap : Duration.t option;
+    daily_pos_diff_cap : Duration.t option; [@default None]
     friendship_bonus : int;
     desired_time_bonus : int;
     undesired_time_malus : int;
