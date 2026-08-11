@@ -97,7 +97,7 @@ module Options = struct
     daily_equilibrium_malus : int;
     event_equilibrium_malus : int;
   }
-  [@@deriving jsont]
+  [@@deriving jsont, show]
 
   let default =
     {

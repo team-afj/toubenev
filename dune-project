@@ -33,6 +33,7 @@
   (jsont
    (>= "0.1.1"))
   ppx_deriving_jsont
+  ppx_deriving
   ppxlib
   bytesrw
   ; Vendored lwd deps:

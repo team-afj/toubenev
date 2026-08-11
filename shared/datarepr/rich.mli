@@ -77,7 +77,7 @@ module Options : sig
     daily_equilibrium_malus : int;
     event_equilibrium_malus : int;
   }
-  [@@deriving jsont]
+  [@@deriving jsont, show]
 
   val default : t
 end

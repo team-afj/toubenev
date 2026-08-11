@@ -3,4 +3,4 @@
  (libraries std_js logs uuidm jsont containers-data lunar ortools)
  (flags :standard -open Std_js)
  (preprocess
-  (pps ppx_deriving_jsont)))
+  (pps ppx_deriving_jsont ppx_deriving.show)))

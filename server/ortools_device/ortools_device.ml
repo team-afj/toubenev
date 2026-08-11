@@ -28,6 +28,11 @@ let new_optim t (p : Data_repr.Rich.Planning.t) =
   let task =
    fun () ->
     let context = Cp_model.Model.make ~with_assumptions:false p in
+    let () =
+      Logs.info (fun m ->
+          m "Starting solve with params:@ %a" Data_repr.Rich.Options.pp
+            p.options)
+    in
     let parameters =
       (* claude suggestions:
          - linearization_level:2l enables a stronger LP relaxation (more cuts),

@@ -127,6 +127,7 @@ module Duration = struct
     let h, m, _s = hms t in
     Utils.lpad ~size:2 h ^ ":" ^ Utils.lpad ~size:2 m
 
+  let pp fmt t = Format.fprintf fmt "%s" (to_string t)
   let jsont : t Jsont.t = Jsont.map ~dec:from_int64 ~enc:to_int64 Jsont.int64
 end
 
