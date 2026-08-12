@@ -301,23 +301,31 @@ let app =
         let f = fun _ -> Lwd.set show_modal true in
         Elwd.handler Ev.click f
       in
-      Elwd.div
+      Elwd.span
         [
           `R print_options_modal;
           `R
-            (Elwd.button
-               ~at:[ `R disabled ]
-               ~ev:[ `P ev ]
-               [ `P (El.txt' "Imprimer") ]);
+            (Elwd.fieldset
+               ~at:[ `P (At.v (Jstr.v "role") (Jstr.v "group")) ]
+               [
+                 `R
+                   (Elwd.button
+                      ~at:[ `R disabled ]
+                      ~ev:[ `P ev ]
+                      [ `P (El.txt' "Imprimer") ]);
+               ]);
         ]
+    in
+    let actions =
+      Elwd.fieldset
+        ~at:[ `P (At.v (Jstr.v "role") (Jstr.v "group")) ]
+        [ `R focus_btn; `R copy_btn; `R delete_btn ]
     in
     Pico_ui.Elwd.section
       [
         `P (El.h3 [ El.txt' "Gestion des solutions" ]);
         `R App_state.sol_select.field;
-        `R focus_btn;
-        `R copy_btn;
-        `R delete_btn;
+        `R actions;
         `R print_btn;
       ]
   in

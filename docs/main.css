@@ -10,6 +10,10 @@ a {
     color: inherit;
 }
 
+button {
+    padding: 0.5rem 1rem;
+}
+
 #main-layout {
     display: flex;
     flex-direction: column;
@@ -20,6 +24,7 @@ a {
 #calendar {
     flex-grow: 1;
     overflow: hidden;
+
     & .ec {
         height: 100%;
     }
@@ -28,6 +33,7 @@ a {
 .ec-event {
     background-color: transparent !important;
     box-shadow: none !important;
+
     &:hover {
         z-index: 1000 !important;
         height: fit-content !important;
@@ -44,9 +50,11 @@ a {
     border: solid black 1px;
     border-radius: 3px;
     padding: 0.1rem;
+
     & p {
         margin: 0.1rem;
     }
+
     & h4 {
         margin-top: 0;
         margin-bottom: 0;
@@ -60,6 +68,7 @@ a {
 }
 
 .ec-resource-month-view {
+
     & .ec-line,
     & .ec-main {
         flex-grow: 1;
@@ -88,6 +97,7 @@ a {
     * {
         overflow: visible !important;
     }
+
     .ec-event-body {
         background-color: white !important;
     }
