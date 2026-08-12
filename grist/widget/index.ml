@@ -326,7 +326,7 @@ let optimize ~(chart_canvas : El.t) grist_data (current_state : Solutions.t) =
   let handle_new_solution (answer_json : Jstr.t) =
     let time =
       Jsont_brr.decode
-        Jsont.(path Path.(mem "deterministic_time" root) Jsont.number)
+        Jsont.(path Path.(mem "user_time" root) Jsont.number)
         answer_json
       |> Result.get_ok
     in

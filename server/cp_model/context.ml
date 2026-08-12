@@ -168,6 +168,6 @@ let prepare_answer date context (response : Ortools.Sat.Response.t) =
     log = response.solve_log;
     date;
     objective_value = response.objective_value;
-    deterministic_time = response.deterministic_time;
+    user_time = response.user_time;
     best_objective_bound = response.best_objective_bound;
   }

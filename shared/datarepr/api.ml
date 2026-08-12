@@ -36,7 +36,7 @@ type answer = {
   log : string;
   date : Lunar_jsont.Zoned_datetime.t;
   objective_value : float;
-  deterministic_time : float;
+  user_time : float;
   best_objective_bound : float;
 }
 [@@deriving jsont]
@@ -50,7 +50,7 @@ let dummy_answer =
     log = "";
     date = Lunar.Zoned_datetime.epoch ();
     objective_value = 0.;
-    deterministic_time = 0.;
+    user_time = 0.;
     best_objective_bound = 0.;
   }
 
