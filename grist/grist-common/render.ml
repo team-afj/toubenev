@@ -9,6 +9,23 @@ let colspan i = At.v (Jstr.v "colspan") (Jstr.of_int i)
 let rowspan i = At.v (Jstr.v "rowspan") (Jstr.of_int i)
 let scope s = At.v (Jstr.v "scope") (Jstr.v s)
 
+let slot_to_el slot =
+  let start_h, start_m, end_h, end_m = Normal.Time_slot.to_string' slot in
+  El.span
+    [
+      El.b [ El.txt' (start_h ^ "h" ^ start_m) ];
+      El.txt' " / ";
+      El.txt' (end_h ^ "h" ^ end_m);
+    ]
+
+let rev_sort assignations =
+  List.sort
+    ~cmp:(fun { Api.quest = q; _ } { Api.quest = q'; _ } ->
+      Zoned_datetime.compare
+        (Normal.Time_slot.end_ q'.slot)
+        (Normal.Time_slot.end_ q.slot))
+    assignations
+
 let place_of_assignation (assignation : Api.assignation) =
   assignation.quest.initial.Rich.Quest.place
 
@@ -55,17 +72,10 @@ let make_day_table ~details ~with_types ~with_places (date : Date.t)
     Zoned_datetime.Map.to_rev_seq assignations
     |> Seq.fold
          (fun acc (_datetime, assignations) ->
-           let assignations =
-             List.sort
-               ~cmp:(fun { Api.quest = q; _ } { Api.quest = q'; _ } ->
-                 Zoned_datetime.compare
-                   (Normal.Time_slot.end_ q'.slot)
-                   (Normal.Time_slot.end_ q.slot))
-               assignations
-           in
+           let assignations = rev_sort assignations in
            List.fold_left assignations ~init:acc
              ~f:(fun acc { Api.quest; volunteers } ->
-               let slot = Normal.Time_slot.to_string quest.slot in
+               let slot = slot_to_el quest.slot in
                let n = max 1 quest.initial.required_volunteers in
                let n_missing =
                  max 0 (n - Normal.Volunteers.cardinal volunteers - 1)
@@ -107,7 +117,7 @@ let make_day_table ~details ~with_types ~with_places (date : Date.t)
                    ~f:(fun acc (v : Normal.Volunteer.t) ->
                      El.tr [ make_assigned_cell ~details ?tags v.name ] :: acc)
                in
-               El.tr [ El.th ~at:[ rowspan n ] [ El.txt' slot ]; first ] :: rest))
+               El.tr [ El.th ~at:[ rowspan n ] [ slot ]; first ] :: rest))
          []
   in
   El.div [ El.table ~at:[ cls "planning" ] (head :: rows) ]
@@ -228,6 +238,24 @@ let make_tdq_planning ~details (task_type : Task_type.t) assignations =
 
 type grouping = By_place | By_quest_kind
 
+let group_by_date (infos : Event_infos.t) (assignations : Api.assignation list)
+    =
+  List.fold_left assignations ~init:Date.Map.empty
+    ~f:(fun acc ({ Api.quest; _ } as ass) ->
+      let date = Normal.to_event_local_date infos quest.slot.start in
+      let time = quest.slot.start in
+      (* let end_time = Normal.Time_slot.end_ quest.slot in *)
+      (Date.Map.update date (function
+        | None -> Some (Zoned_datetime.Map.singleton time [ ass ])
+        | Some times ->
+            Some
+              (Zoned_datetime.Map.update time
+                 (function
+                   | None -> Some [ ass ]
+                   | Some assignations -> Some (ass :: assignations))
+                 times)))
+        acc)
+
 let group (infos : Event_infos.t) (assignations : Api.assignation list) ~empty
     ~update =
   List.fold_left assignations ~init:empty
@@ -272,6 +300,43 @@ let group_by_kind (infos : Event_infos.t) (assignations : Api.assignation list)
   in
   group infos assignations ~empty:Task_type.Map.empty ~update
 
+let list_tasks (_infos : Event_infos.t) ?for_each_volunteers assignations =
+  ignore for_each_volunteers;
+  let row { Api.quest; volunteers } =
+    let slot = slot_to_el quest.slot in
+    let title =
+      El.div [ El.txt' quest.initial.name ]
+      ::
+      (match quest.initial.task_type with
+      | None -> []
+      | Some tdq -> [ El.div [ El.txt' (tdq.slug ^ " " ^ tdq.name) ] ])
+    in
+    let volunteers =
+      String.concat ~sep:", "
+        (Normal.Volunteers.to_list_map ~f:(fun v -> v.name) volunteers)
+      |> El.txt'
+    in
+    let place =
+      match quest.initial.place with
+      | None -> El.nbsp ()
+      | Some place -> El.txt' (place.slug ^ " " ^ place.name)
+    in
+    El.tr [ El.td [ slot ]; El.td title; El.td [ volunteers ]; El.td [ place ] ]
+  in
+  let day_list (date, assignations) =
+    let date = Date.to_intl_long_string `Fr date in
+    let thead =
+      El.thead [ El.tr [ El.th ~at:[ colspan 4 ] [ El.txt' date ] ] ]
+    in
+    let assignations =
+      Zoned_datetime.Map.to_list assignations
+      |> List.map ~f:(fun (_, l) -> rev_sort l |> List.rev)
+      |> List.concat
+    in
+    El.section (thead :: List.map ~f:row assignations)
+  in
+  Date.Map.to_list assignations |> List.map ~f:day_list
+
 let make_plannings (data : Rich.Planning.t) (answer : Api.answer) ~details
     variants =
   List.map variants ~f:(function
@@ -290,5 +355,9 @@ let make_plannings (data : Rich.Planning.t) (answer : Api.answer) ~details
         let tdq_sections =
           Task_type.Map.fold make_tdq_planning assignations []
         in
-        El.div ~at:[ cls "planning-sections" ] tdq_sections)
+        El.div ~at:[ cls "planning-sections" ] tdq_sections
+    | `List_all_tasks ->
+        let assignations = group_by_date data.infos answer.solution in
+        let list_sections = list_tasks data.infos assignations in
+        El.div ~at:[ cls "planning-sections" ] list_sections)
   |> El.section ~at:[ cls "planning-view" ]

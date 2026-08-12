@@ -53,6 +53,20 @@ let modal get_solution =
       let (Check { state; _ }) = bt.desc in
       state
     in
+    let list_all =
+      Forms.Field_checkboxes.make_single
+        {
+          value = `List_all_tasks;
+          id = "chk-lst-all";
+          name = "List all";
+          label = (fun _ -> [ `P (El.txt' "Liste de toutes les quêtes") ]);
+          state = false;
+        }
+    in
+    let list_all_var =
+      let (Check { state; _ }) = list_all.desc in
+      state
+    in
     let details =
       Forms.Field_checkboxes.make_single
         {
@@ -75,13 +89,15 @@ let modal get_solution =
       state
     in
     let peek () =
-      ( List.filter_map ~f:Fun.id [ Lwd.peek bp_var; Lwd.peek bt_var ],
+      ( List.filter_map ~f:Fun.id
+          [ Lwd.peek bp_var; Lwd.peek bt_var; Lwd.peek list_all_var ],
         Lwd.peek details_var |> Option.is_some )
     in
     ( [
         `P (El.legend [ El.txt' "Type(s) de planning à imprimer :" ]);
         `R bp.element;
         `R bt.element;
+        `R list_all.element;
         `P (El.legend [ El.txt' "Autres options :" ]);
         `R details.element;
       ],

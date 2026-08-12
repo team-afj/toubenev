@@ -8,7 +8,7 @@ module Time_slot = struct
   let dummy = { start = Zoned_datetime.epoch (); duration = Duration.zero }
   let end_ t = Zoned_datetime.(t.start + t.duration)
 
-  let to_string t =
+  let to_string' t =
     let start = Zoned_datetime.local_time t.start in
     let end_ = Zoned_datetime.local_time (end_ t) in
     let start_h = Time.hour start |> Utils.lpad ~size:2 in
@@ -19,6 +19,10 @@ module Time_slot = struct
     let end_m =
       Time.minute end_ |> function 0 -> "" | m -> Utils.lpad ~size:2 m
     in
+    (start_h, start_m, end_h, end_m)
+
+  let to_string t =
+    let start_h, start_m, end_h, end_m = to_string' t in
     start_h ^ "h" ^ start_m ^ " / " ^ end_h ^ "h" ^ end_m
 
   let overlaps t1 t2 =
