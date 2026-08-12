@@ -121,6 +121,7 @@ module Options = struct
     min_quest_duration : Duration.t;
     max_quest_duration : Duration.t;
     daily_pos_diff_cap : Duration.t option; [@default None]
+    event_pos_diff_cap : Duration.t option; [@default None]
     friendship_bonus : int;
     desired_time_bonus : int;
     undesired_time_malus : int;
@@ -138,6 +139,7 @@ module Options = struct
       min_quest_duration = Duration.from_minutes 45;
       max_quest_duration = Duration.from_minutes 120;
       daily_pos_diff_cap = None;
+      event_pos_diff_cap = None;
       friendship_bonus = 1;
       desired_time_bonus = 1;
       undesired_time_malus = 1;

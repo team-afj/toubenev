@@ -88,8 +88,7 @@ let cap_volunteers_diffs ?(epsilon = Duration.from_hours 1) (ctx : Context.t) =
   |> Date.Map.iter (fun day quests ->
       let quests =
         Quests.to_list_map
-          ~f:(fun q ->
-            (Duration.to_minutes q.slot.duration, ctx.assignations v q))
+          ~f:(fun q -> (Quest.real_duration q, ctx.assignations v q))
           quests
       in
       let sum = Sat.LinearExpr.weighted_sum quests in
@@ -102,12 +101,38 @@ let cap_volunteers_diffs ?(epsilon = Duration.from_hours 1) (ctx : Context.t) =
         @@ Format.sprintf "%s time is capped on %s" v.initial.name
              (Date.to_string day)
       in
-      Sat.(add ctx.model ~name ?only_enforce_if (sum < of_int v_time_m)))
+      Sat.(add ctx.model ~name ?only_enforce_if (sum <= of_int v_time_m)))
+
+let cap_volunteers_event_diffs ?(epsilon = Duration.from_hours 1)
+    (ctx : Context.t) =
+  ctx.for_all_volunteers @@ fun v ->
+  let v_time_m = Duration.(to_minutes (v.initial.daily_workload + epsilon)) in
+  let quests =
+    Quests.to_list_map
+      ~f:(fun q -> (Quest.real_duration q, ctx.assignations v q))
+      ctx.qs
+  in
+  let sum = Sat.LinearExpr.weighted_sum quests in
+  let name =
+    Format.sprintf "%s_time_diff_is_capped_to_%im_on_the_event" v.initial.name
+      v_time_m
+  in
+  let only_enforce_if =
+    assume ctx
+    @@ Format.sprintf "%s time diff is capped to %i on the event" v.initial.name
+         v_time_m
+  in
+  Sat.(add ctx.model ~name ?only_enforce_if (sum <= of_int v_time_m))
 
 let cap_volunteers_diffs (ctx : Context.t) =
-  match ctx.data.options.daily_pos_diff_cap with
+  begin match ctx.data.options.daily_pos_diff_cap with
   | None -> ()
   | Some epsilon -> cap_volunteers_diffs ~epsilon ctx
+  end;
+  begin match ctx.data.options.event_pos_diff_cap  with
+  | None -> ()
+  | Some epsilon ->  cap_volunteers_event_diffs ~epsilon ctx
+  end
 
 (** Enforces manual assignations of volunteers, and prevents manually assigned
     volunteers from doing anything else. *)
