@@ -25,14 +25,32 @@ module type Jsontable = sig
   val jsont : t Jsont.t
 end
 
+module type Pretty_printable = sig
+  type t
+
+  val pp : Format.formatter -> t -> unit
+  val show : t -> string
+end
+
 module type S = sig
   type t
 
   include Editable with type t := t
   include Jsontable with type t := t
+  include Pretty_printable with type t := t
 end
 
-module Random_access_list (X : S) : S with type t = X.t CCRAL.t = struct
+module type Random_access_list = sig
+  type t
+
+  include Editable with type t := t
+  include Jsontable with type t := t
+  include Pretty_printable with type t := t
+end
+
+module Random_access_list (X : S) : sig
+  include S with type t = X.t CCRAL.t
+end = struct
   type t = X.t CCRAL.t
 
   let jsont =
@@ -54,10 +72,25 @@ module Random_access_list (X : S) : S with type t = X.t CCRAL.t = struct
         Option.fold
           (fun t v -> X.apply_edit edit v |> CCRAL.set t i)
           t (CCRAL.get t i)
+
+  let pp fmt t =
+    CCRAL.to_array t |> Array.to_list
+    |> Format.pp_print_list
+         ~pp_sep:(fun fmt () -> Format.fprintf fmt ";@ ")
+         X.pp fmt
+
+  let show t =
+    let fmt = Format.str_formatter in
+    CCRAL.to_array t |> Array.to_list
+    |> Format.pp_print_list
+         ~pp_sep:(fun fmt () -> Format.fprintf fmt ";@ ")
+         X.pp fmt;
+    Format.flush_str_formatter ()
 end
 
 type _ id = string
 
+let pp_id _pp fmt id = Format.fprintf fmt "%s" id
 let id_equal u1 u2 = String.equal u1 u2
 let id_jsont _ = Jsont.string
 let make_id () = new_random_uuid_v4 () |> Uuidm.to_string
@@ -69,7 +102,7 @@ module Event_infos = struct
   type kind =
     (* TODO Weekly | Monthly *)
     | Finite of { start_date : Date.t; end_date : Date.t }
-  [@@deriving jsont]
+  [@@deriving jsont, show]
 
   type t = {
     name : string;
@@ -79,7 +112,7 @@ module Event_infos = struct
     minimum_transfer_time : Duration.t;
     daily_break_duration : Duration.t;
   }
-  [@@deriving jsont]
+  [@@deriving jsont, show]
 end
 
 module Options = struct
@@ -124,7 +157,7 @@ module Place = struct
       name : string;
       description : string option;
     }
-    [@@deriving jsont]
+    [@@deriving jsont, show]
 
     let equal p1 p2 = id_equal p1.id p2.id
     let compare t1 t2 = String.compare (id_to_string t1.id) (id_to_string t2.id)
@@ -161,7 +194,7 @@ module Task_type = struct
     | At_least_once
     | At_most_once
     | In_equal_proportion
-  [@@deriving jsont]
+  [@@deriving jsont, show]
 
   let string_of_task_sharing = function
     | Not_necessarily -> "Not_necessarily"
@@ -182,7 +215,7 @@ module Task_type = struct
       required_time_before : Duration.t option;
       required_time_after : Duration.t option;
     }
-    [@@deriving jsont]
+    [@@deriving jsont, show]
 
     let equal t1 t2 = String.equal (id_to_string t1.id) (id_to_string t2.id)
     let compare t1 t2 = String.compare (id_to_string t1.id) (id_to_string t2.id)
@@ -244,7 +277,7 @@ module Task_types = Random_access_list (Task_type)
 
 module Time_spec = struct
   type recurrence = Daily | Weekly of Weekday.Set.t | On of Date.t list
-  [@@deriving jsont]
+  [@@deriving jsont, show]
 
   let string_of_recurrence = function
     | Daily -> "daily"
@@ -268,7 +301,7 @@ module Time_spec = struct
     first_day : Date.t option;
     last_day : Date.t option;
   }
-  [@@deriving jsont]
+  [@@deriving jsont, show]
 
   type edit =
     | New_recurrence of recurrence
@@ -310,8 +343,8 @@ end
 module Time_specs = Random_access_list (Time_spec)
 
 module Availability = struct
-  type status = Unavailable | Available of int [@@deriving jsont]
-  type t = { status : status; slot : Time_spec.t } [@@deriving jsont]
+  type status = Unavailable | Available of int [@@deriving jsont, show]
+  type t = { status : status; slot : Time_spec.t } [@@deriving jsont, show]
 
   type edit =
     | New_status of status
@@ -329,7 +362,7 @@ end
 module Availabilities = Random_access_list (Availability)
 
 module Volunteer = struct
-  type spread_pref = Spreaded | Grouped [@@deriving jsont]
+  type spread_pref = Spreaded | Grouped [@@deriving jsont, show]
 
   type t = {
     id : t id;
@@ -351,7 +384,7 @@ module Volunteer = struct
         (* TODO this has been made optional to stay compatible with earlier
                 versions but should be enforced in the future. *)
   }
-  [@@deriving jsont]
+  [@@deriving jsont, show]
 
   let dummy =
     {
@@ -438,7 +471,7 @@ module Break = struct
     specs : Time_specs.t;  (** Time spans during which the break can happen *)
     filter : [ `All | `Only of Volunteers.t | `Except of Volunteers.t ];
   }
-  [@@deriving jsont]
+  [@@deriving jsont, show]
 
   type edit = unit [@@deriving jsont]
 
@@ -456,7 +489,7 @@ module Quests_group = struct
     | Maximum_common_volunteers
     | Distinct_volunteers
     | Maximum_diversity
-  [@@deriving jsont]
+  [@@deriving jsont, show]
 
   let string_of_quests_constraint = function
     | At_least_one_common_volunteer -> "At_least_one_common_volunteer"
@@ -467,7 +500,7 @@ module Quests_group = struct
   type recurring_quests_behavior =
     | Same_group_for_all_occurrences
     | One_group_per_occurrence
-  [@@deriving jsont]
+  [@@deriving jsont, show]
 
   type t = {
     id : t id;
@@ -475,7 +508,7 @@ module Quests_group = struct
     quests_constraint : quests_constraint;
     recurring_quests_behavior : recurring_quests_behavior;
   }
-  [@@deriving jsont]
+  [@@deriving jsont, show]
 
   type edit = TODO [@@deriving jsont]
 
@@ -501,7 +534,7 @@ module Quest = struct
     required_volunteers : int;
     assigned_volunteers : Volunteers.t;
   }
-  [@@deriving jsont]
+  [@@deriving jsont, show]
 
   let dummy =
     {
@@ -569,7 +602,7 @@ module Planning = struct
     quests_groups : Quests_groups.t;
     quests : Quests.t;
   }
-  [@@deriving jsont]
+  [@@deriving jsont, show]
 
   type edit =
     | Places of Places.edit

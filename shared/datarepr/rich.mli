@@ -21,11 +21,27 @@ module type Jsontable = sig
   val jsont : t Jsont.t
 end
 
+module type Pretty_printable = sig
+  type t
+
+  val pp : Format.formatter -> t -> unit
+  val show : t -> string
+end
+
 module type S = sig
   type t
 
   include Editable with type t := t
   include Jsontable with type t := t
+  include Pretty_printable with type t := t
+end
+
+module type Random_access_list = sig
+  type t
+
+  include Editable with type t := t
+  include Jsontable with type t := t
+  include Pretty_printable with type t := t
 end
 
 type _ id
@@ -101,9 +117,7 @@ module Place : sig
     ?id:t id -> slug:string -> name:string -> ?description:string -> unit -> t
 end
 
-module Places : sig
-  include module type of Random_access_list (Place)
-end
+module Places : Random_access_list with type t = Place.t CCRAL.t
 
 module Task_type : sig
   (* Only [At_least_once] is handled right now *)
@@ -152,9 +166,7 @@ module Task_type : sig
     t
 end
 
-module Task_types : sig
-  include module type of Random_access_list (Task_type)
-end
+module Task_types : Random_access_list with type t = Task_type.t CCRAL.t
 
 module Time_spec : sig
   type recurrence = Daily | Weekly of Weekday.Set.t | On of Date.t list
@@ -182,9 +194,7 @@ module Time_spec : sig
   val to_string : t -> string
 end
 
-module Time_specs : sig
-  include module type of Random_access_list (Time_spec)
-end
+module Time_specs : Random_access_list with type t = Time_spec.t CCRAL.t
 
 module Availability : sig
   type status =
@@ -199,9 +209,7 @@ module Availability : sig
   include S with type t := t
 end
 
-module Availabilities : sig
-  include module type of Random_access_list (Availability)
-end
+module Availabilities : Random_access_list with type t = Availability.t CCRAL.t
 
 module Volunteer : sig
   type spread_pref = Spreaded | Grouped [@@deriving jsont]
@@ -253,9 +261,7 @@ module Volunteer : sig
   val set_ennemis : t -> t id list -> unit
 end
 
-module Volunteers : sig
-  include module type of Random_access_list (Volunteer)
-end
+module Volunteers : Random_access_list with type t = Volunteer.t CCRAL.t
 
 module Break : sig
   type t = private {
@@ -264,6 +270,7 @@ module Break : sig
     specs : Time_specs.t;  (** Time span during which the break can happen *)
     filter : [ `All | `Only of Volunteers.t | `Except of Volunteers.t ];
   }
+  [@@deriving show]
 
   include S with type t := t
 
@@ -276,9 +283,7 @@ module Break : sig
     t
 end
 
-module Breaks : sig
-  include module type of Random_access_list (Break)
-end
+module Breaks : Random_access_list with type t = Break.t CCRAL.t
 
 module Quests_group : sig
   type quests_constraint =
@@ -319,9 +324,7 @@ module Quests_group : sig
     t
 end
 
-module Quests_groups : sig
-  include module type of Random_access_list (Quests_group)
-end
+module Quests_groups : Random_access_list with type t = Quests_group.t CCRAL.t
 
 module Quest : sig
   type t = private {
@@ -356,9 +359,7 @@ module Quest : sig
   val is_free : t -> bool
 end
 
-module Quests : sig
-  include module type of Random_access_list (Quest)
-end
+module Quests : Random_access_list with type t = Quest.t CCRAL.t
 
 module Planning : sig
   type t = {

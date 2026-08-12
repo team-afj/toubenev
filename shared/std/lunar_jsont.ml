@@ -48,6 +48,10 @@ module Weekday = struct
     include Set
 
     let jsont = Jsont.map ~dec:of_list ~enc:to_list (Jsont.list jsont)
+
+    let pp fmt t =
+      let days = to_list t |> List.map to_string |> String.concat ", " in
+      Format.fprintf fmt "{%s}" days
   end
 end
 
@@ -136,6 +140,8 @@ module Timezone = struct
 
   let jsont : t Jsont.t =
     Jsont.map ~dec:from_string_exn ~enc:to_string Jsont.string
+
+  let pp fmt t = Format.fprintf fmt "%s" (to_string t)
 end
 
 module Date = struct
@@ -163,6 +169,8 @@ module Date = struct
     | `DDMMYYYY ->
         let year = year t |> string_of_int in
         day_of_month ^ "/" ^ month ^ "/" ^ year
+
+  let pp fmt t = Format.pp_print_string fmt (to_string t)
 
   let jsont : t Jsont.t =
     Jsont.map ~dec:from_string_exn ~enc:to_string Jsont.string
@@ -195,6 +203,8 @@ module Time = struct
         let hour = hour t |> Utils.lpad ~size:2 in
         let minute = minute t |> Utils.lpad ~size:2 in
         hour ^ ":" ^ minute
+
+  let pp fmt t = Format.pp_print_string fmt (to_string t)
 end
 
 module Datetime = struct
@@ -206,6 +216,7 @@ end
 module Zoned_datetime = struct
   include Lunar.Zoned_datetime
 
+  let pp fmt t = Format.fprintf fmt "%s" (to_string t)
   let jsont = Jsont.string |> Jsont.map ~dec:from_string_exn ~enc:to_string
   let local_date t = to_local_datetime t |> Datetime.date
   let local_time t = to_local_datetime t |> Datetime.time
