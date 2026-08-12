@@ -14,7 +14,7 @@ let slot_to_el slot =
   El.span
     [
       El.b [ El.txt' (start_h ^ "h" ^ start_m) ];
-      El.txt' " / ";
+      El.txt' " / ";
       El.txt' (end_h ^ "h" ^ end_m);
     ]
 
@@ -263,7 +263,7 @@ let group (infos : Event_infos.t) (assignations : Api.assignation list) ~empty
       let date = Normal.to_event_local_date infos quest.slot.start in
       let time = quest.slot.start in
       (* let end_time = Normal.Time_slot.end_ quest.slot in *)
-      update quest
+      update ass
         (function
           | None ->
               Some
@@ -286,22 +286,30 @@ let group (infos : Event_infos.t) (assignations : Api.assignation list) ~empty
 
 let group_by_place (infos : Event_infos.t) (assignations : Api.assignation list)
     =
-  let update (q : Normal.Quest.t) f acc =
-    let place = Option.value ~default:Place.dummy q.initial.place in
+  let update { Api.quest; _ } f acc =
+    let place = Option.value ~default:Place.dummy quest.initial.place in
     Place.Map.update place f acc
   in
   group infos assignations ~empty:Place.Map.empty ~update
 
 let group_by_kind (infos : Event_infos.t) (assignations : Api.assignation list)
     =
-  let update (q : Normal.Quest.t) f acc =
-    let task = Option.value ~default:Task_type.dummy q.initial.task_type in
+  let update { Api.quest; _ } f acc =
+    let task = Option.value ~default:Task_type.dummy quest.initial.task_type in
     Task_type.Map.update task f acc
   in
   group infos assignations ~empty:Task_type.Map.empty ~update
 
-let list_tasks (_infos : Event_infos.t) ?for_each_volunteers assignations =
-  ignore for_each_volunteers;
+let group_by_volunteer (infos : Event_infos.t)
+    (assignations : Api.assignation list) =
+  let open Normal in
+  let update { Api.volunteers; _ } f acc =
+    Volunteers.fold volunteers ~init:acc ~f:(fun acc v ->
+        Volunteer.Map.update v f acc)
+  in
+  group infos assignations ~empty:Volunteer.Map.empty ~update
+
+let list_tasks assignations =
   let row { Api.quest; volunteers } =
     let slot = slot_to_el quest.slot in
     let title =
@@ -321,7 +329,16 @@ let list_tasks (_infos : Event_infos.t) ?for_each_volunteers assignations =
       | None -> El.nbsp ()
       | Some place -> El.txt' (place.slug ^ " " ^ place.name)
     in
-    El.tr [ El.td [ slot ]; El.td title; El.td [ volunteers ]; El.td [ place ] ]
+    let size_1 = At.style (Jstr.v "width: 10ch") in
+    let size_2 = At.style (Jstr.v "width: 10em") in
+    let size_3 = At.style (Jstr.v "width: 10em") in
+    El.tr
+      [
+        El.td ~at:[ size_1 ] [ slot ];
+        El.td ~at:[ size_2 ] title;
+        El.td [ volunteers ];
+        El.td ~at:[ size_3 ] [ place ];
+      ]
   in
   let day_list (date, assignations) =
     let date = Date.to_intl_long_string `Fr date in
@@ -333,9 +350,20 @@ let list_tasks (_infos : Event_infos.t) ?for_each_volunteers assignations =
       |> List.map ~f:(fun (_, l) -> rev_sort l |> List.rev)
       |> List.concat
     in
-    El.section (thead :: List.map ~f:row assignations)
+    El.section [ El.table (thead :: List.map ~f:row assignations) ]
   in
   Date.Map.to_list assignations |> List.map ~f:day_list
+
+let volunteers_task_lists assignations =
+  let open Normal in
+  let make (v, assignations) =
+    let title = El.h1 [ El.txt' v.Volunteer.name ] in
+    let planning = list_tasks assignations in
+    El.section
+      ~at:[ At.class' (Jstr.v "planning-place") ]
+      [ title; El.section planning ]
+  in
+  Volunteer.Map.to_list assignations |> List.map ~f:make
 
 let make_plannings (data : Rich.Planning.t) (answer : Api.answer) ~details
     variants =
@@ -358,6 +386,10 @@ let make_plannings (data : Rich.Planning.t) (answer : Api.answer) ~details
         El.div ~at:[ cls "planning-sections" ] tdq_sections
     | `List_all_tasks ->
         let assignations = group_by_date data.infos answer.solution in
-        let list_sections = list_tasks data.infos assignations in
+        let list_sections = list_tasks assignations in
+        El.div ~at:[ cls "planning-sections" ] list_sections
+    | `List_tasks_by_volunteer ->
+        let assignations = group_by_volunteer data.infos answer.solution in
+        let list_sections = volunteers_task_lists assignations in
         El.div ~at:[ cls "planning-sections" ] list_sections)
   |> El.section ~at:[ cls "planning-view" ]

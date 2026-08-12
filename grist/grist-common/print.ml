@@ -67,6 +67,21 @@ let modal get_solution =
       let (Check { state; _ }) = list_all.desc in
       state
     in
+    let list_by_v =
+      Forms.Field_checkboxes.make_single
+        {
+          value = `List_tasks_by_volunteer;
+          id = "chk-lst-by-v";
+          name = "List by v";
+          label =
+            (fun _ -> [ `P (El.txt' "Liste des quêtes de chaque bénévole") ]);
+          state = false;
+        }
+    in
+    let list_by_v_var =
+      let (Check { state; _ }) = list_by_v.desc in
+      state
+    in
     let details =
       Forms.Field_checkboxes.make_single
         {
@@ -90,7 +105,12 @@ let modal get_solution =
     in
     let peek () =
       ( List.filter_map ~f:Fun.id
-          [ Lwd.peek bp_var; Lwd.peek bt_var; Lwd.peek list_all_var ],
+          [
+            Lwd.peek bp_var;
+            Lwd.peek bt_var;
+            Lwd.peek list_all_var;
+            Lwd.peek list_by_v_var;
+          ],
         Lwd.peek details_var |> Option.is_some )
     in
     ( [
@@ -98,6 +118,7 @@ let modal get_solution =
         `R bp.element;
         `R bt.element;
         `R list_all.element;
+        `R list_by_v.element;
         `P (El.legend [ El.txt' "Autres options :" ]);
         `R details.element;
       ],

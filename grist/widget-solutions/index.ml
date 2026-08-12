@@ -327,7 +327,7 @@ let app =
     | None | Some { answer = { solution = []; _ }; _ } -> El.nbsp ()
     | Some sol ->
         Render.make_plannings sol.data_rich sol.answer ~details:false
-          [ `List_all_tasks ]
+          [ `List_tasks_by_volunteer ]
   in
   let analyses =
     let$* results = App_state.active_solution_normal in
