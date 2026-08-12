@@ -128,9 +128,9 @@ let cap_volunteers_diffs (ctx : Context.t) =
   | None -> ()
   | Some epsilon -> cap_volunteers_diffs ~epsilon ctx
   end;
-  begin match ctx.data.options.event_pos_diff_cap  with
+  begin match ctx.data.options.event_pos_diff_cap with
   | None -> ()
-  | Some epsilon ->  cap_volunteers_event_diffs ~epsilon ctx
+  | Some epsilon -> cap_volunteers_event_diffs ~epsilon ctx
   end
 
 (** Enforces manual assignations of volunteers, and prevents manually assigned
