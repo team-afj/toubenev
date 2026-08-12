@@ -240,7 +240,7 @@ let know_your_ennemy (ctx : Context.t) =
 
 (** Dstribute breaks *)
 
-let distribute_break (ctx : Context.t) { Break.initial; slot } =
+let distribute_break (ctx : Context.t) { Break.initial; slot; filter } =
   (* TODO volunteer filters *)
   (* TODO we could magnetize break slots to start every fifteen minutes.
      It would scale the domain down and make more pleasants results. *)
@@ -254,47 +254,48 @@ let distribute_break (ctx : Context.t) { Break.initial; slot } =
     |> Quests.to_list
   in
   ctx.for_all_volunteers @@ fun v ->
-  let start =
+  if Break.applies_to_v filter v then
+    let start =
+      let name =
+        String.concat ~sep:"_"
+          [ "break_start"; initial.name; "for"; v.name; "on"; start_s ]
+      in
+      let lb = start_m in
+      let ub =
+        end_m - duration_m
+        (* The break must start [duration_of_the_break] before the break slot ends *)
+      in
+      Sat.Var.new_int ctx.model ~lb ~ub name
+    in
+    let break =
+      let name =
+        String.concat ~sep:"_"
+          [ "break_interval"; initial.name; "for"; v.name; "on"; start_s ]
+      in
+      let start = Sat.var start in
+      let size = Sat.of_int duration_m in
+      let end_ = Sat.(start + size) in
+      Sat.new_interval_var ctx.model ~start ~size ~end_ name
+    in
     let name =
       String.concat ~sep:"_"
-        [ "break_start"; initial.name; "for"; v.name; "on"; start_s ]
+        [ "break_no_overlap"; initial.name; "for"; v.name; "on"; start_s ]
     in
-    let lb = start_m in
-    let ub =
-      end_m - duration_m
-      (* The break must start [duration_of_the_break] before the break slot ends *)
+    let only_enforce_if =
+      assume ctx
+      @@ String.concat ~sep:" "
+           [
+             "Break ";
+             initial.name;
+             "for";
+             v.name;
+             "on";
+             start_s;
+             "does not overlap with other quests";
+           ]
     in
-    Sat.Var.new_int ctx.model ~lb ~ub name
-  in
-  let break =
-    let name =
-      String.concat ~sep:"_"
-        [ "break_interval"; initial.name; "for"; v.name; "on"; start_s ]
-    in
-    let start = Sat.var start in
-    let size = Sat.of_int duration_m in
-    let end_ = Sat.(start + size) in
-    Sat.new_interval_var ctx.model ~start ~size ~end_ name
-  in
-  let name =
-    String.concat ~sep:"_"
-      [ "break_no_overlap"; initial.name; "for"; v.name; "on"; start_s ]
-  in
-  let only_enforce_if =
-    assume ctx
-    @@ String.concat ~sep:" "
-         [
-           "Break ";
-           initial.name;
-           "for";
-           v.name;
-           "on";
-           start_s;
-           "does not overlap with other quests";
-         ]
-  in
-  let intervals = break :: List.map overlapping_quests ~f:(ctx.intervals v) in
-  Sat.add_no_overlap ctx.model ?only_enforce_if ~name intervals
+    let intervals = break :: List.map overlapping_quests ~f:(ctx.intervals v) in
+    Sat.add_no_overlap ctx.model ?only_enforce_if ~name intervals
 
 let distribute_breaks (ctx : Context.t) =
   List.iter ~f:(distribute_break ctx) ctx.breaks

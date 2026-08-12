@@ -140,6 +140,8 @@ module Pause = struct
     name : string;
     duration_m : int;
     time_specs : grist_int_list; [@default []]
+    everyone_except : grist_int_list; [@default []]
+    nobody_except : grist_int_list; [@default []]
   }
   [@@deriving jsont]
 end
@@ -615,14 +617,36 @@ let to_planning ?(id_map = new_id_map ())
         Rich.Volunteer.set_ennemis v ennemis)
   in
   let breaks =
-    let convert_break { Pause.name; duration_m; time_specs = specs; _ } =
+    let convert_break
+        {
+          Pause.id = _;
+          name;
+          duration_m;
+          time_specs = specs;
+          everyone_except;
+          nobody_except;
+        } =
       let name = String.trim name in
       let duration = Duration.from_minutes duration_m in
       let specs =
         List.map specs ~f:(fun i ->
             Hashtbl.get time_specs i |> Option.get_exn_or "Bad time spec")
       in
-      Rich.Break.make ~name duration (CCRAL.of_list specs) ()
+      let filter =
+        match (everyone_except, nobody_except) with
+        | [], [] -> `All
+        | _, [] ->
+            `Except
+              (List.filter_map everyone_except ~f:(fun id ->
+                   Int.Map.find_opt id id_map.volunteers)
+              |> CCRAL.of_list)
+        | _, _ ->
+            `Only
+              (List.filter_map nobody_except ~f:(fun id ->
+                   Int.Map.find_opt id id_map.volunteers)
+              |> CCRAL.of_list)
+      in
+      Rich.Break.make ~name ~filter duration (CCRAL.of_list specs) ()
     in
     let breaks = List.map ~f:convert_break breaks in
     CCRAL.of_list breaks

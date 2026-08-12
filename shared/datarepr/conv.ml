@@ -123,16 +123,16 @@ let normalize_volunteer event_infos (v : Rich.Volunteer.t) =
     preferences;
   }
 
+let ccral_to_volunteers vs l =
+  CCRAL.fold l ~x:Volunteer.Set.empty ~f:(fun acc (v : Rich.Volunteer.t) ->
+      Volunteer.Set.add
+        (Volunteer.Set.find_by_id (Rich.id_to_string v.id) vs)
+        acc)
+
 (** Generates sub-quests depending of the recurrence and the task type's
     divisibility. *)
 let normalize_quest event_infos options vs (diags, groups) (q : Rich.Quest.t) =
-  let assigned_volunteers =
-    CCRAL.fold q.assigned_volunteers ~x:Volunteer.Set.empty
-      ~f:(fun acc (v : Rich.Volunteer.t) ->
-        Volunteer.Set.add
-          (Volunteer.Set.find_by_id (Rich.id_to_string v.id) vs)
-          acc)
-  in
+  let assigned_volunteers = ccral_to_volunteers vs q.assigned_volunteers in
   let slots = expand_time_spec event_infos q.slot in
   let diagnostics =
     if not (List.is_empty slots) then diags
@@ -222,12 +222,18 @@ let normalize (data : Rich.Planning.t) =
   in
   let breaks =
     CCRAL.to_list data.breaks
-    |> List.concat_map ~f:(fun ({ Rich.Break.specs; _ } as initial) ->
+    |> List.concat_map ~f:(fun ({ Rich.Break.specs; filter; _ } as initial) ->
         let specs = CCRAL.to_list specs in
+        let filter =
+          match filter with
+          | `All -> `All
+          | `Only vs -> `Only (ccral_to_volunteers volunteers vs)
+          | `Except vs -> `Except (ccral_to_volunteers volunteers vs)
+        in
         List.concat_map
           ~f:(fun spec ->
             List.map (expand_time_spec data.infos spec) ~f:(fun slot ->
-                { Break.initial; slot }))
+                { Break.initial; slot; filter }))
           specs)
   in
   { Api.volunteers; breaks; quests; quests_groups; diagnostics }

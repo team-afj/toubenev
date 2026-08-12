@@ -152,7 +152,18 @@ end
 module Volunteers = Volunteer.Set
 
 module Break = struct
-  type t = { initial : Break.t; slot : Time_slot.t } [@@deriving jsont]
+  type t = {
+    initial : Break.t;
+    slot : Time_slot.t;
+    filter : [ `All | `Only of Volunteers.t | `Except of Volunteers.t ];
+  }
+  [@@deriving jsont]
+
+  let applies_to_v filter v =
+    match filter with
+    | `All -> true
+    | `Except vs -> not (Volunteers.mem v vs)
+    | `Only vs -> Volunteers.mem v vs
 end
 
 module Quest = struct
