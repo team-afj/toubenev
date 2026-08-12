@@ -29,12 +29,11 @@ let all_staffed (ctx : Context.t) =
     let name = Format.sprintf "q_%s_is_staffed" q.name in
     let only_enforce_if =
       (* TODO: these probably add more noise than useful information *)
-      (* let name =
+      let name =
         Format.sprintf "%i people do %s"
           q.initial.Rich.Quest.required_volunteers q.name
       in
-      assume ctx name *)
-      None
+      assume ctx name
     in
     let vars =
       Volunteers.to_list_map ctx.vs ~f:(fun v -> ctx.assignations v q)
