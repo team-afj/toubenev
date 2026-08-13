@@ -35,8 +35,10 @@ C Par là
 - [x] Print liste tâches et par bénévole
 - [x] Listé bénévoles par appréciation
 - [x] Essayer limiter heure / jour
+- [ ] Planning grille
 
 De la mort
 - [x] Contrainte groupe: une seule quête du groupe
 - [ ] Bénévoles à heures max FIXES
 - [x] Amplitudes horaires par bénévole
+- [ ] Bug overlapping check
