@@ -452,8 +452,8 @@ let per_volunteer (assignations : Api.assignation list) (v : Normal.Volunteer.t)
   let slots =
     List.fold_left quests ~init:(0, 0, 0) ~f:(fun acc q ->
         let quest_end = Time_slot.end_ q.Quest.slot in
-        let rec loop acc current =
-          if Zoned_datetime.(current >= quest_end) then acc
+        let rec loop (gd, bd, ne) current =
+          if Zoned_datetime.(current >= quest_end) then (gd, bd, ne)
           else
             let next_time =
               Zoned_datetime.(min (current + fifteen_minutes) quest_end)
@@ -467,13 +467,16 @@ let per_volunteer (assignations : Api.assignation list) (v : Normal.Volunteer.t)
               { Time_slot.start = current; duration = block_duration }
             in
             let preferences_score =
-              List.fold_left v.preferences ~init:acc
-                ~f:(fun (gd, bd, ne) (pref_score, pref_slot) ->
-                  if Time_slot.overlaps current_block pref_slot then
-                    begin if pref_score > 0 then (gd + 1, bd, ne)
-                    else (gd, bd + 1, ne)
-                    end
-                  else (gd, bd, ne + 1))
+              let score =
+                List.fold_left v.preferences ~init:0
+                  ~f:(fun acc (pref_score, pref_slot) ->
+                    if Time_slot.overlaps current_block pref_slot then
+                      acc + pref_score
+                    else acc)
+              in
+              if score > 0 then (gd + 1, bd, ne)
+              else if score < 0 then (gd, bd + 1, ne)
+              else (gd, bd, ne + 1)
             in
             loop preferences_score next_time
         in
