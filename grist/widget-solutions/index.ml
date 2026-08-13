@@ -358,7 +358,13 @@ let app =
             `R capacity_table;
           ]
   in
-  Elwd.div [ `R controls; `R solution_manager; `R analyses ]
+  let dbg_grid_plan =
+    let$ answer = App_state.active_solution_state in
+    match answer with
+    | None | Some { answer = { solution = []; _ }; _ } -> El.nbsp ()
+    | Some sol -> Grid_planning.render sol.data_rich.infos sol.answer.solution
+  in
+  Elwd.div [ `R dbg_grid_plan; `R controls; `R solution_manager; `R analyses ]
 
 let decode_solution_jv sol =
   let sol_id = Jv.Int.get sol "id" in

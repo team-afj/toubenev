@@ -1,0 +1,17 @@
+/* grid-template-columns:
+  repeat(auto-fit, minmax(10px, 1fr)); */
+
+.grid-planning {
+  display: grid;
+
+  .grid-timeline {
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-auto-flow: dense;
+    grid-column: 2/-1;
+
+    .slot {
+      overflow: hidden;
+    }
+  }
+}
