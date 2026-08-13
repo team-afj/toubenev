@@ -319,6 +319,7 @@ let optimize ~(chart_canvas : El.t) grist_data (current_state : Solutions.t) =
               in
               Lwd.set App_state.last_answer
                 (Some { state with answer; analysis });
+              let* () = Assignations.remove_assignations ~solution:s_id_2 in
               Assignations.insert_assignations assignations
         end)
       (Event_source.as_target event_source)
