@@ -391,5 +391,8 @@ let make_plannings (data : Rich.Planning.t) (answer : Api.answer) ~details
     | `List_tasks_by_volunteer ->
         let assignations = group_by_volunteer data.infos answer.solution in
         let list_sections = volunteers_task_lists assignations in
+        El.div ~at:[ cls "planning-sections" ] list_sections
+    | `Daily_grids ->
+        let list_sections = Grid_planning.render data.infos answer.solution in
         El.div ~at:[ cls "planning-sections" ] list_sections)
   |> El.section ~at:[ cls "planning-view" ]

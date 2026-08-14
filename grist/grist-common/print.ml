@@ -82,6 +82,20 @@ let modal get_solution =
       let (Check { state; _ }) = list_by_v.desc in
       state
     in
+    let gp =
+      Forms.Field_checkboxes.make_single
+        {
+          value = `Daily_grids;
+          id = "chk-grid-planning";
+          name = "Grid planning";
+          label = (fun _ -> [ `P (El.txt' "Grilles quotidiennes") ]);
+          state = true;
+        }
+    in
+    let gp_var =
+      let (Check { state; _ }) = gp.desc in
+      state
+    in
     let details =
       Forms.Field_checkboxes.make_single
         {
@@ -110,6 +124,7 @@ let modal get_solution =
             Lwd.peek bt_var;
             Lwd.peek list_all_var;
             Lwd.peek list_by_v_var;
+            Lwd.peek gp_var;
           ],
         Lwd.peek details_var |> Option.is_some )
     in
@@ -119,6 +134,7 @@ let modal get_solution =
         `R bt.element;
         `R list_all.element;
         `R list_by_v.element;
+        `R gp.element;
         `P (El.legend [ El.txt' "Autres options :" ]);
         `R details.element;
       ],

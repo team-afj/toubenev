@@ -97,10 +97,6 @@ let render date
           ~at:[ At.class' (j "slot"); grid_column (start + 1) duration ]
           [ El.div ~at:[ At.class' (j "slot-content") ] content ])
   in
-  (* let ass =
-    Place.Map.max_binding assignations
-    |> snd |> Task_type.Map.max_binding |> snd
-  in *)
   let rows =
     Place.Map.fold
       (fun place ->
@@ -119,7 +115,6 @@ let render date
             :: acc))
       assignations []
   in
-  (* let slots = make_slots ass in *)
   let header =
     let ticks = render_ticks ~start ~end_ in
     El.div ~at:[ c_grid_row ]
@@ -131,15 +126,6 @@ let render date
   El.div
     ~at:[ At.class' (j "grid-planning"); grid_template_columns minutes ]
     (header :: rows)
-(* [
-      (* render_background (); *)
-      header;
-      El.div ~at:[ c_grid_row ]
-        [
-          El.div [ El.txt' q.quest.name ];
-          El.div ~at:[ At.class' (j "grid-timeline") ] slots;
-        ];
-    ] *)
 
 let render infos (assignations : Api.assignation list) =
   let assignations =
@@ -170,5 +156,8 @@ let render infos (assignations : Api.assignation list) =
                      places))
           dates)
   in
-  let date, first_day = Date.Map.choose assignations in
-  render date first_day
+  Date.Map.fold
+    (fun day ass acc ->
+      El.section ~at:[ At.class' (Jstr.v "planning-place") ] [ render day ass ]
+      :: acc)
+    assignations []
