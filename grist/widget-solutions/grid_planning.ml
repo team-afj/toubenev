@@ -54,16 +54,18 @@ let render (assignations : Api.assignation list Task_type.Map.t Place.Map.t) =
     |> snd |> Task_type.Map.max_binding |> snd
   in
   let shifts =
-    List.map ass ~f:(fun { Api.quest; _ } ->
+    List.map ass ~f:(fun { Api.quest; volunteers } ->
         let start_q = quest.slot.start in
         let start = Zoned_datetime.diff start_q start |> Duration.to_minutes in
         let duration = quest.slot.duration |> Duration.to_minutes in
+        let content =
+          El.txt' (string_of_int quest.initial.required_volunteers)
+          :: Volunteers.fold volunteers ~init:[] ~f:(fun acc v ->
+              El.br () :: El.txt' v.name :: acc)
+        in
         El.div
           ~at:[ At.class' (j "slot"); grid_column (start + 1) duration ]
-          [
-            El.txt' (string_of_int start ^ " " ^ string_of_int duration);
-            El.txt' (Zoned_datetime.local_time start_q |> Time.to_string);
-          ])
+          content)
   in
   let q = List.hd ass in
   El.div
