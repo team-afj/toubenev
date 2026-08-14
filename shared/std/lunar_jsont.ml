@@ -203,6 +203,11 @@ module Time = struct
         let hour = hour t |> Utils.lpad ~size:2 in
         let minute = minute t |> Utils.lpad ~size:2 in
         hour ^ ":" ^ minute
+    | `SHORT ->
+        let hour = hour t |> Utils.lpad ~size:2 in
+        let minute = minute t in
+        if Int.equal 0 minute then hour ^ "h"
+        else hour ^ "h" ^ Utils.lpad ~size:2 minute
 
   let pp fmt t = Format.pp_print_string fmt (to_string t)
 end

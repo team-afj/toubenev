@@ -5,6 +5,7 @@ open! Rich
 open! Normal
 
 let j = Jstr.v
+let c_grid_row = At.class' (j "grid-row")
 
 let grid_template_columns duration =
   Printf.sprintf
@@ -41,13 +42,34 @@ let bounds (assignations : Api.assignation list Task_type.Map.t Place.Map.t) =
     assignations None
   |> Option.get_exn_or "Bad bounds"
 
-let render (assignations : Api.assignation list Task_type.Map.t Place.Map.t) =
+let render_ticks ~start ~end_ =
+  let bounds_ticks = Zoned_datetime.Set.of_list [ start; end_ ] in
+  let aligned_start = Zoned_datetime.ceil Lunar.Resolution.hour start in
+  let range = Zoned_datetime.Range.make ~first:aligned_start ~last:end_ in
+  let ticks =
+    Zoned_datetime.(
+      Set.add_seq
+        (Range.to_seq ~include_boundaries:false ~iterator:Range.iterator_hour
+           range)
+        bounds_ticks)
+  in
+  Zoned_datetime.Set.fold
+    (fun dt acc ->
+      let start = Zoned_datetime.diff dt start |> Duration.to_minutes in
+      let txt = Zoned_datetime.local_time dt |> Time.to_string ~format:`SHORT in
+      El.div
+        ~at:[ At.class' (j "tick"); grid_column (start + 1) 1 ]
+        [ El.txt' txt ]
+      :: acc)
+    ticks []
+  |> List.rev
+
+let render date
+    (assignations : Api.assignation list Task_type.Map.t Place.Map.t) =
   let assignations = sort assignations in
   let min_q, max_q = bounds assignations in
   let start = min_q.slot.start in
   let end_ = Time_slot.end_ max_q.slot in
-  (* let quest_1 = El.div ~at:[ grid_column 60 60 ] [ El.txt' "60 60" ] in
-  let quest_2 = El.div ~at:[ grid_column 120 120 ] [ El.txt' "120 120" ] in *)
   let minutes = Zoned_datetime.diff end_ start |> Duration.to_minutes in
   let ass =
     Place.Map.max_binding assignations
@@ -68,11 +90,23 @@ let render (assignations : Api.assignation list Task_type.Map.t Place.Map.t) =
           content)
   in
   let q = List.hd ass in
+  let header =
+    let ticks = render_ticks ~start ~end_ in
+    El.div ~at:[ c_grid_row ]
+      [
+        El.div [ El.txt' (Date.to_intl_long_string `Fr date) ];
+        El.div ~at:[ At.class' (j "grid-ticks") ] ticks;
+      ]
+  in
   El.div
     ~at:[ At.class' (j "grid-planning"); grid_template_columns minutes ]
     [
-      El.div [ El.txt' q.quest.name ];
-      El.div ~at:[ At.class' (j "grid-timeline") ] shifts;
+      header;
+      El.div ~at:[ c_grid_row ]
+        [
+          El.div [ El.txt' q.quest.name ];
+          El.div ~at:[ At.class' (j "grid-timeline") ] shifts;
+        ];
     ]
 
 let render infos (assignations : Api.assignation list) =
@@ -104,5 +138,5 @@ let render infos (assignations : Api.assignation list) =
                      places))
           dates)
   in
-  let _, first_day = Date.Map.choose assignations in
-  render first_day
+  let date, first_day = Date.Map.choose assignations in
+  render date first_day
