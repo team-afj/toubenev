@@ -26,6 +26,9 @@ Solveur:
 - [x] IMPORTANT un bénévole très mal équilibré... autorise tout le monde à l'être ?
 - [ ] des amis veulent travailler ensemble... et ne pas travailler ensemble ! Overlapping quests are good for friends too
 - [ ] Finir les nouveaux widgets
+- [ ] Quand la même constrainte et listée pour tous les bénévoles dans "minimum
+  for infeasibility" il faudrait les regrouper...
+- [ ] Essayer limiter diff heure / event
 
 Bugs
 - [x] le quart d’heure mystérieux de Clara Engrand C'est par là
@@ -41,4 +44,4 @@ De la mort
 - [x] Contrainte groupe: une seule quête du groupe
 - [ ] Bénévoles à heures max FIXES
 - [x] Amplitudes horaires par bénévole
-- [ ] Bug overlapping check
+- [ ] bug "en même temps"
