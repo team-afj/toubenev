@@ -249,6 +249,7 @@ let know_your_ennemy (ctx : Context.t) =
           | ennemy ->
               Hashtbl.add processed_pairs (a, b) ();
               ctx.for_all_quests @@ fun q ->
+                if not(Quest.is_assigned_to v q && Quest.is_assigned_to ennemy q) then
               let name =
                 Format.sprintf "%s_cannot_do_%s_with_%s" v.name q.name
                   ennemy.name
