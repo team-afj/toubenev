@@ -116,6 +116,8 @@ module Place : sig
 
   val make :
     ?id:t id -> slug:string -> name:string -> ?description:string -> unit -> t
+
+  val nice_name : t -> string
 end
 
 module Places : Random_access_list with type t = Place.t CCRAL.t
@@ -165,6 +167,8 @@ module Task_type : sig
     ?required_time_after:Duration.t ->
     unit ->
     t
+
+  val nice_name : t -> string
 end
 
 module Task_types : Random_access_list with type t = Task_type.t CCRAL.t

@@ -151,6 +151,9 @@ module Options = struct
     }
 end
 
+let with_slug name slug =
+  if String.is_empty slug then name else slug ^ " " ^ name
+
 module Place = struct
   module T = struct
     type t = {
@@ -163,6 +166,7 @@ module Place = struct
 
     let equal p1 p2 = id_equal p1.id p2.id
     let compare t1 t2 = String.compare (id_to_string t1.id) (id_to_string t2.id)
+    let nice_name t = with_slug t.name t.slug
   end
 
   include T
@@ -221,6 +225,7 @@ module Task_type = struct
 
     let equal t1 t2 = String.equal (id_to_string t1.id) (id_to_string t2.id)
     let compare t1 t2 = String.compare (id_to_string t1.id) (id_to_string t2.id)
+    let nice_name t = with_slug t.name t.slug
   end
 
   include T

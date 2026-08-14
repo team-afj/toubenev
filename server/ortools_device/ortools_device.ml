@@ -44,8 +44,8 @@ let new_optim t (p : Data_repr.Rich.Planning.t) =
          - interleave_search:true better coordination between parallel workers.
            Fact check: this is much slower in practice. *)
       Ortools.Sat_parameters.make_sat_parameters ~log_search_progress:false
-        ~num_workers:8l ~max_time_in_seconds ~linearization_level:2l
-        ~interleave_search:false ~stop_after_first_solution:true ()
+        ~num_workers:10l ~max_time_in_seconds ~linearization_level:2l
+        ~interleave_search:false ~stop_after_first_solution:false ()
     in
     let atomic_queue = Miou.Queue.create () in
     let listener =

@@ -6,6 +6,7 @@ open! Normal
 
 let j = Jstr.v
 let c_grid_row = At.class' (j "grid-row")
+let c_grid_left = At.class' (j "grid-left")
 
 let grid_template_columns duration =
   Printf.sprintf
@@ -66,6 +67,9 @@ let render_ticks ~start ~end_ =
     ticks []
   |> List.rev
 
+let render_background () =
+  El.div ~at:[ At.class' (j "grid-background") ] [ El.div [] ]
+
 let render date
     (assignations : Api.assignation list Task_type.Map.t Place.Map.t) =
   let assignations = sort assignations in
@@ -73,25 +77,49 @@ let render date
   let start = min_q.slot.start in
   let end_ = Time_slot.end_ max_q.slot in
   let minutes = Zoned_datetime.diff end_ start |> Duration.to_minutes in
-  let ass =
-    Place.Map.max_binding assignations
-    |> snd |> Task_type.Map.max_binding |> snd
-  in
-  let shifts =
+  let make_slots ass =
     List.map ass ~f:(fun { Api.quest; volunteers } ->
         let start_q = quest.slot.start in
         let start = Zoned_datetime.diff start_q start |> Duration.to_minutes in
         let duration = quest.slot.duration |> Duration.to_minutes in
         let content =
           El.txt' (string_of_int quest.initial.required_volunteers)
-          :: Volunteers.fold volunteers ~init:[] ~f:(fun acc v ->
-              El.br () :: El.txt' v.name :: acc)
+          :: Volunteers.fold volunteers
+               ~init:
+                 [
+                   El.div
+                     ~at:[ At.class' (j "slot-details") ]
+                     [ El.txt' quest.initial.name ];
+                 ]
+               ~f:(fun acc v -> El.br () :: El.txt' v.name :: acc)
         in
         El.div
           ~at:[ At.class' (j "slot"); grid_column (start + 1) duration ]
-          content)
+          [ El.div ~at:[ At.class' (j "slot-content") ] content ])
   in
-  let q = List.hd ass in
+  (* let ass =
+    Place.Map.max_binding assignations
+    |> snd |> Task_type.Map.max_binding |> snd
+  in *)
+  let rows =
+    Place.Map.fold
+      (fun place ->
+        Task_type.Map.fold (fun task_type assignations acc ->
+            let slots = make_slots assignations in
+            El.div ~at:[ c_grid_row ]
+              [
+                El.div
+                  [
+                    El.txt' (Place.nice_name place);
+                    El.br ();
+                    El.txt' (Task_type.nice_name task_type);
+                  ];
+                El.div ~at:[ At.class' (j "grid-timeline") ] slots;
+              ]
+            :: acc))
+      assignations []
+  in
+  (* let slots = make_slots ass in *)
   let header =
     let ticks = render_ticks ~start ~end_ in
     El.div ~at:[ c_grid_row ]
@@ -102,14 +130,16 @@ let render date
   in
   El.div
     ~at:[ At.class' (j "grid-planning"); grid_template_columns minutes ]
-    [
+    (header :: rows)
+(* [
+      (* render_background (); *)
       header;
       El.div ~at:[ c_grid_row ]
         [
           El.div [ El.txt' q.quest.name ];
-          El.div ~at:[ At.class' (j "grid-timeline") ] shifts;
+          El.div ~at:[ At.class' (j "grid-timeline") ] slots;
         ];
-    ]
+    ] *)
 
 let render infos (assignations : Api.assignation list) =
   let assignations =
