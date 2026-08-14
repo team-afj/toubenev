@@ -9,7 +9,8 @@ let c_grid_row = At.class' (j "grid-row")
 
 let grid_template_columns duration =
   Printf.sprintf
-    "grid-template-columns: [left] 10rem [timeline] repeat(%i, 1fr);" duration
+    "grid-template-columns: [left] 10rem [timeline] repeat(%i, minmax(0, 1fr));"
+    duration
   |> j |> At.style
 
 let grid_column start duration =
@@ -43,7 +44,7 @@ let bounds (assignations : Api.assignation list Task_type.Map.t Place.Map.t) =
   |> Option.get_exn_or "Bad bounds"
 
 let render_ticks ~start ~end_ =
-  let bounds_ticks = Zoned_datetime.Set.of_list [ start; end_ ] in
+  let bounds_ticks = Zoned_datetime.Set.of_list [ start ] in
   let aligned_start = Zoned_datetime.ceil Lunar.Resolution.hour start in
   let range = Zoned_datetime.Range.make ~first:aligned_start ~last:end_ in
   let ticks =
@@ -53,13 +54,14 @@ let render_ticks ~start ~end_ =
            range)
         bounds_ticks)
   in
+  let ticks = Zoned_datetime.Set.remove end_ ticks in
   Zoned_datetime.Set.fold
     (fun dt acc ->
       let start = Zoned_datetime.diff dt start |> Duration.to_minutes in
       let txt = Zoned_datetime.local_time dt |> Time.to_string ~format:`SHORT in
       El.div
         ~at:[ At.class' (j "tick"); grid_column (start + 1) 1 ]
-        [ El.txt' txt ]
+        [ El.div [ El.txt' txt ] ]
       :: acc)
     ticks []
   |> List.rev
