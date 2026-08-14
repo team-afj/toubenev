@@ -564,6 +564,64 @@ let appreciation_of_planning opts (ctx : Context.t) =
           else (appreciation, ctx.assignations v q) :: acc))
   |> Sat.LinearExpr.weighted_sum
 
+let repeated_initial_penalty (ctx : Context.t) =
+  let nb_quests = Quests.cardinal ctx.qs in
+  let terms =
+    Volunteers.fold ctx.vs ~init:[] ~f:(fun acc v ->
+        let assignments_by_initial =
+          Quests.fold ctx.qs ~init:String.Map.empty ~f:(fun acc q ->
+              (* We don't want to penalise doing multiple parts of a divisible
+                 quest, but doing the exact same quest multiple days in a row.
+                 To do that we add the quest start time to the key. *)
+              let initial_id = id_to_string q.initial.Rich.Quest.id in
+              let start_time =
+                q.slot.start |> Zoned_datetime.local_time |> Time.to_string
+              in
+              let key = initial_id ^ "_" ^ start_time in
+              let assignation = ctx.assignations v q in
+              String.Map.update key
+                (function
+                  | None -> Some [ assignation ]
+                  | Some assignations -> Some (assignation :: assignations))
+                acc)
+        in
+        String.Map.fold
+          (fun initial_id assignations acc ->
+            match assignations with
+            | [] | [ _ ] -> acc
+            | _ ->
+                let open Sat in
+                let count_name =
+                  Format.sprintf "%s_repeated_initial_%s_count" v.name
+                    initial_id
+                in
+                let ub = nb_quests in
+                let count = Var.new_int ctx.model ~lb:0 ~ub count_name in
+                add ctx.model ~name:(count_name ^ "_eq")
+                  Sat.(var count == LinearExpr.sum_vars assignations);
+                let repeated_name = Format.sprintf "%s_repeated" count_name in
+                let ub = max 0 Int.(ub - 1) in
+                let repeated = Var.new_int ctx.model ~lb:0 ~ub repeated_name in
+                add ctx.model
+                  ~name:(repeated_name ^ "_max_eq")
+                  Constraint.(
+                    max_equality repeated
+                      [ Sat.(var count - of_int 1); of_int 0 ]);
+                let repeated_sq_name =
+                  Format.sprintf "%s_squared" repeated_name
+                in
+                let repeated_sq =
+                  Var.new_int ctx.model ~lb:0 ~ub:Int.(ub * ub) repeated_sq_name
+                in
+                add ctx.model
+                  ~name:(repeated_sq_name ^ "_mult_eq")
+                  (Constraint.multiplication_equality repeated_sq
+                     [ var repeated; var repeated ]);
+                var repeated_sq :: acc)
+          assignments_by_initial acc)
+  in
+  Sat.LinearExpr.sum terms
+
 (* Amplitudes: daily work time span *)
 
 let quest_time_range (ctx : Context.t) (v : Volunteer.t) (quests : Quests.t) =
@@ -647,7 +705,8 @@ let minimize_f (ctx : Context.t) =
       appreciation_of_planning,
       amplitudes,
       event_bounds_coef,
-      daily_bounds_coef );
+      daily_bounds_coef,
+      repeated_initial_penalty );
   let objective_terms =
     [
       (* Diffs should always be the most important weights, so we scale them by
@@ -658,16 +717,21 @@ let minimize_f (ctx : Context.t) =
       @@ Workload_balance.event_pow_diffs ctx `Fifteen_minutes;
       scale (daily_bounds_coef * nb_volunteers * nb_quests * 15 * 10_000)
       @@ Workload_balance.daily_pow_diffs ctx `Fifteen_minutes;
-      scale (-1 * friendship_coef) @@ friendship_bonus ctx;
+      scale (-1 * friendship_coef * 10) @@ friendship_bonus ctx;
       (* Fridenshipness: 1 * coef per pairing.
          TODO we probably want to scale that with quest duration *)
-      scale (-1) @@ appreciation_of_planning options ctx;
+      scale (-1 * 10) @@ appreciation_of_planning options ctx;
       (* Appreciation:
           ∑qs (coef_pref_type + ∑15m (coef_pref_time))
 
         ex: 4 * 1h with only good times and quest types (with coefs at 1):
             - 4 * 1 + 4 * 4 * 1 (= 20)
+
+        TODO: we might want to pow2 at least positive answers
       *)
+      scale 1 @@ repeated_initial_penalty ctx;
+      (* Penalize repeated occurrences of the same quest initial for a
+        volunteer. First occurrence stays free; repeats are squared. *)
       amplitudes ctx;
       (* Amplitudes:
          ∑ ((default_coef + individual_coef)
