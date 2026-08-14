@@ -120,21 +120,21 @@ let modal get_solution =
     let peek () =
       ( List.filter_map ~f:Fun.id
           [
+            Lwd.peek gp_var;
             Lwd.peek bp_var;
             Lwd.peek bt_var;
             Lwd.peek list_all_var;
             Lwd.peek list_by_v_var;
-            Lwd.peek gp_var;
           ],
         Lwd.peek details_var |> Option.is_some )
     in
     ( [
         `P (El.legend [ El.txt' "Type(s) de planning à imprimer :" ]);
+        `R gp.element;
         `R bp.element;
         `R bt.element;
         `R list_all.element;
         `R list_by_v.element;
-        `R gp.element;
         `P (El.legend [ El.txt' "Autres options :" ]);
         `R details.element;
       ],
