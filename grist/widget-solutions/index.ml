@@ -359,7 +359,7 @@ let app =
         Pico_ui.Elwd.section
           [
             `P (El.h3 [ El.txt' "Analyses des données initiales" ]);
-            `P (El.h3 [ El.txt' "Status: "; El.txt' status ]);
+            `P (El.span [ El.txt' "Status: "; El.txt' status ]);
             `P (El.h4 [ El.txt' "Compteur de bénévoles" ]);
             `R available_volunteers;
             `P (El.h4 [ El.txt' "Main d'oeuvre requise / disponible" ]);
