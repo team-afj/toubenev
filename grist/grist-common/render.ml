@@ -365,11 +365,11 @@ let volunteers_task_lists assignations =
   in
   Volunteer.Map.to_list assignations |> List.map ~f:make
 
-let make_plannings (data : Rich.Planning.t) (answer : Api.answer) ~details
-    variants =
+let make_plannings (data : Rich.Planning.t)
+    (assignations : Api.assignation list) ~details variants =
   List.map variants ~f:(function
     | `By_place ->
-        let assignations = group_by_place data.infos answer.solution in
+        let assignations = group_by_place data.infos assignations in
         let make_place_planning p v acc =
           make_place_planning ~details p v :: acc
         in
@@ -378,21 +378,21 @@ let make_plannings (data : Rich.Planning.t) (answer : Api.answer) ~details
         in
         El.div ~at:[ cls "planning-sections" ] place_sections
     | `By_quest_kind ->
-        let assignations = group_by_kind data.infos answer.solution in
+        let assignations = group_by_kind data.infos assignations in
         let make_tdq_planning p v acc = make_tdq_planning ~details p v :: acc in
         let tdq_sections =
           Task_type.Map.fold make_tdq_planning assignations []
         in
         El.div ~at:[ cls "planning-sections" ] tdq_sections
     | `List_all_tasks ->
-        let assignations = group_by_date data.infos answer.solution in
+        let assignations = group_by_date data.infos assignations in
         let list_sections = list_tasks assignations in
         El.div ~at:[ cls "planning-sections" ] list_sections
     | `List_tasks_by_volunteer ->
-        let assignations = group_by_volunteer data.infos answer.solution in
+        let assignations = group_by_volunteer data.infos assignations in
         let list_sections = volunteers_task_lists assignations in
         El.div ~at:[ cls "planning-sections" ] list_sections
     | `Daily_grids ->
-        let list_sections = Grid_planning.render data.infos answer.solution in
+        let list_sections = Grid_planning.render data.infos assignations in
         El.div ~at:[ cls "planning-sections" ] list_sections)
   |> El.section ~at:[ cls "planning-view" ]

@@ -468,7 +468,10 @@ let app =
         [ `P (El.txt' "2. Optimiser") ]
     in
     let print_options_modal, show_modal =
-      Print.modal (fun () -> Lwd.peek App_state.last_answer)
+      Print.modal (fun () ->
+          Lwd.peek App_state.last_answer
+          |> Option.map (fun (a : Solutions.t) ->
+              (a.data_rich, a.answer.solution)))
     in
     let print_btn =
       let disabled =

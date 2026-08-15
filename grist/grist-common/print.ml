@@ -149,10 +149,10 @@ let modal get_solution =
     let print =
       let on_click _ =
         get_solution ()
-        |> Option.iter @@ fun { Tables.Solutions.data_rich; answer; _ } ->
+        |> Option.iter @@ fun (data_rich, assignations) ->
            let planning =
              let sections, details = peek_options () in
-             Render.make_plannings ~details data_rich answer sections
+             Render.make_plannings ~details data_rich assignations sections
            in
            Lwd.set show_modal false;
            print planning

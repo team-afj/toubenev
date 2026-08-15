@@ -290,7 +290,11 @@ let app =
     let print_btn =
       let$* print_options_modal, show_modal =
         Lwd.map App_state.active_solution_state ~f:(fun sol ->
-            Print.modal (fun () -> sol))
+            Print.modal (fun () ->
+                Option.map
+                  (fun (sol : Solutions.t) ->
+                    (sol.data_rich, sol.answer.solution))
+                  sol))
       in
       let disabled =
         let$ answer = App_state.active_solution_state in
