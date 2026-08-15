@@ -30,7 +30,7 @@ module App_state = struct
 end
 
 let app =
-  let render (name, rich_data, data, assignations, analysis) =
+  let render (name, rich_data, data, assignations, _analysis) =
     let infos = rich_data.Planning.infos in
     let static_checks = Static_analysis.make infos data.Api.quests () in
     let title = Jstr.append (Jstr.v "Assignations de ") name in
@@ -42,6 +42,7 @@ let app =
     in
     let per_volunteer = Infos.per_volunteer_el data assignations in
     let all_volunteers_sorted = Infos.list data assignations in
+    let analysis = Shared.Analysis.of_planning rich_data assignations data in
     let complete_diff_table = Diffs_table.make analysis in
     Elwd.div
       [
