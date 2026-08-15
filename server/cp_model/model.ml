@@ -730,7 +730,7 @@ let minimize_f (ctx : Context.t) =
 
         TODO: we might want to pow2 at least positive answers
       *)
-      scale 1 @@ repeated_initial_penalty ctx;
+      scale 2 @@ repeated_initial_penalty ctx;
       (* Penalize repeated occurrences of the same quest initial for a
         volunteer. First occurrence stays free; repeats are squared. *)
       amplitudes ctx;
