@@ -119,10 +119,10 @@ let volunteer_load (assignations : Api.assignation list) =
   |> Duration.from_minutes
 
 let volunteer_analyses static_checks (planning : Planning.t)
-    (answer : Api.answer) (normalized : Api.data) =
+    (assignations : Api.assignation list) (normalized : Api.data) =
   let quests_by_day = quests_by_day planning.infos normalized.quests in
   let assignations =
-    group_assignations_by_date_and_volunteer planning.infos answer.solution
+    group_assignations_by_date_and_volunteer planning.infos assignations
   in
   let by_day =
     Date.Map.mapi
@@ -169,11 +169,12 @@ let volunteer_analyses static_checks (planning : Planning.t)
       in
       Volunteer.Map.add v { daily; event } acc)
 
-let of_planning (planning : Planning.t) (answer : Api.answer) (n : Api.data) =
+let of_planning (planning : Planning.t) (assignations : Api.assignation list)
+    (n : Api.data) =
   let static_checks = Static_analysis.make planning.infos n.quests () in
   {
     daily = daily static_checks planning n;
-    volunteers = volunteer_analyses static_checks planning answer n;
+    volunteers = volunteer_analyses static_checks planning assignations n;
   }
 
 let diags { daily; _ } =

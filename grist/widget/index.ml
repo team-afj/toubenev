@@ -166,7 +166,8 @@ let sat =
             in
             Console.debug [ "TBN"; "Perform analysis on empty assignations." ];
             let analysis =
-              Shared.Analysis.of_planning planning answer normalized_planning
+              Shared.Analysis.of_planning planning answer.solution
+                normalized_planning
             in
             let state =
               { Tables.Solutions.data_rich = planning; answer; analysis }
@@ -187,7 +188,8 @@ let sat =
             let answer = rev_append_diags initial_answer.diagnostics answer in
             Console.debug [ "TBN"; "Perform analysis on assignations." ];
             let analysis =
-              Shared.Analysis.of_planning planning answer normalized_planning
+              Shared.Analysis.of_planning planning answer.solution
+                normalized_planning
             in
             let state =
               { Tables.Solutions.data_rich = planning; answer; analysis }
@@ -306,7 +308,8 @@ let optimize ~(chart_canvas : El.t) ~reuse grist_data
                 |> Result.get_ok
               in
               let analysis =
-                Shared.Analysis.of_planning planning answer normalized_planning
+                Shared.Analysis.of_planning planning answer.solution
+                  normalized_planning
               in
               let state = { current_state with answer; analysis } in
               Lwd.set App_state.last_answer (Some state);
@@ -319,7 +322,8 @@ let optimize ~(chart_canvas : El.t) ~reuse grist_data
                   ~f:(Grist_import.Assignation.v ~solution:s_id_2)
               in
               let analysis =
-                Shared.Analysis.of_planning planning answer normalized_planning
+                Shared.Analysis.of_planning planning answer.solution
+                  normalized_planning
               in
               Lwd.set App_state.last_answer
                 (Some { state with answer; analysis });

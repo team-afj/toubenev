@@ -94,7 +94,8 @@ let unwind_planning () =
         }
       in
       let analysis =
-        Shared.Analysis.of_planning planning initial_answer normalized_planning
+        Shared.Analysis.of_planning planning initial_answer.solution
+          normalized_planning
       in
       let state =
         {
@@ -164,7 +165,7 @@ let server_sat_check (state : Solutions.t) grist_data normalized_planning =
       let answer = rev_append_diags initial_answer.diagnostics answer in
       Console.debug [ "TBN"; "Perform analysis on assignations." ];
       let analysis =
-        Shared.Analysis.of_planning planning answer normalized_planning
+        Shared.Analysis.of_planning planning answer.solution normalized_planning
       in
       let state = { state with answer; analysis } in
       let () =
