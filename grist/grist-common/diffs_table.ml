@@ -12,15 +12,24 @@ let print_signed_int i =
   (* if i = 0 then "±" ^ s else *)
   if i > 0 then "+" ^ s else s
 
-let color_grad i =
+let color_grad_red i =
   At.style (Jstr.v ("background-color: hwb(9 " ^ string_of_int i ^ "% 0%);"))
 
+let color_grad_blue i =
+  At.style (Jstr.v ("background-color: hwb(160 " ^ string_of_int i ^ "% 0%);"))
+
 let max_red = 200
+let max_blue = 200
 
 let make_red i =
   let i = max 0 (min max_red (abs i)) in
   let i = i * 100 / max_red in
-  color_grad (100 - i)
+  color_grad_red (100 - i)
+
+let make_blue i =
+  let i = max 0 (min max_blue (abs i)) in
+  let i = i * 100 / max_blue in
+  color_grad_blue (100 - i)
 
 let make_table (analysis : t) real_time hide_zeros =
   let head =
@@ -41,9 +50,9 @@ let make_table (analysis : t) real_time hide_zeros =
       let diff =
         Duration.(facts.event.actual_load - expected_load |> to_minutes)
       in
+      let color = if diff > 0 then make_red diff else make_blue diff in
       ( diff,
-        El.td
-          ~at:[ make_red diff ]
+        El.td ~at:[ color ]
           [
             El.txt' (print_signed_int diff);
             El.txt' (" (" ^ Duration.to_string expected_load ^ ")");
@@ -60,8 +69,8 @@ let make_table (analysis : t) real_time hide_zeros =
             Duration.(facts.actual_load - expected_load |> to_minutes)
           in
           if diff <> 0 then is_zero := false;
-          El.td
-            ~at:[ make_red diff ]
+          let color = if diff > 0 then make_red diff else make_blue diff in
+          El.td ~at:[ color ]
             [
               El.txt' (print_signed_int diff);
               El.txt' (" (" ^ Duration.to_string expected_load ^ ")");
@@ -94,26 +103,27 @@ let make_table (analysis : t) real_time hide_zeros =
             in
             let acc_max_p = max acc_max_p diff in
             let acc_max_min = min acc_max_min diff in
-            if diff >= 0 then (acc_p + diff, acc_max_p, acc_m, acc_max_min) else (acc_p, acc_max_p, acc_m + diff, acc_max_min))
+            if diff >= 0 then (acc_p + diff, acc_max_p, acc_m, acc_max_min)
+            else (acc_p, acc_max_p, acc_m + diff, acc_max_min))
           va.daily acc)
       analysis.volunteers (0, 0, 0, 0)
   in
   let totals =
-    [El.txt'
-      ("Total diffs: "
-      ^ print_signed_int total_plus
-      ^ " / "
-      ^ print_signed_int total_minus);
-    El.nbsp ();
-    El.txt'
-      ("Max diffs: "
-      ^ print_signed_int max_plus
-      ^ " / "
-      ^ print_signed_int max_minus)]
+    [
+      El.txt'
+        ("Total diffs: "
+        ^ print_signed_int total_plus
+        ^ " / "
+        ^ print_signed_int total_minus);
+      El.nbsp ();
+      El.txt'
+        ("Max diffs: " ^ print_signed_int max_plus ^ " / "
+       ^ print_signed_int max_minus);
+    ]
   in
   El.div
     [
-      El.div totals ;
+      El.div totals;
       El.table ~at:[ Pico_ui.At.overflow_auto ] (head :: volunteers);
     ]
 
