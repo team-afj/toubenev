@@ -345,6 +345,13 @@ let app =
           (El.h3
              [ El.txt' "Cette solution ne contient pas de données dépliées." ])
     | Some n ->
+        let status =
+          Printf.sprintf "%s after %im on %s"
+            (n.state.answer.status |> Ortools.Sat.Response.string_of_status)
+            (Int.of_float (n.state.answer.user_time /. 60.))
+            (n.state.answer.date |> Zoned_datetime.to_local_datetime
+           |> Datetime.to_string)
+        in
         let capacity_table = Infos.capacity_table n in
         let available_volunteers =
           Infos.available_volunteers_widget n.state.data_rich
@@ -352,6 +359,7 @@ let app =
         Pico_ui.Elwd.section
           [
             `P (El.h3 [ El.txt' "Analyses des données initiales" ]);
+            `P (El.h3 [ El.txt' "Status: "; El.txt' status ]);
             `P (El.h4 [ El.txt' "Compteur de bénévoles" ]);
             `R available_volunteers;
             `P (El.h4 [ El.txt' "Main d'oeuvre requise / disponible" ]);
