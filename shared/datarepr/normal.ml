@@ -174,7 +174,7 @@ module Quest = struct
       name : string;
       slot : Time_slot.t;
       assigned_volunteers : Volunteers.t;
-      hints : Volunteers.t;
+      hints : Volunteers.t; [@default Volunteers.empty]
     }
     [@@deriving jsont]
 
