@@ -560,7 +560,7 @@ let appreciation_of_planning opts (ctx : Context.t) =
   Volunteers.fold ctx.vs ~init:[] ~f:(fun acc v ->
       Quests.fold ctx.qs ~init:acc ~f:(fun acc q ->
           let appreciation = appreciation_of_quest opts v q in
-          Logs.debug (fun msg -> msg "%s + %s = %i" v.name q.name appreciation);
+          (* Logs.debug (fun msg -> msg "%s + %s = %i" v.name q.name appreciation); *)
           if appreciation = 0 then acc
           else (appreciation, ctx.assignations v q) :: acc))
   |> Sat.LinearExpr.weighted_sum
