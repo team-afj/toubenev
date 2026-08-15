@@ -93,7 +93,21 @@ let assignations m vs qs =
   let rev_find = fun i -> Hashtbl.find rev_tbl i in
   (find_assignation, find_interval, find_interval_real, rev_find)
 
-let prepare ~with_assumptions model (data : Planning.t) =
+let apply_hints model assignations vs qs =
+  Quests.iter qs ~f:(fun q ->
+      let trues = q.hints in
+      let falses =
+        if Volunteers.cardinal trues = q.initial.required_volunteers then
+          Volunteers.diff vs trues
+        else Volunteers.empty
+      in
+      Volunteers.iter trues ~f:(fun v ->
+          (* Logs.debug (fun m -> m "Hint: %s does %s" v.name q.name); *)
+          Sat.add_hint model (assignations v q) 1);
+      Volunteers.iter falses ~f:(fun v ->
+          Sat.add_hint model (assignations v q) 0))
+
+let prepare ~with_assumptions model ?previous_assignations (data : Planning.t) =
   let {
     Api.volunteers = vs;
     quests = qs;
@@ -101,7 +115,7 @@ let prepare ~with_assumptions model (data : Planning.t) =
     breaks;
     diagnostics = _;
   } =
-    Data_repr.Conv.normalize data
+    Data_repr.Conv.normalize ?previous_assignations data
   in
   let task_types = CCRAL.to_list data.task_types |> Task_type.Set.of_list in
   let assignations, intervals, intervals_reals, assignations_rev =
@@ -111,6 +125,7 @@ let prepare ~with_assumptions model (data : Planning.t) =
   let for_all_volunteers f = Volunteers.iter ~f vs in
   let by_day = quests_by_day data.infos qs in
   let static_checks = Static_analysis.make data.infos qs () in
+  let () = apply_hints model assignations vs qs in
   {
     model;
     with_assumptions;

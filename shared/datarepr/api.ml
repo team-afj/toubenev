@@ -28,6 +28,8 @@ type data = {
 type assignation = { quest : Quest.t; volunteers : Volunteers.t }
 [@@deriving jsont]
 
+type previous_assignation = Rich.Volunteer.t list String.Map.t
+
 type answer = {
   status : status;
   diagnostics : diagnostic list;

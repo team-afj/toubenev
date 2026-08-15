@@ -15,7 +15,7 @@ type t = {
   task_launcher : unit Miou.t;
 }
 
-let new_optim t (p : Data_repr.Rich.Planning.t) =
+let new_optim t (p : Data_repr.Rich.Planning.t) previous_assignations =
   let handle = new_random_uuid_v4 () |> Uuidm.to_string in
   let max_time_in_seconds =
     Lunar.Duration.to_seconds p.options.solver_timeout |> Float.of_int
@@ -27,7 +27,9 @@ let new_optim t (p : Data_repr.Rich.Planning.t) =
   in
   let task =
    fun () ->
-    let context = Cp_model.Model.make ~with_assumptions:false p in
+    let context =
+      Cp_model.Model.make ~with_assumptions:false ~previous_assignations p
+    in
     let () =
       Logs.info (fun m ->
           m "Starting solve with params:@ %a" Data_repr.Rich.Options.pp

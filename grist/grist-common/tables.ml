@@ -89,6 +89,7 @@ module Solutions = struct
   let data_rich_path =
     Jsont.(path (Path.mem "data_rich" Path.root) Rich.Planning.jsont)
 
+  let id jv = Jv.Int.get jv "id"
   let name jv = Jv.Jstr.get jv "name"
 
   let data_rich jv =

@@ -209,7 +209,7 @@ module Assignation = struct
     initial_quest : int;
     start : int;  (** UTC timestamp *)
     end_ : int;  (** UTC timestamp *)
-    volunteers : int list;
+    volunteers : grist_int_list;
   }
   [@@deriving jsont]
 
@@ -247,6 +247,12 @@ type data = {
   breaks : Pause.t list;
   quests_groups : Quests_group.t list;
   quests : Quete.t list;
+}
+[@@deriving jsont]
+
+type with_previous_assignations = {
+  data : data;
+  assignations : Assignation.t list;
 }
 [@@deriving jsont]
 
@@ -748,3 +754,14 @@ let to_planning ?(id_map = new_id_map ())
       quests_groups;
       quests;
     } )
+
+let resolve_assignations id_map (assignations : Assignation.t list) =
+  List.fold_left assignations ~init:String.Map.empty
+    ~f:(fun acc (ass : Assignation.t) ->
+      let assigned_volunteers =
+        List.filter_map
+          ~f:(fun i -> Int.Map.find_opt i id_map.volunteers)
+          ass.volunteers
+        |> CCRAL.of_list
+      in
+      String.Map.add ass.ref assigned_volunteers acc)

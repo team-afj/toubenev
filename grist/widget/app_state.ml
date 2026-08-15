@@ -26,3 +26,4 @@ type server_status = Offline | Working | Done
 let to_fr_slug = function Offline -> "⛓️‍💥" | Working -> "🤖" | Done -> "🔗"
 
 let server_status : server_status Lwd.var = Lwd.var Offline
+let selected_solution_in_grist : Jv.t option Lwd.var = Lwd.var None

@@ -50,15 +50,21 @@ let or_error = function
       let* () = Response.empty in
       Response.respond `Internal_server_error
 
-let handle_optimize (req : (Vif.Type.json, Grist_import.data) Request.t) server
-    () =
+let handle_optimize
+    (req : (Vif.Type.json, Grist_import.with_previous_assignations) Request.t)
+    server () =
   let open Result in
   or_error
   @@
   let ortools = Server.device Ortools_device.v server in
   let+ v = Request.of_json req in
-  let _, planning = Grist_import.to_planning v in
-  let handle = Ortools_device.new_optim ortools planning in
+  let id_map, planning = Grist_import.to_planning v.data in
+  let previous_assignations =
+    Grist_import.resolve_assignations id_map v.assignations
+  in
+  let handle =
+    Ortools_device.new_optim ortools planning previous_assignations
+  in
   let open Response.Syntax in
   let* () = Api.Cors.allow_origin () in
   let* () = Response.with_text req handle in

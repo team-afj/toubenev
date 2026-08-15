@@ -257,12 +257,16 @@ let init_optimization_chart =
     let () = Chart.set_data chart data in
     (chart, d_objective, d_satisfaction)
 
-let optimize ~(chart_canvas : El.t) grist_data (current_state : Solutions.t) =
+let optimize ~(chart_canvas : El.t) ~reuse grist_data
+    (current_state : Solutions.t) =
   let planning = current_state.data_rich in
   let+ handle =
     let open Brr_io.Fetch in
-    let* json =
-      Fut.return @@ Jsont_brr.encode Grist_import.data_jsont grist_data
+    let* data =
+      Fut.return @@ Jsont_brr.encode_jv Grist_import.data_jsont grist_data
+    in
+    let json =
+      Jv.obj [| ("data", data); ("assignations", reuse) |] |> Json.encode
     in
     let body = Body.of_jstr json in
     let method' = Jstr.v "PUT" in
@@ -399,6 +403,33 @@ let app =
         ~ev:[ `R ev ]
         [ `P (El.txt' "1. Déplier les quêtes et vérifier la faisabilité") ]
     in
+    let reuse_var = Lwd.var None in
+    let reuse =
+      let$* sol = Lwd.get App_state.selected_solution_in_grist in
+      match sol with
+      | None ->
+          Lwd.set reuse_var None;
+          Lwd.return (El.nbsp ())
+      | Some sol ->
+          let name = Solutions.name sol in
+          let chk =
+            Brr_lwd_ui.Forms.Field_checkboxes.make_single ~var:reuse_var
+              {
+                value = Solutions.id sol;
+                id = "reuse_switch";
+                name = "reuse_switch";
+                label =
+                  (fun () ->
+                    [
+                      `P
+                        (El.txt'
+                           ("Réutiliser la solution " ^ Jstr.to_string name));
+                    ]);
+                state = true;
+              }
+          in
+          chk.element
+    in
     let optimize_btn =
       let disabled =
         let$ state = Lwd.get App_state.optimize_state in
@@ -412,7 +443,20 @@ let app =
         | Not_ready | Running -> Elwd.handler Ev.click (fun _ -> ())
         | Ready (grist_data, state) ->
             Elwd.handler Ev.click (fun _ ->
-                ignore (optimize ~chart_canvas grist_data state))
+                ignore
+                  begin
+                    let reuse = Lwd.peek reuse_var in
+                    let* assignations =
+                      match reuse with
+                      | None -> Fut.ok (Jv.Jarray.create 0)
+                      | Some solution ->
+                          let+ assignations =
+                            Assignations.get_assignations ~solution
+                          in
+                          Jv.of_jv_list assignations
+                    in
+                    optimize ~chart_canvas grist_data ~reuse:assignations state
+                  end)
       in
       Elwd.button
         ~at:[ `R disabled ]
@@ -449,7 +493,7 @@ let app =
         [ `R optimize_btn; `R print_btn ]
     in
     Pico_ui.Elwd.section
-      [ `R print_options_modal; `R btns; `R btns2; `R optimize_chart ]
+      [ `R print_options_modal; `R btns; `R reuse; `R btns2; `R optimize_chart ]
   in
   let results =
     let title =
@@ -563,9 +607,18 @@ let app =
   in *)
   Elwd.div [ `R controls; `R diagnostics; `R analyses; `R results ]
 
+let on_record () =
+  let f = fun v -> Lwd.set App_state.selected_solution_in_grist (Some v) in
+  let callback = Jv.callback ~arity:1 f in
+  let options =
+    Jv.obj [| ("keepEncoded", Jv.false'); ("expandRefs", Jv.false') |]
+  in
+  Grist.on_record ~callback ~options ()
+
 let _ =
   let on_load _ =
     let _ = fetch_last () in
+    let _ = on_record () in
     let root = El.find_first_by_selector (Jstr.v "main") |> Option.get in
     let app = Lwd.observe app in
     let f _ = ignore @@ Lwd.quick_sample app in

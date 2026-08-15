@@ -60,7 +60,7 @@ let routes =
     --> Grist.handle_put_data;
     options (rel / "grist" / "optim" /?? nil) --> Api.Cors.preflight;
     put
-      (Type.json_encoding Grist_import.data_jsont)
+      (Type.json_encoding Grist_import.with_previous_assignations_jsont)
       (rel / "grist" / "optim" /?? nil)
     --> Grist.handle_optimize;
     options (rel / "grist" / "optim-stream" /?? nil) --> Api.Cors.preflight;

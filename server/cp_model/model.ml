@@ -747,10 +747,13 @@ let minimize_f (ctx : Context.t) =
   in
   sum objective_terms |> Sat.minimize ctx.model
 
-let make ?(no_optim = false) ~with_assumptions (data : Planning.t) =
+let make ?(no_optim = false) ~with_assumptions ?previous_assignations
+    (data : Planning.t) =
   let start_time = Unix.gettimeofday () in
   let model = Sat.make ~name:"Toubenev" () in
-  let context = Context.prepare ~with_assumptions model data in
+  let context =
+    Context.prepare ~with_assumptions ?previous_assignations model data
+  in
 
   let () = all_staffed context in
   let () = non_ubiquity_of_normal_humans context in

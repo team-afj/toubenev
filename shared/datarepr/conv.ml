@@ -131,7 +131,9 @@ let ccral_to_volunteers vs l =
 
 (** Generates sub-quests depending of the recurrence and the task type's
     divisibility. *)
-let normalize_quest event_infos options vs (diags, groups) (q : Rich.Quest.t) =
+let normalize_quest event_infos options vs
+    ?(previous_assignations = String.Map.empty) (diags, groups)
+    (q : Rich.Quest.t) =
   let assigned_volunteers = ccral_to_volunteers vs q.assigned_volunteers in
   let slots = expand_time_spec event_infos q.slot in
   let diagnostics =
@@ -184,8 +186,13 @@ let normalize_quest event_infos options vs (diags, groups) (q : Rich.Quest.t) =
               Printf.sprintf "%s_%s" q.name
                 (Zoned_datetime.to_string slot.start)
             in
+            let hints =
+              String.Map.find_opt id previous_assignations
+              |> Option.map (ccral_to_volunteers vs)
+              |> Option.value ~default:Volunteers.empty
+            in
             let q' =
-              { Quest.id; initial = q; name; slot; assigned_volunteers }
+              { Quest.id; initial = q; name; slot; assigned_volunteers; hints }
             in
             let groups =
               List.fold_left groups_infos ~init:groups
@@ -206,7 +213,7 @@ let normalize_quest event_infos options vs (diags, groups) (q : Rich.Quest.t) =
   in
   ((diagnostics, groups), quests)
 
-let normalize (data : Rich.Planning.t) =
+let normalize ?previous_assignations (data : Rich.Planning.t) =
   let volunteers =
     CCRAL.to_list data.volunteers
     |> List.map ~f:(normalize_volunteer data.infos)
@@ -216,7 +223,9 @@ let normalize (data : Rich.Planning.t) =
     let (diags, quests_groups), quests =
       CCRAL.to_list data.quests
       |> List.fold_flat_map ~init:([], String.Map.empty)
-           ~f:(normalize_quest data.infos data.options volunteers)
+           ~f:
+             (normalize_quest data.infos data.options ?previous_assignations
+                volunteers)
     in
     (Quests.of_list quests, quests_groups, diags)
   in
