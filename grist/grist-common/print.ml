@@ -148,7 +148,11 @@ let modal get_solution =
     in
     let print =
       let on_click _ =
-        get_solution ()
+        let open Fut.Result_syntax in
+        ignore
+        @@
+        let+ sol = get_solution () in
+        sol
         |> Option.iter @@ fun (data_rich, assignations) ->
            let planning =
              let sections, details = peek_options () in

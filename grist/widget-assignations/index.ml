@@ -6,7 +6,6 @@ open! Fut.Result_syntax
 open! Lunar_jsont
 open! Data_repr
 open! Rich
-open Normal
 open Tables
 
 let () = Logs.set_reporter (Logs_browser.console_reporter ())
@@ -72,29 +71,6 @@ let app =
   in
   Elwd.div [ `R content ]
 
-let resolve_assignation_jv (data : Api.data) ass =
-  let quest_id = Jv.Jstr.get ass "ref" |> Jstr.to_string in
-  let volunteers_ids =
-    let jv = Jv.get ass "volunteers" in
-    if Jv.is_none jv then [] else Jv.to_list Jv.to_int jv
-  in
-  let quest = Quests.find_by_id quest_id data.quests in
-  let by_id =
-    let tbl = Hashtbl.create 128 in
-    Volunteers.iter data.volunteers ~f:(fun v -> Hashtbl.add tbl v.id v);
-    tbl
-  in
-  let volunteers =
-    List.fold_left volunteers_ids ~init:Volunteers.empty ~f:(fun acc i ->
-        try
-          let v = Hashtbl.find by_id (string_of_int i) in
-          Volunteers.add v acc
-        with err ->
-          Console.error [ "TBN ASS OUPS "; err ];
-          acc)
-  in
-  { Api.quest; volunteers }
-
 let on_records () =
   (* For custom widgets, add a handler that will be called whenever the selected
      records change. If the widget is correctly set this means rows from the
@@ -118,7 +94,7 @@ let on_records () =
                 s ^ " " ^ v.id ^ " " ^ v.name);
           ]; *)
         let assignations =
-          List.map assignations ~f:(resolve_assignation_jv normal)
+          List.map assignations ~f:(Assignations.resolve_assignation_jv normal)
         in
         Lwd.set App_state.active_assignations
           (Some (name, data, normal, assignations, analyses))

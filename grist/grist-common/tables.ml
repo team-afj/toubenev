@@ -159,6 +159,8 @@ module Solutions = struct
 end
 
 module Assignations = struct
+  open Data_repr.Normal
+
   let assignations_table () =
     Lazy.force (lazy (Grist.get_table ~table_id:Data.assignations_tbl_id ()))
 
@@ -168,6 +170,29 @@ module Assignations = struct
     List.filter
       ~f:(fun obj -> Jv.Int.get obj "solution" = solution)
       current_assignations
+
+  let resolve_assignation_jv (data : Api.data) ass =
+    let quest_id = Jv.Jstr.get ass "ref" |> Jstr.to_string in
+    let volunteers_ids =
+      let jv = Jv.get ass "volunteers" in
+      if Jv.is_none jv then [] else Jv.to_list Jv.to_int jv
+    in
+    let quest = Quests.find_by_id quest_id data.quests in
+    let by_id =
+      let tbl = Hashtbl.create 128 in
+      Volunteers.iter data.volunteers ~f:(fun v -> Hashtbl.add tbl v.id v);
+      tbl
+    in
+    let volunteers =
+      List.fold_left volunteers_ids ~init:Volunteers.empty ~f:(fun acc i ->
+          try
+            let v = Hashtbl.find by_id (string_of_int i) in
+            Volunteers.add v acc
+          with err ->
+            Console.error [ "TBN ASS OUPS "; err ];
+            acc)
+    in
+    { Api.quest; volunteers }
 
   let remove_assignations ~solution =
     let* current_assignations = get_assignations ~solution in

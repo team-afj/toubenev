@@ -469,9 +469,10 @@ let app =
     in
     let print_options_modal, show_modal =
       Print.modal (fun () ->
-          Lwd.peek App_state.last_answer
-          |> Option.map (fun (a : Solutions.t) ->
-              (a.data_rich, a.answer.solution)))
+          match Lwd.peek App_state.last_answer with
+          | None -> Fut.ok None
+          | Some (a : Solutions.t) ->
+              Fut.ok (Some (a.data_rich, a.answer.solution)))
     in
     let print_btn =
       let disabled =

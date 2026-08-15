@@ -289,12 +289,20 @@ let app =
     in
     let print_btn =
       let$* print_options_modal, show_modal =
-        Lwd.map App_state.active_solution_state ~f:(fun sol ->
+        Lwd.map App_state.active_solution_normal ~f:(fun sol ->
             Print.modal (fun () ->
-                Option.map
-                  (fun (sol : Solutions.t) ->
-                    (sol.data_rich, sol.answer.solution))
-                  sol))
+                match sol with
+                | None -> Fut.ok None
+                | Some (sol : Solutions.normal) ->
+                    let solution = Lwd.peek App_state.selected_in_grist in
+                    let+ assignations =
+                      Assignations.get_assignations ~solution
+                    in
+                    let assignations =
+                      List.map assignations
+                        ~f:(Assignations.resolve_assignation_jv sol.data)
+                    in
+                    Some (sol.state.data_rich, assignations)))
       in
       let disabled =
         let$ answer = App_state.active_solution_state in
