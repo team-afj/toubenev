@@ -294,7 +294,9 @@ let app =
                 match sol with
                 | None -> Fut.ok None
                 | Some (sol : Solutions.normal) ->
-                    let solution = Lwd.peek App_state.selected_in_grist in
+                    let solution =
+                      Lwd.peek App_state.sol_select.value |> int_of_string
+                    in
                     let+ assignations =
                       Assignations.get_assignations ~solution
                     in
