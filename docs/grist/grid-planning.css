@@ -47,7 +47,7 @@
     border-left: 1px solid black;
 
     & .slot {
-      overflow: hidden;
+      overflow: visible;
       /* outline: 1px solid black; */
       border: 1px solid #ababab;
       border-radius: 3px;
@@ -73,7 +73,9 @@
 
     @container slot (max-width: 50px) {
       & .slot .slot-content {
+        text-align: left;
         font-size: 0.7em;
+        min-width: 2rem;
       }
     }
   }
