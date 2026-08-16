@@ -175,7 +175,8 @@ module Assignations = struct
     let quest_id = Jv.Jstr.get ass "ref" |> Jstr.to_string in
     let volunteers_ids =
       let jv = Jv.get ass "volunteers" in
-      if Jv.is_none jv then [] else Jv.to_list Jv.to_int jv
+      if Jv.is_none jv then []
+      else Jv.to_list Jv.to_int jv |> List.tail_opt |> Option.value ~default:[]
     in
     let quest = Quests.find_by_id quest_id data.quests in
     let by_id =
@@ -188,8 +189,8 @@ module Assignations = struct
           try
             let v = Hashtbl.find by_id (string_of_int i) in
             Volunteers.add v acc
-          with err ->
-            Console.error [ "TBN ASS OUPS "; err ];
+          with _err ->
+            Console.error [ "TBN ASS OUPS "; "Did not found volunteer #"; i ];
             acc)
     in
     { Api.quest; volunteers }
