@@ -11,10 +11,15 @@
     grid-column: 1/-1;
 
     border-top: 1px solid black;
+
+    & .quest-type {
+      font-size: 0.8em;
+    }
   }
 
   & .grid-left {
     border-right: 1px solid black;
+
   }
 
   & .grid-background {

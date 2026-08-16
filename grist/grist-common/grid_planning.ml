@@ -114,7 +114,9 @@ let render date
     let types =
       List.map slots ~f:(fun (tt, color, _) ->
           let style = j ("background-color: " ^ color) in
-          El.div ~at:[ At.style style ] [ El.txt' (Task_type.nice_name tt) ])
+          El.div
+            ~at:[ At.class' (j "quest-type"); At.style style ]
+            [ El.txt' (Task_type.nice_name tt) ])
     in
     let slots = List.flat_map ~f:(fun (_, _, a) -> a) slots in
     El.div ~at:[ c_grid_row ]
