@@ -94,8 +94,19 @@ let render date
         let start_q = quest.slot.start in
         let start = Zoned_datetime.diff start_q start |> Duration.to_minutes in
         let duration = quest.slot.duration |> Duration.to_minutes in
+        let short_name_breakpoint = if duration >= 120 then 4 else 2 in
+        let fold_volunteers acc =
+          if quest.initial.required_volunteers <= short_name_breakpoint then
+            fun v -> El.div [ El.txt' v.Volunteer.name ] :: acc
+          else fun v ->
+            let name =
+              String.split_on_char ~sep:' ' v.Volunteer.name |> List.hd
+            in
+            if List.length acc = 1 then El.txt' name :: acc
+            else El.txt' name :: El.txt' ", " :: acc
+        in
         let content =
-          El.txt' (string_of_int quest.initial.required_volunteers)
+          El.div [ El.txt' (string_of_int quest.initial.required_volunteers) ]
           :: Volunteers.fold volunteers
                ~init:
                  [
@@ -103,7 +114,7 @@ let render date
                      ~at:[ At.class' (j "slot-details") ]
                      [ El.txt' quest.initial.name ];
                  ]
-               ~f:(fun acc v -> El.br () :: El.txt' v.name :: acc)
+               ~f:fold_volunteers
         in
         let style = j ("background-color: " ^ color) in
         El.div
