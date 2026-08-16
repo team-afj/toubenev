@@ -196,3 +196,4 @@ let render infos (assignations : Api.assignation list) =
       El.section ~at:[ At.class' (Jstr.v "planning-place") ] [ render day ass ]
       :: acc)
     assignations []
+  |> List.rev
