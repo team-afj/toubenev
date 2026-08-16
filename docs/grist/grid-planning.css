@@ -63,6 +63,7 @@
       text-align: center;
       container: slot / inline-size;
       font-size: 0.5em;
+      color: black;
 
       & .slot-content {
         display: flex;
