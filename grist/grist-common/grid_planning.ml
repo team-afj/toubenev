@@ -102,19 +102,27 @@ let render date
             let name =
               String.split_on_char ~sep:' ' v.Volunteer.name |> List.hd
             in
-            if List.length acc = 1 then El.txt' name :: acc
+            if List.is_empty acc then [ El.txt' name ]
             else El.txt' name :: El.txt' ", " :: acc
+        in
+        let sorted_volunteers =
+          Volunteers.to_list volunteers
+          |> List.sort ~cmp:(fun v v' ->
+              let v = String.(trim (uncapitalize_ascii v.Volunteer.name)) in
+              let v' = String.(trim (uncapitalize_ascii v'.Volunteer.name)) in
+              String.compare v v')
+        in
+        let names =
+          List.fold_left sorted_volunteers ~init:[] ~f:fold_volunteers
         in
         let content =
           El.div [ El.txt' (string_of_int quest.initial.required_volunteers) ]
-          :: Volunteers.fold volunteers
-               ~init:
-                 [
-                   El.div
-                     ~at:[ At.class' (j "slot-details") ]
-                     [ El.txt' quest.initial.name ];
-                 ]
-               ~f:fold_volunteers
+          :: List.rev_append names
+               [
+                 El.div
+                   ~at:[ At.class' (j "slot-details") ]
+                   [ El.txt' quest.initial.name ];
+               ]
         in
         let style = j ("background-color: " ^ color) in
         El.div
