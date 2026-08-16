@@ -6,10 +6,6 @@
      padding: 0.5rem 1rem;
    }
 
-   .hidden {
-     display: none;
-   }
-
    .container {
      overflow-x: auto;
      overflow-y: visible;
