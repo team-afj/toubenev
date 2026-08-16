@@ -342,14 +342,6 @@ let app =
         `R print_btn;
       ]
   in
-  (* let dbg_planning =
-    let$ answer = App_state.active_solution_state in
-    match answer with
-    | None | Some { answer = { solution = []; _ }; _ } -> El.nbsp ()
-    | Some sol ->
-        Render.make_plannings sol.data_rich sol.answer ~details:false
-          [ `List_tasks_by_volunteer ]
-  in *)
   let analyses =
     let$* results = App_state.active_solution_normal in
     match results with
@@ -379,15 +371,14 @@ let app =
             `R capacity_table;
           ]
   in
-  (* let dbg_grid_plan =
+  let dbg_grid_plan =
     let$ answer = App_state.active_solution_state in
     match answer with
     | None | Some { answer = { solution = []; _ }; _ } -> El.nbsp ()
     | Some sol ->
         El.div @@ Grid_planning.render sol.data_rich.infos sol.answer.solution
-  in *)
-  Elwd.div
-    [ (*`R dbg_grid_plan;*) `R controls; `R solution_manager; `R analyses ]
+  in
+  Elwd.div [ `R dbg_grid_plan; `R controls; `R solution_manager; `R analyses ]
 
 let decode_solution_jv sol =
   let sol_id = Jv.Int.get sol "id" in

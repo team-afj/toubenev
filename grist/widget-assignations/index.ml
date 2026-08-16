@@ -31,7 +31,10 @@ end
 let app =
   let render (name, rich_data, data, assignations, _analysis) =
     let infos = rich_data.Planning.infos in
-    let static_checks = Static_analysis.make infos data.Api.quests () in
+    let static_checks =
+      Pico_ui.with_loader "Verifying" @@ fun () ->
+      Static_analysis.make infos data.Api.quests ()
+    in
     let title = Jstr.append (Jstr.v "Assignations de ") name in
     let verif =
       match Check.assignations infos static_checks assignations with
@@ -41,8 +44,12 @@ let app =
     in
     let per_volunteer = Infos.per_volunteer_el data assignations in
     let all_volunteers_sorted = Infos.list data assignations in
-    let analysis = Shared.Analysis.of_planning rich_data assignations data in
-    let complete_diff_table = Diffs_table.make analysis in
+    let complete_diff_table =
+      Pico_ui.with_loader "Analysing" @@ fun () ->
+      Shared.Analysis.of_planning rich_data assignations data
+      |> Diffs_table.make
+    in
+    let _ = G.set_timeout ~ms:1000 Pico_ui.hide_loader in
     Elwd.div
       [
         `P (El.h2 [ El.txt title ]);
@@ -80,6 +87,7 @@ let on_records () =
     match Jv.to_jv_list v with
     | [] -> Fut.ok ()
     | hd :: _ as assignations ->
+        Pico_ui.with_loader "Loading data from Grist" @@ fun () ->
         (* Solution should contain a ROW ID *)
         let solution_id = Jv.(Int.get (get hd "solution") "rowId") in
         let* solution = Solutions.get_solution solution_id in
