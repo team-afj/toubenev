@@ -77,7 +77,7 @@ let render date
   let start = min_q.slot.start in
   let end_ = Time_slot.end_ max_q.slot in
   let minutes = Zoned_datetime.diff end_ start |> Duration.to_minutes in
-  let make_slots ass =
+  let make_slots ?(color = "white") ass =
     List.map ass ~f:(fun { Api.quest; volunteers } ->
         let start_q = quest.slot.start in
         let start = Zoned_datetime.diff start_q start |> Duration.to_minutes in
@@ -93,28 +93,47 @@ let render date
                  ]
                ~f:(fun acc v -> El.br () :: El.txt' v.name :: acc)
         in
+        let style = j ("background-color: " ^ color) in
         El.div
-          ~at:[ At.class' (j "slot"); grid_column (start + 1) duration ]
+          ~at:
+            [
+              At.class' (j "slot");
+              grid_column (start + 1) duration;
+              At.style style;
+            ]
           [ El.div ~at:[ At.class' (j "slot-content") ] content ])
   in
-  let make_row place task_type assignations =
-    let slots = make_slots assignations in
+  let make_row place by_task =
+    let color deg = Printf.sprintf "hsl(%ideg 75%% 75%%)" deg in
+    let slots =
+      List.map by_task ~f:(fun (tt, assignations) ->
+          let deg = Random.int 360 |> Random.run in
+          let color = color deg in
+          (tt, color, make_slots ~color assignations))
+    in
+    let types =
+      List.map slots ~f:(fun (tt, color, _) ->
+          let style = j ("background-color: " ^ color) in
+          El.div ~at:[ At.style style ] [ El.txt' (Task_type.nice_name tt) ])
+    in
+    let slots = List.flat_map ~f:(fun (_, _, a) -> a) slots in
     El.div ~at:[ c_grid_row ]
       [
-        El.div
-          [
-            El.txt' (Place.nice_name place);
-            El.br ();
-            El.txt' (Task_type.nice_name task_type);
-          ];
+        El.div (El.txt' (Place.nice_name place) :: types);
         El.div ~at:[ At.class' (j "grid-timeline") ] slots;
       ]
   in
   let rows =
     Place.Map.fold
-      (fun place ->
-        Task_type.Map.fold (fun task_type assignations acc ->
-            make_row place task_type assignations :: acc))
+      (fun place tts acc ->
+        if String.prefix ~pre:"Scène" place.name then
+          let tasks = Task_type.Map.to_list tts in
+          make_row place tasks :: acc
+        else
+          Task_type.Map.fold
+            (fun task_type assignations acc ->
+              make_row place [ (task_type, assignations) ] :: acc)
+            tts acc)
       assignations []
   in
   let header =
