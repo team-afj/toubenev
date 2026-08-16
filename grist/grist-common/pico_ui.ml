@@ -97,3 +97,24 @@ end
   </article>
 </dialog>
 *)
+
+let loader =
+  El.find_first_by_selector (Jstr.v ".loader")
+  |> Option.get_exn_or "Could not find loader element"
+
+let active_loaders = ref 0
+
+let mk_loader msg =
+  El.span ~at:[ At.v (Jstr.v "aria-busy") (Jstr.v "true") ] [ El.txt' msg ]
+
+let with_loader msg f =
+  incr active_loaders;
+  Brrer.Brr.Window.queue_micro_task G.window (fun () ->
+      El.set_children loader [ mk_loader msg ]);
+
+  let result = f () in
+  decr active_loaders;
+  if !active_loaders = 0 then El.set_children loader [];
+  result
+
+let hide_loader () = El.set_children loader []

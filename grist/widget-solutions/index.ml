@@ -344,14 +344,6 @@ let app =
         `R print_btn;
       ]
   in
-  (* let dbg_planning =
-    let$ answer = App_state.active_solution_state in
-    match answer with
-    | None | Some { answer = { solution = []; _ }; _ } -> El.nbsp ()
-    | Some sol ->
-        Render.make_plannings sol.data_rich sol.answer ~details:false
-          [ `List_tasks_by_volunteer ]
-  in *)
   let analyses =
     let$* results = App_state.active_solution_normal in
     match results with
