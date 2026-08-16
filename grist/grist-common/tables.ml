@@ -175,8 +175,9 @@ module Assignations = struct
     let quest_id = Jv.Jstr.get ass "ref" |> Jstr.to_string in
     let volunteers_ids =
       let jv = Jv.get ass "volunteers" in
-      if Jv.is_none jv then []
-      else Jv.to_list Jv.to_int jv |> List.tail_opt |> Option.value ~default:[]
+      (* TODO when there is only one volunteer, it's a number.
+          When there are several the list starts with "L" in grist *)
+      if Jv.is_none jv then [] else Jv.to_list Jv.to_int jv
     in
     let quest = Quests.find_by_id quest_id data.quests in
     let by_id =
