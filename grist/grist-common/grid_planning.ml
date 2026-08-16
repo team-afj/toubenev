@@ -74,6 +74,18 @@ let render date
     (assignations : Api.assignation list Task_type.Map.t Place.Map.t) =
   let assignations = sort assignations in
   let min_q, max_q = bounds assignations in
+  let tts =
+    Place.Map.fold
+      (fun _p -> Task_type.Map.fold (fun tt _ acc -> Task_type.Set.add tt acc))
+      assignations Task_type.Set.empty
+  in
+  let current_color_deg = ref 0 in
+  let color_incr = 360 / Task_type.Set.cardinal tts in
+  let tt_colors =
+    Task_type.Set.fold tts ~init:Task_type.Map.empty ~f:(fun acc tt ->
+        current_color_deg := !current_color_deg + color_incr;
+        Task_type.Map.add tt !current_color_deg acc)
+  in
   let start = min_q.slot.start in
   let end_ = Time_slot.end_ max_q.slot in
   let minutes = Zoned_datetime.diff end_ start |> Duration.to_minutes in
@@ -107,7 +119,7 @@ let render date
     let color deg = Printf.sprintf "hsl(%ideg 75%% 75%%)" deg in
     let slots =
       List.map by_task ~f:(fun (tt, assignations) ->
-          let deg = Random.int 360 |> Random.run in
+          let deg = Task_type.Map.find tt tt_colors in
           let color = color deg in
           (tt, color, make_slots ~color assignations))
     in
