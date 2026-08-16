@@ -97,22 +97,24 @@ let render date
           ~at:[ At.class' (j "slot"); grid_column (start + 1) duration ]
           [ El.div ~at:[ At.class' (j "slot-content") ] content ])
   in
+  let make_row place task_type assignations =
+    let slots = make_slots assignations in
+    El.div ~at:[ c_grid_row ]
+      [
+        El.div
+          [
+            El.txt' (Place.nice_name place);
+            El.br ();
+            El.txt' (Task_type.nice_name task_type);
+          ];
+        El.div ~at:[ At.class' (j "grid-timeline") ] slots;
+      ]
+  in
   let rows =
     Place.Map.fold
       (fun place ->
         Task_type.Map.fold (fun task_type assignations acc ->
-            let slots = make_slots assignations in
-            El.div ~at:[ c_grid_row ]
-              [
-                El.div
-                  [
-                    El.txt' (Place.nice_name place);
-                    El.br ();
-                    El.txt' (Task_type.nice_name task_type);
-                  ];
-                El.div ~at:[ At.class' (j "grid-timeline") ] slots;
-              ]
-            :: acc))
+            make_row place task_type assignations :: acc))
       assignations []
   in
   let header =
