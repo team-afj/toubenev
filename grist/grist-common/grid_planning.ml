@@ -115,8 +115,20 @@ let render date
         let names =
           List.fold_left sorted_volunteers ~init:[] ~f:fold_volunteers
         in
+        let header =
+          let start_time =
+            Zoned_datetime.local_time start_q |> Time.to_string ~format:`SHORT
+          in
+          let end_time =
+            Zoned_datetime.local_time (Time_slot.end_ quest.slot)
+            |> Time.to_string ~format:`SHORT
+          in
+          El.txt'
+            (start_time ^ " - " ^ end_time ^ ": "
+            ^ string_of_int quest.initial.required_volunteers)
+        in
         let content =
-          El.div [ El.txt' (string_of_int quest.initial.required_volunteers) ]
+          El.div [ header ]
           :: List.rev_append names
                [
                  El.div
