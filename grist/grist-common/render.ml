@@ -6,7 +6,6 @@ open Rich
 let text = El.txt'
 let cls name = At.class' (Jstr.v name)
 let colspan i = At.v (Jstr.v "colspan") (Jstr.of_int i)
-let rowspan i = At.v (Jstr.v "rowspan") (Jstr.of_int i)
 let scope s = At.v (Jstr.v "scope") (Jstr.v s)
 
 let slot_to_el slot =
@@ -50,6 +49,22 @@ let make_empty_cell ~details ?tags () =
 
 let make_assigned_cell ~details ?tags name =
   make_assignation_cell ~details ?tags (El.txt' name)
+
+let make_volunteer_item el = El.div ~at:[ cls "planning-volunteer-item" ] [ el ]
+
+let make_volunteer_cell ~details ?tags volunteers ~n_missing =
+  let assigned =
+    match Normal.Volunteers.to_list volunteers with
+    | [] -> [ make_volunteer_item (El.nbsp ()) ]
+    | volunteers ->
+        List.map volunteers ~f:(fun (v : Normal.Volunteer.t) ->
+            make_volunteer_item (El.txt' v.name))
+  in
+  let missing =
+    List.init ~len:n_missing ~f:(fun _ -> make_volunteer_item (El.nbsp ()))
+  in
+  make_assignation_cell ~details ?tags
+    (El.div ~at:[ cls "planning-volunteer-list" ] (assigned @ missing))
 
 let make_day_table ~details ~with_types ~with_places (date : Date.t)
     assignations =
@@ -104,21 +119,10 @@ let make_day_table ~details ~with_types ~with_places (date : Date.t)
                  | None, true, descr -> (Some descr, true)
                  | _, _, _ -> (tags, false)
                in
-               let first, rest =
-                 match Normal.Volunteers.to_list volunteers with
-                 | [] -> (make_empty_cell ~details ?tags (), [])
-                 | hd :: tl -> (make_assigned_cell ~details ?tags hd.name, tl)
+               let volunteers_cell =
+                 make_volunteer_cell ~details ?tags volunteers ~n_missing
                in
-               let missing =
-                 List.init ~len:n_missing ~f:(fun _ ->
-                     El.tr [ make_empty_cell ~details ?tags () ])
-               in
-               let rest =
-                 List.fold_left rest ~init:(List.rev_append missing acc)
-                   ~f:(fun acc (v : Normal.Volunteer.t) ->
-                     El.tr [ make_assigned_cell ~details ?tags v.name ] :: acc)
-               in
-               El.tr [ El.th ~at:[ rowspan n ] [ slot ]; first ] :: rest))
+               El.tr [ El.th [ slot ]; volunteers_cell ] :: acc))
          []
   in
   El.div [ El.table ~at:[ cls "planning" ] (head :: rows) ]

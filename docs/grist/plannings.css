@@ -84,6 +84,18 @@ table.planning {
       display: flex;
       flex-direction: row;
 
+      & .planning-volunteer-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+        width: 100%;
+        break-inside: avoid;
+      }
+
+      & .planning-volunteer-item {
+        min-height: 1lh;
+      }
+
       & .planning-cell-tags {
         font-size: 1rem;
         align-self: flex-start;
