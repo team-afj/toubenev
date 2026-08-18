@@ -189,9 +189,13 @@ let render date
         El.div ~at:[ At.class' (j "grid-ticks") ] ticks;
       ]
   in
-  El.div
-    ~at:[ At.class' (j "grid-planning"); grid_template_columns minutes ]
-    (header :: rows)
+  El.section
+    ~at:[ At.class' (Jstr.v "planning-place") ]
+    [
+      El.div
+        ~at:[ At.class' (j "grid-planning"); grid_template_columns minutes ]
+        (header :: rows);
+    ]
 
 let render infos (assignations : Api.assignation list) =
   let assignations =

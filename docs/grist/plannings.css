@@ -3,7 +3,7 @@
     size: portrait;
   } */
 
-  .planning-place:not(:first-child) {
+  .planning-place {
     break-before: page;
   }
 
