@@ -67,8 +67,30 @@ let render_ticks ~start ~end_ =
     ticks []
   |> List.rev
 
-let render_background () =
-  El.div ~at:[ At.class' (j "grid-background") ] [ El.div [] ]
+let render_time_tracks ~start ~end_ =
+  let bounds_ticks = Zoned_datetime.Set.of_list [ start ] in
+  let aligned_start = Zoned_datetime.ceil Lunar.Resolution.hour start in
+  let range = Zoned_datetime.Range.make ~first:aligned_start ~last:end_ in
+  let ticks =
+    Zoned_datetime.(
+      Set.add_seq
+        (Range.to_seq ~include_boundaries:false ~iterator:Range.iterator_hour
+           range)
+        bounds_ticks)
+  in
+  let ticks = Zoned_datetime.Set.remove end_ ticks in
+  Zoned_datetime.Set.fold
+    (fun dt acc ->
+      let start = Zoned_datetime.diff dt start |> Duration.to_minutes in
+      let time =
+        Zoned_datetime.local_time dt |> Time.to_string ~format:`SHORT
+      in
+      El.div
+        ~at:[ At.class' (j "time-track"); grid_column (start + 1) 1 ]
+        [ El.span [ El.txt' time ] ]
+      :: acc)
+    ticks []
+  |> List.rev
 
 let render date
     (assignations : Api.assignation list Task_type.Map.t Place.Map.t) =
@@ -161,11 +183,17 @@ let render date
             ~at:[ At.class' (j "quest-type"); At.style style ]
             [ El.txt' (Task_type.nice_name tt) ])
     in
+    let tracks = render_time_tracks ~start ~end_ in
     let slots = List.flat_map ~f:(fun (_, _, a) -> a) slots in
     El.div ~at:[ c_grid_row ]
       [
-        El.div (El.txt' (Place.nice_name place) :: types);
+        El.div
+          (El.div
+             ~at:[ At.class' (j "title") ]
+             [ El.txt' (Place.nice_name place) ]
+          :: types);
         El.div ~at:[ At.class' (j "grid-timeline") ] slots;
+        El.div ~at:[ At.class' (j "grid-timeline-tracks") ] tracks;
       ]
   in
   let rows =
