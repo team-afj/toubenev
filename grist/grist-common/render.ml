@@ -76,10 +76,11 @@ let make_day_table ~details ~with_types ~with_places (date : Date.t)
            List.fold_left assignations ~init:acc
              ~f:(fun acc { Api.quest; volunteers } ->
                let slot = slot_to_el quest.slot in
-               let n = max 1 quest.initial.required_volunteers in
-               let n_missing =
-                 max 0 (n - Normal.Volunteers.cardinal volunteers - 1)
+               let n_assigned = Normal.Volunteers.cardinal volunteers in
+               let n =
+                 max 1 (max quest.initial.required_volunteers n_assigned)
                in
+               let n_missing = max 0 (n - n_assigned - 1) in
                let tags, descr =
                  match
                    ( with_types,
