@@ -3,7 +3,11 @@
     size: portrait;
   } */
 
-  .planning-place {
+  .planning-sections:not(:first-child) {
+    break-before: page;
+  }
+
+  .planning-place:not(:first-child) {
     break-before: page;
   }
 
