@@ -71,14 +71,15 @@
 
     border-left: 1px solid black;
 
+    padding: 2px;
+
     & .slot {
       overflow: visible;
       /* outline: 1px solid black; */
       border: 1px solid #ababab;
       border-radius: 3px;
       padding: 0.125rem;
-      /* margin-right: -1px; */
-      margin: 2px;
+      margin-right: 2px;
       margin-left: 0px;
       text-align: center;
       container: slot / inline-size;
