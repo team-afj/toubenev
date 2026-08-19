@@ -160,13 +160,12 @@ let render date
         in
         let style = j ("background-color: " ^ color) in
         El.div
-          ~at:
-            [
-              At.class' (j "slot");
-              grid_column (start + 1) duration;
-              At.style style;
-            ]
-          [ El.div ~at:[ At.class' (j "slot-content") ] content ])
+          ~at:[ At.class' (j "slot-item"); grid_column (start + 1) duration ]
+          [
+            El.div
+              ~at:[ At.class' (j "slot-box"); At.style style ]
+              [ El.div ~at:[ At.class' (j "slot-content") ] content ];
+          ])
   in
   let make_row place by_task =
     let color deg = Printf.sprintf "hsl(%ideg 75%% 75%%)" deg in

@@ -71,26 +71,31 @@
 
     border-left: 1px solid black;
 
-    padding: 2px;
-
-    & .slot {
-      overflow: visible;
-      /* outline: 1px solid black; */
-      border: 1px solid #ababab;
-      border-radius: 3px;
-      padding: 0.125rem;
-      margin-right: 2px;
-      margin-left: 0px;
-      text-align: center;
-      container: slot / inline-size;
+    & .slot-item {
+      padding: 2px;
+      padding-left: 0px;
       font-size: 0.5em;
       color: black;
 
+      & .slot-box {
+        overflow: visible;
+        container: slot-box / inline-size;
+
+        height: 100%;
+
+        padding: 2px;
+
+        border: 1px solid #ababab;
+        border-radius: 3px;
+      }
+
       & .slot-content {
         display: flex;
+        min-width: 3rem;
         height: 100%;
         flex-direction: column;
         justify-content: space-between;
+        text-align: center;
 
         & .slot-details {
           margin-top: 0.125rem;
@@ -99,8 +104,8 @@
       }
     }
 
-    @container slot (max-width: 50px) {
-      & .slot .slot-content {
+    @container slot-box (max-width: 50px) {
+      & .slot-box .slot-content {
         text-align: left;
         font-size: 0.7em;
         min-width: 2rem;
